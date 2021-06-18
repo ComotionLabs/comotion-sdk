@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     setuptools.setup(
         name="comotion-sdk",
-        version="0.0.3",
+        version="0.0.4",
         author="Tim Vieyra",
         author_email="tim@comotion.us",
         description="SDK for interacting with the Comotion Dash API",
