@@ -23,7 +23,7 @@ with open("../../VERSION", "r", encoding="utf-8") as vfh:
 from comotion import __projectname__  # noqa
 from comotion import __author__  # noqa
 
-project = "Comotion Python SDK"
+project = "comotion-sdk"
 copyright = '2021, Comotion Business Solutions'
 author = "Comotion"
 
@@ -71,6 +71,12 @@ html_theme_options = {
     'repo_name': 'comotion-sdk',
     'globaltoc_depth': 3
 }
+
+html_title = 'Comotion Python SDK Docs'
+
+html_short_title = 'comotion-sdk'
+
+html_favicon = 'favicon.png'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
