@@ -16,20 +16,21 @@ sys.path.insert(0, os.path.abspath('../../src/'))
 
 
 # -- Project information -----------------------------------------------------
-from comotion import __version__  # noqa
+
+
+with open("../../VERSION", "r", encoding="utf-8") as vfh:
+    version = vfh.read()
+    release = version
+
+
 from comotion import __projectname__  # noqa
 from comotion import __author__  # noqa
 
-project = __projectname__
+project = "Comotion Python SDK"
 copyright = '2021, Comotion Business Solutions'
-author = __author__
+author = "Comotion"
 
-# The short X.Y version.
-version = __version__
 # The full version, including alpha/beta/rc tags.
-release = __version__
-
-root_doc = 'contents'
 
 # -- General configuration ---------------------------------------------------
 
@@ -71,8 +72,7 @@ html_theme_options = {
     'color_accent': 'light-blue',
     'repo_url': 'https://github.com/ComotionLabs/comotion-sdk/',
     'repo_name': 'comotion-sdk',
-    'globaltoc_depth': 3,
-    'globaltoc_includehidden': True
+    'globaltoc_depth': 3
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
