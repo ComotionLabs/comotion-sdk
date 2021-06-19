@@ -1,9 +1,9 @@
 import io
 import requests
-import pandas as pd
 import csv
 from typing import Union, Callable
 from os.path import join
+import pandas as pd
 
 
 def upload_csv_to_dash(
@@ -141,7 +141,6 @@ def read_and_upload_file_to_dash(
     List
         List of http responses
     """
-
     file_reader = pd.read_csv(
         file,
         chunksize=chunksize,
