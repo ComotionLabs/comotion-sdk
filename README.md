@@ -2,6 +2,10 @@
 
 comotion-sdk is the python SDK for interacting with the Comotion APIs.  Initial support is limited to Dash, but may expand in future.
 
+# Contributing
+
+You
+
 # Building
 
 auto push to test

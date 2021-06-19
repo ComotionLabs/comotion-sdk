@@ -1,14 +1,18 @@
 import setuptools
 
+from comotion import __version__
+from comotion import __projectname__
+from comotion import __author__
+
 if __name__ == "__main__":
 
     with open("README.md", "r", encoding="utf-8") as fh:
         long_description = fh.read()
 
     setuptools.setup(
-        name="comotion-sdk",
-        version="0.0.4",
-        author="Tim Vieyra",
+        name=__projectname__,
+        version=__version__,
+        author=__author__,
         author_email="tim@comotion.us",
         description="SDK for interacting with the Comotion Dash API",
         long_description=long_description,
