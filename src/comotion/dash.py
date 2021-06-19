@@ -1,9 +1,9 @@
 import io
 import requests
-import pandas as pd
 import csv
 from typing import Union, Callable
 from os.path import join
+import pandas as pd
 
 
 def upload_csv_to_dash(
@@ -16,25 +16,18 @@ def upload_csv_to_dash(
 
     Expects a csv gzipped stream to upload to dash.
 
-    Parameters
-    ----------
-    dash_orgname : str
-        Dash organisation name for dash instance
-    dash_api_key : str
-        Valid API key for the organisation instance
-    dash_table: str
-        Table name to upload to
+    Args:
+        dash_orgname (str): Dash organisation name for dash instance
+        dash_api_key (str): Valid API key for the organisation instance
+        dash_table (str): Table name to upload to
 
+        csv_gz_stream (io.FileIO): Description
 
-    Returns
-    -------
-    requests.Response
-        response from dash api
+    Returns:
+        requests.Response: response from dash api
 
-    Raises
-    ------
-    HTTPError
-        If one is raised by the call
+    Raises:
+        HTTPError: If one is raised by the call
     """
 
     url = "https://api.comodash.io/v1/data-input-file"
@@ -70,7 +63,7 @@ def create_gzipped_csv_stream_from_df(df: pd.DataFrame) -> io.BytesIO:
 
     Parameters
     ----------
-    df : pf.Dataframe
+    df : pd.DataFrame
         Dateframe to be turned into bytestream
 
     Returns
@@ -106,8 +99,8 @@ def read_and_upload_file_to_dash(
 
     This function will:
     - Read a csv file
-    - Break it up into multiple csv's, each with a maxmum
-       number of lines defined by chunksize
+    - Break it up into multiple csv's
+    - each with a maximum number of lines defined by chunksize
     - upload them to dash
 
     Parameters
@@ -140,17 +133,14 @@ def read_and_upload_file_to_dash(
         if specified, no upload will be made to dash, but files
         will be saved to the location specified. This is useful for
         testing.
-        multiple files will be created with name
-            [table_name].[i].csv.gz where i
+        multiple files will be created: [table_name].[i].csv.gz where i
         represents multiple file parts
 
     Returns
     -------
     List
-
-
+        List of http responses
     """
-
     file_reader = pd.read_csv(
         file,
         chunksize=chunksize,

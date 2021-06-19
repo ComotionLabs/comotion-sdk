@@ -2,7 +2,10 @@ name: Publish Python 🐍 distributions 📦 to PyPI and TestPyPI
 
 #thank you https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
 
-on: push
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   build-n-publish:
