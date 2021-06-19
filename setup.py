@@ -9,7 +9,7 @@ if __name__ == "__main__":
         version = vfh.read()
 
     setuptools.setup(
-        name="Comotion Python SDK",
+        name="comotion-sdk",
         version=version,
         author="Comotion",
         author_email="tim@comotion.us",
