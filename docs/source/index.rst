@@ -179,7 +179,7 @@ Here is an example of reading a table named ``my_table`` from a postgres databas
       dash.dash_response = upload_csv_to_dash(
           dash_orgname,
           dash_api_key,
-          'pastel_income_statement',
+          'my_table_in_dash',
           csv_stream
       )
 
