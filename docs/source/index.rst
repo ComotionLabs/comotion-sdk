@@ -176,7 +176,7 @@ Here is an example of reading a table named ``my_table`` from a postgres databas
       csv_stream = dash.create_gzipped_csv_stream(df)
 
       # upload the stream to dash
-      dash.dash_response = upload_csv_to_dash(
+      dash_response = dash.upload_csv_to_dash(
           dash_orgname,
           dash_api_key,
           'my_table_in_dash',
