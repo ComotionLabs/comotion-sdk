@@ -398,10 +398,10 @@
    <span class="n">csv_stream</span> <span class="o">=</span> <span class="n">dash</span><span class="o">.</span><span class="n">create_gzipped_csv_stream</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 
    <span class="c1"># upload the stream to dash</span>
-   <span class="n">dash</span><span class="o">.</span><span class="n">dash_response</span> <span class="o">=</span> <span class="n">upload_csv_to_dash</span><span class="p">(</span>
+   <span class="n">dash_response</span> <span class="o">=</span> <span class="n">dash</span><span class="o">.</span><span class="n">upload_csv_to_dash</span><span class="p">(</span>
        <span class="n">dash_orgname</span><span class="p">,</span>
        <span class="n">dash_api_key</span><span class="p">,</span>
-       <span class="s1">'pastel_income_statement'</span><span class="p">,</span>
+       <span class="s1">'my_table_in_dash'</span><span class="p">,</span>
        <span class="n">csv_stream</span>
    <span class="p">)</span>
 </pre></div>
