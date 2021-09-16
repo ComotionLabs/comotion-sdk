@@ -79,7 +79,7 @@ def create_gzipped_csv_stream_from_df(df: pd.DataFrame) -> io.BytesIO:
         compression="gzip",
         encoding="utf-8",
         index=False,
-        quoting=csv.QUOTE_ALL
+        quoting=csv.QUOTE_NONNUMERIC
     )
 
     return csv_stream
