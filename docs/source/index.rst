@@ -173,7 +173,7 @@ Here is an example of reading a table named ``my_table`` from a postgres databas
       df['snapshot_timestamp'] = myTimeStamp
 
       # create a gzipped csv stream from the dataframe
-      csv_stream = dash.create_gzipped_csv_stream(df)
+      csv_stream = dash.create_gzipped_csv_stream_from_df(df)
 
       # upload the stream to dash
       dash_response = dash.upload_csv_to_dash(
