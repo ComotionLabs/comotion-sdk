@@ -4,7 +4,9 @@ import csv
 from typing import Union, Callable
 from os.path import join
 import pandas as pd
-
+import logging
+from datetime import datetime
+from tqdm import tqdm
 
 def upload_csv_to_dash(
     dash_orgname: str,
@@ -179,3 +181,104 @@ def read_and_upload_file_to_dash(
         i = i + 1
 
     return responses
+
+def upload_dataframe(
+    dataframe: pd.DataFrame,
+    dash_table: str,
+    dash_orgname: str,
+    dash_api_key: str,
+    dtypes: dict = None,
+    chunksize: int = 30000,
+    path_to_output_for_dryrun: str = None,
+    include_snapshot: bool = True
+):
+    """Reads a file and uploads to dash.
+
+    This function will:
+    - Read a csv file
+    - Break it up into multiple csv's
+    - each with a maximum number of lines defined by chunksize
+    - upload them to dash
+
+    Parameters
+    ----------
+    file : pandas DataFrame object to be uploaded
+    dash_table: str
+        name of Dash table to upload the file to
+    dash_orgname: str
+        orgname of your Dash instance
+    dash_api_key: str
+        valid api key for Dash API
+    dtypes: dict
+        (optional)
+        A dictionary that contains the column name and data type to convert to.
+        Defaults to None i.e. load dataframe columns as they are
+    chunksize: int
+        (optional)
+        the maximum number of lines to be included in each file.
+        Note that this should be low enough that the zipped file is less
+        than Dash maximum gzipped file size. Defaults to 30000.
+    path_to_output_for_dryrun: str
+        (optional)
+        if specified, no upload will be made to dash, but files
+        will be saved to the location specified. This is useful for
+        testing.
+        multiple files will be created: [table_name].[i].csv.gz where i
+        represents multiple file parts
+    include_snapshot: bool
+        (optional)
+        If True, an additional column 'snapshot_timestamp' will be added to the DataFrame.
+        This column will contain the time that data is loaded in "%Y-%m-%d %H:%M:%S.%f" format in order to help with database management
+        Defaults to True i.e. snapshot_timestamp is included
+
+    Returns
+    -------
+    List
+        List of http responses
+    """
+
+    snapshot_timestamp = datetime.now()
+
+    log_file = dash_table + "_" + snapshot_timestamp.strftime("%Y%m%d%H%M") + ".log"
+
+    formatter = logging.Formatter(
+        fmt='%(asctime)s - %(name)-12s %(levelname)-8s %(message)s',
+        datefmt='%Y-%m-%d,%H:%M:%S'
+    )
+
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    # Change columns format if dtypes is specified
+    if dtypes:
+        dataframe = dataframe.astype(dtype=dtypes)
+
+    # Include snapshort time if include_snapshot == True
+    if include_snapshot:
+        dataframe['snapshot_timestamp'] = snapshot_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")
+
+    data_chunks = [dataframe[i:i+chunksize] for i in range(0, dataframe.shape[0], chunksize)]    
+   
+    for i, chunk in enumerate(tqdm(data_chunks)):
+
+        csv_stream = create_gzipped_csv_stream_from_df(chunk)
+
+        if path_to_output_for_dryrun is None:
+
+            response = upload_csv_to_dash(
+                dash_orgname=dash_orgname,
+                dash_api_key=dash_api_key,
+                dash_table=dash_table,
+                csv_gz_stream=csv_stream
+            )
+
+            logger.info(response.text)
+
+        else:
+            with open(join(path_to_output_for_dryrun, dash_table + "." + str(i) + ".csv.gz"), "wb") as f:
+                f.write(csv_stream.getvalue())
+
+    return
