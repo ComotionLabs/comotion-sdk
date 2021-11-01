@@ -9,4 +9,6 @@ Documentation for this module can be found [here](https://comotionlabs.github.io
 
 # Contributing
 
-In order to contribute to this project, fork this repo and submit a pull request to this project.
+In order to contribute to this project, fork this repo and submit a pull request to this project
+
+pip install --editable .

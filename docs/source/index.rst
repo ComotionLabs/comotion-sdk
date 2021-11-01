@@ -183,6 +183,3 @@ Here is an example of reading a table named ``my_table`` from a postgres databas
           csv_stream
       )
 
-
-
-

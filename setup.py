@@ -13,7 +13,7 @@ if __name__ == "__main__":
         version=version,
         author="Comotion",
         author_email="tim@comotion.us",
-        description="SDK for interacting with the Comotion Dash API",
+        description="SDK for interacting with the Comotion APIs",
         long_description=long_description,
         long_description_content_type="text/markdown",
         url="https://github.com/ComotionLabs/comotion-sdk",
@@ -27,9 +27,20 @@ if __name__ == "__main__":
         ],
         package_dir={"": "src"},
         packages=setuptools.find_packages(where="src"),
+        package_data={
+            "": ["*.jar"],
+        },
         python_requires=">=3.6",
+        entry_points={
+        'console_scripts': [
+            'comotion = comotion.cli:cli',
+            ],
+        },
         install_requires=[
             'requests>=2.25.0',
-            'pandas>=1.2.0'
+            'pandas>=1.2.0',
+            'click>=8.0.3',
+            'jpype1>=1.3.0',
+            'keyring>=23.2.1'
         ]
     )
