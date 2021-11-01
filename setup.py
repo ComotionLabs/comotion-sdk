@@ -42,5 +42,9 @@ if __name__ == "__main__":
             'click>=8.0.3',
             'jpype1>=1.3.0',
             'keyring>=23.2.1'
+        ],
+        tests_require=[
+            'mock',
+            'pytest'
         ]
     )
