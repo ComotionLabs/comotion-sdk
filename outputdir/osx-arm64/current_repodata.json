@@ -1,0 +1,24 @@
+{
+  "info": {
+    "subdir": "osx-arm64"
+  },
+  "packages": {
+    "comotion-sdk-None-None.tar.bz2": {
+      "build": "None",
+      "build_number": 2,
+      "depends": [
+        "python >=3.9,<3.10.0a0"
+      ],
+      "md5": "d5a4b3b96187749d76111760fef73eda",
+      "name": "comotion-sdk",
+      "sha256": "ca9355fc97f3a85fe4e919c6b7c07be7d58df48d079b1c17d2bd7cba39bdcaa0",
+      "size": 15533,
+      "subdir": "osx-arm64",
+      "timestamp": 1636313406660,
+      "version": "None"
+    }
+  },
+  "packages.conda": {},
+  "removed": [],
+  "repodata_version": 1
+}

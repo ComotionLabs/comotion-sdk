@@ -1,0 +1,12 @@
+name: ComotionSDKInstaller
+version: 1.0.0
+installer_type: all
+
+channels:
+  - file:///Users/timalive/documents/Comotion-sdk/conda-build/
+  - http://repo.anaconda.com/pkgs/main/
+
+specs:
+  - python 3.*
+  - conda
+  - comotion-sdk

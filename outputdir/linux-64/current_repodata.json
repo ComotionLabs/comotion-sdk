@@ -1,0 +1,24 @@
+{
+  "info": {
+    "subdir": "linux-64"
+  },
+  "packages": {
+    "comotion-sdk-None-None.tar.bz2": {
+      "build": "None",
+      "build_number": 2,
+      "depends": [
+        "python >=3.9,<3.10.0a0"
+      ],
+      "md5": "a3d135c66f2c0a474f5114dad97ceba7",
+      "name": "comotion-sdk",
+      "sha256": "7cfc46eccb1dcde919b35ad1444cf39363c37dc56544cdb4113a31af51d4b8f8",
+      "size": 15521,
+      "subdir": "linux-64",
+      "timestamp": 1636313406660,
+      "version": "None"
+    }
+  },
+  "packages.conda": {},
+  "removed": [],
+  "repodata_version": 1
+}

@@ -114,14 +114,14 @@ class MyTestCase(unittest.TestCase):
                                                         login.assert_called_once()
                                                         setLocale.assert_called_once()
                                                         # test that config is correct
-                                                        assert (str(jpypetypes.mock_calls[0])) == """call.JString('{"realm": "hello", "auth-server-url": "https://qa.auth.comotion.us/auth", "ssl-required": "external", "resource": "redirect_test", "public-client": true, "use-resource-role-mappings": false, "enable-pkce": true}')""" # noqa
+                                                        assert (str(jpypetypes.mock_calls[0])) == """call.JString('{"realm": "hello", "auth-server-url": "https://auth.comotion.us/auth", "ssl-required": "external", "resource": "redirect_test", "public-client": true, "use-resource-role-mappings": false, "enable-pkce": true}')""" # noqa
                                                         addClassPath.assert_called_once_with("keycloak_install_jars/*") # noqa
                                                         getrtoken.assert_called_once()
                                                         getidtoken.assert_called_once()
                                                         pun.assert_called_once()
                                                         shutdownJVM.assert_called_once()
                                                         set_password.assert_called_once_with(
-                                                            "comotion auth api offline token (qa.auth.comotion.us/auth/realms/hello)", # noqa
+                                                            "comotion auth api offline token (auth.comotion.us/auth/realms/hello)", # noqa
                                                             "myawesomename",
                                                             "myawesomerefreshtoken"
                                                             )

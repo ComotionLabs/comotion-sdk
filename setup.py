@@ -5,12 +5,12 @@ if __name__ == "__main__":
     with open("README.md", "r", encoding="utf-8") as fh:
         long_description = fh.read()
 
-    with open("VERSION", "r", encoding="utf-8") as vfh:
-        version = vfh.read()
+    # with open("VERSION", "r", encoding="utf-8") as vfh:
+        # version = vfh.read()
 
     setuptools.setup(
         name="comotion-sdk",
-        version=version,
+        # version=version,
         author="Comotion",
         author_email="tim@comotion.us",
         description="SDK for interacting with the Comotion APIs",

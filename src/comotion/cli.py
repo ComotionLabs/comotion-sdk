@@ -2,7 +2,7 @@ import click
 import json
 import keyring
 import requests
-
+import uuid
 
 class Config(object):
     """
@@ -33,7 +33,7 @@ def _validate_orgname(issuer, orgname):
         # check that auth endpoint exists and is happy
         well_known_response = _call_well_known(issuer, orgname)
         if well_known_response.status_code != requests.codes.ok:
-            raise click.BadParameter("%s cannot be found at qa.auth.comotion.us.  Make sure you have the correct orgname" % orgname, param_hint='orgname') # noqa E501
+            raise click.BadParameter("%s cannot be found at %s.  Make sure you have the correct orgname" % (orgname,issuer), param_hint='orgname') # noqa E501
 
     except requests.exceptions.ConnectionError:
         raise click.UsageError("Struggling to connect to the internet!")
@@ -50,11 +50,15 @@ def cli(config, orgname):
     """
     Command Line Interface for interacting with the Comotion APIs.
     """
-    issuer = 'https://qa.auth.comotion.us'
+    issuer = 'https://auth.comotion.us'
     _validate_orgname(issuer, orgname)
 
-    click.echo("Running in orgname: %s" % orgname)
+    # click.echo("Running in orgname: %s" % orgname)
     config.orgname = orgname
+
+
+def _get_token_key(issuer, orgname):
+        return "comotion auth api offline token (%s/auth/realms/%s)" % (issuer, orgname) # noqa: E501
 
 
 @cli.command()
@@ -75,9 +79,9 @@ def login(config):
     from java.io import ByteArrayInputStream
     keycloak_config = {
         "realm": config.orgname,
-        "auth-server-url": "https://qa.auth.comotion.us/auth",
+        "auth-server-url": "https://auth.comotion.us/auth",
         "ssl-required": "external",
-        "resource": "redirect_test",
+        "resource": "comotion_cli",
         "public-client": True,
         "use-resource-role-mappings": False,
         "enable-pkce": True
@@ -89,6 +93,7 @@ def login(config):
     keycloak = KeycloakInstalled(keycloak_config_stream)
     from java.util import Locale
     keycloak.setLocale(Locale.ENGLISH)
+    click.echo("logged out")
     keycloak.login()
 
     # uses LoginDesktop flow if available, otherwise login manual flow.
@@ -97,13 +102,75 @@ def login(config):
     refresh_token = keycloak.getRefreshToken()
     refresh_token_string = str(refresh_token)
     preferred_username = str(keycloak.getIdToken().getPreferredUsername())
-    jpype.shutdownJVM()
 
-    token_key = "comotion auth api offline token (qa.auth.comotion.us/auth/realms/%s)" % config.orgname # noqa: E501
+    keyring.set_password(
+        'comotion auth api latest username',
+        config.orgname,
+        preferred_username
+    )
+
+    token_key = _get_token_key("auth.comotion.us", config.orgname)
+
     keyring.set_password(
         token_key,
         preferred_username,
         refresh_token_string
     )
 
+    keycloak.logout()
+    jpype.shutdownJVM()
     click.echo("login is complete.")
+
+
+@cli.command()
+@pass_config
+def get_access_token(config):
+    """
+    Get an access token for the logged in user
+    """
+
+    token_key = _get_token_key("auth.comotion.us", config.orgname)
+    issuer = "https://auth.comotion.us"
+
+    preferred_username = keyring.get_password(
+        'comotion auth api latest username',
+        config.orgname
+    )
+
+    offline_token = keyring.get_password(
+        token_key,
+        preferred_username
+    )
+
+    payload = {
+        "grant_type": "refresh_token",
+        "refresh_token": offline_token,
+        "client_id": "comotion_cli"
+    }
+
+    token_address = "%s/auth/realms/%s/protocol/openid-connect/token" % (issuer,config.orgname) # noqa
+
+    response = requests.post(
+        token_address,
+        data=payload
+    )
+
+    if response.status_code == requests.codes.ok:
+        click.echo(json.loads(str(response.text))['access_token'])
+    else:
+        click.echo("There is an error with the response:")
+        click.echo(response.text)
+
+
+@cli.command()
+@pass_config
+def get_current_user(config):
+    """
+    Get an id token for the logged in user
+    """
+    preferred_username = keyring.get_password(
+        'comotion auth api latest username',
+        config.orgname
+    )
+
+    click.echo(preferred_username)
