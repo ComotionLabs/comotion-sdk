@@ -2,14 +2,17 @@ import click
 import json
 import keyring
 import requests
-import uuid
+
+from .como_authenticator import ComoAuthenticator, KeyringCredentialCache
+
 
 class Config(object):
     """
-    Config objec that allows config to be shared between multiple actions
+    Config object that allows config to be shared between multiple actions
     """
     def __init__(self):
         self.orgname = None
+        self.issuer = 'https://auth.comotion.us'
 
 
 # make a decorator the allows for config to be passed to multiple actions
@@ -50,76 +53,28 @@ def cli(config, orgname):
     """
     Command Line Interface for interacting with the Comotion APIs.
     """
-    issuer = 'https://auth.comotion.us'
-    _validate_orgname(issuer, orgname)
 
     # click.echo("Running in orgname: %s" % orgname)
     config.orgname = orgname
 
-
-def _get_token_key(issuer, orgname):
-        return "comotion auth api offline token (%s/auth/realms/%s)" % (issuer, orgname) # noqa: E501
+    _validate_orgname(config.issuer, config.orgname)
 
 
 @cli.command()
 @pass_config
-def login(config):
+def authenticate(config):
     """
-    Authenticate the user against the provided orgname.
+    Authenticate the user against the provided orgname
     """
 
     click.echo("logging you in.  You may see a popup screen to complete authentication...") # noqa
 
-    import jpype
-    import jpype.imports
-    from jpype.types import JString
-
-    jpype.startJVM()
-    jpype.addClassPath("keycloak_install_jars/*")
-    from java.io import ByteArrayInputStream
-    keycloak_config = {
-        "realm": config.orgname,
-        "auth-server-url": "https://auth.comotion.us/auth",
-        "ssl-required": "external",
-        "resource": "comotion_cli",
-        "public-client": True,
-        "use-resource-role-mappings": False,
-        "enable-pkce": True
-    }
-
-    keycloak_config_stream = ByteArrayInputStream(
-        JString(json.dumps(keycloak_config)).getBytes())
-    from org.keycloak.adapters.installed import KeycloakInstalled
-    keycloak = KeycloakInstalled(keycloak_config_stream)
-    from java.util import Locale
-    keycloak.setLocale(Locale.ENGLISH)
-    click.echo("logged out")
-    keycloak.login()
-
-    # uses LoginDesktop flow if available, otherwise login manual flow.
-    # see https://www.keycloak.org/docs/latest/securing_apps/index.html#_installed_adapter # noqa: E501
-
-    refresh_token = keycloak.getRefreshToken()
-    refresh_token_string = str(refresh_token)
-    preferred_username = str(keycloak.getIdToken().getPreferredUsername())
-
-    keyring.set_password(
-        'comotion auth api latest username',
+    como_authenticator = ComoAuthenticator(
+        config.issuer,
         config.orgname,
-        preferred_username
+        KeyringCredentialCache
     )
-
-    token_key = _get_token_key("auth.comotion.us", config.orgname)
-
-    keyring.set_password(
-        token_key,
-        preferred_username,
-        refresh_token_string
-    )
-
-    keycloak.logout()
-    jpype.shutdownJVM()
-    click.echo("login is complete.")
+    como_authenticator.authenticate()
 
 
 @cli.command()
@@ -129,26 +84,17 @@ def get_access_token(config):
     Get an access token for the logged in user
     """
 
-    token_key = _get_token_key("auth.comotion.us", config.orgname)
-    issuer = "https://auth.comotion.us"
+    keyring_cache = KeyringCredentialCache(config.issuer, config.orgname)
 
-    preferred_username = keyring.get_password(
-        'comotion auth api latest username',
-        config.orgname
-    )
-
-    offline_token = keyring.get_password(
-        token_key,
-        preferred_username
-    )
+    refresh_token = keyring_cache.get_refresh_token()
 
     payload = {
         "grant_type": "refresh_token",
-        "refresh_token": offline_token,
+        "refresh_token": refresh_token,
         "client_id": "comotion_cli"
     }
 
-    token_address = "%s/auth/realms/%s/protocol/openid-connect/token" % (issuer,config.orgname) # noqa
+    token_address = "%s/auth/realms/%s/protocol/openid-connect/token" % (config.issuer,config.orgname) # noqa
 
     response = requests.post(
         token_address,

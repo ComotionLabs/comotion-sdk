@@ -41,7 +41,8 @@ if __name__ == "__main__":
             'pandas>=1.2.0',
             'click>=8.0.3',
             'jpype1>=1.3.0',
-            'keyring>=23.2.1'
+            'keyring>=23.2.1',
+            'pyjwt'
         ],
         tests_require=[
             'mock',
