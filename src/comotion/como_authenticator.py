@@ -201,6 +201,10 @@ class KeyringCredentialCache(CredentialsCacheInterface):
 
 class ComoAuthenticator():
 
+    """
+    Class that authenticates the
+    """
+
     def __init__(self, issuer, orgname, credentials_cache_class):
         self.issuer = issuer
         self.orgname = orgname
@@ -209,7 +213,11 @@ class ComoAuthenticator():
         self.logout_endpoint = "%s/auth/realms/%s/protocol/openid-connect/logout" % (issuer,orgname) # noqa
         self.delegated_endpoint = "%s/auth/realms/%s/protocol/openid-connect/delegated" % (issuer,orgname) # noqa
         self.refresh_token = None
+
+        # retrieve refresh token from cache?
         self.access_token = None
+        #retrieve current access token
+
         self.credentials_cache = credentials_cache_class(issuer, orgname)
 
     def _build_auth_url(self, redirect_uri, state, pkce):
@@ -226,33 +234,8 @@ class ComoAuthenticator():
         query_params = "?" + urlencode(query_params)
         return self.auth_endpoint + query_params
 
-    # def _sent_logout(self,)
-
-    # def _process_code(self, authcode, redirect_uri, pkce):
-    #     payload = {
-    #         "grant_type": "authorization_code",
-    #         "code": authcode,
-    #         "client_id": "comotion_cli",
-    #         "redirect_uri": redirect_uri,
-    #         "code_verifier": pkce.get_code_verifier()
-    #     }
-
-    #     response = requests.post(
-    #         self.token_endpoint,
-    #         data=payload
-    #     )
-
-    #     self.refresh_token = json.loads(str(response.text))['refresh_token']
-    #     self.id_token = json.loads(str(response.text))['id_token']
-    #     id_token_decoded = jwt.decode(
-    #         self.id_token,
-    #         options={"verify_signature": False}
-    #     )
-    #     id_token_decoded['preferred_username']
-    #     self.credentials_cache.set_refresh_token(
-    #         id_token_decoded['preferred_username'],
-    #         self.refresh_token)
-    #     self.access_token = json.loads(str(response.text))['access_token']
+# force authenticate
+# retrieve the refresh token
 
     def authenticate(self):
         try:

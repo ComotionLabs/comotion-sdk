@@ -7,7 +7,7 @@ import pandas as pd
 
 
 def upload_csv_to_dash(
-    dash_orgname: str,
+    dash_orgname: str, # noqa
     dash_api_key: str,
     dash_table: str,
     csv_gz_stream: io.FileIO

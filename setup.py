@@ -27,9 +27,6 @@ if __name__ == "__main__":
         ],
         package_dir={"": "src"},
         packages=setuptools.find_packages(where="src"),
-        package_data={
-            "": ["*.jar"],
-        },
         python_requires=">=3.6",
         entry_points={
         'console_scripts': [
@@ -40,7 +37,6 @@ if __name__ == "__main__":
             'requests>=2.25.0',
             'pandas>=1.2.0',
             'click>=8.0.3',
-            'jpype1>=1.3.0',
             'keyring>=23.2.1',
             'pyjwt'
         ],
