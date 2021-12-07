@@ -10,7 +10,7 @@ from comotion import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.comodash_api import queries_api
 from comodash_api_client_lowlevel.model.query_text import QueryText
 from urllib3.exceptions import IncompleteRead
-
+from urllib3.response import HTTPResponse
 
 class DashConfig(comodash_api_client_lowlevel.Configuration):
     """
@@ -133,19 +133,20 @@ class Query():
         """
         return self.query_id
 
-    def get_csv_for_streaming(self):
-        """ Returns a urllib3.response.HTTPResponse object that can be used for streaming
+    def get_csv_for_streaming(self) -> HTTPResponse:
+        """ Returns a ``urllib3.response.HTTPResponse`` object that can be used for streaming
             This allows use of the downloaded file without having to save
             it to local storage.
 
-            Be sure to use `.release_conn()` when completed to ensure that the
+            Be sure to use ``.release_conn()`` when completed to ensure that the
             connection is released
 
-            This can be achieved using the `with` notation e.g.
-            ``` with query.get_csv_for_streaming().stream() as stream:
-                    for chunk in stream:
-                        # do somthing with chunk
-                        # chunk is a byte array
+            This can be achieved using the `with` notation e.g.::
+
+                with query.get_csv_for_streaming().stream() as stream:
+                  for chunk in stream:
+                      # do somthing with chunk
+                      # chunk is a byte array ``
         """
 
         response = self.query_api_instance.download_csv(

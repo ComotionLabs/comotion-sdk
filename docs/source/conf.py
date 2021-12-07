@@ -13,12 +13,11 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../src/'))
-
+import pkg_resources
 
 # -- Project information -----------------------------------------------------
-with open("../../VERSION", "r", encoding="utf-8") as vfh:
-    version = vfh.read()
-    release = version
+release = pkg_resources.require("comotion-sdk")[0].version
+version='.'.join(release.split('.')[:2])
 
 from comotion import __projectname__  # noqa
 from comotion import __author__  # noqa

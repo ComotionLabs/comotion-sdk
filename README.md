@@ -13,8 +13,13 @@ In order to contribute to this project, fork this repo and submit a pull request
 
 pip install --editable .
 
+## Building docs
 
-# Rerunning code generator
+Run the following from the docs directly. Ensure to watch out for warnings.
+`
+make html
+`
+## Rerunning code generator
 
 We use OpenApi generator to generate the python.
 
