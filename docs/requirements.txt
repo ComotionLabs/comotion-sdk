@@ -1,3 +1,4 @@
 sphinx-material
 pandas
+git
 setuptools_scm
