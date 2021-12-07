@@ -35,7 +35,7 @@ from comodash_api_client_lowlevel.model.error import Error
 from comodash_api_client_lowlevel.model.query import Query
 from comodash_api_client_lowlevel.model.query_id import QueryId
 from comodash_api_client_lowlevel.model.query_result import QueryResult
-from comodash_api_client_lowlevel.model.query_status import QueryStatus
+from comodash_api_client_lowlevel.model.query_text import QueryText
 # Defining the host is optional and defaults to https://training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
@@ -92,8 +92,7 @@ Class | Method | HTTP request | Description
  - [QueryResultResultSetMetaDataColumnInfo](comodash_api_client_lowlevel/docs/QueryResultResultSetMetaDataColumnInfo.md)
  - [QueryResultResultSetRows](comodash_api_client_lowlevel/docs/QueryResultResultSetRows.md)
  - [QueryStatus](comodash_api_client_lowlevel/docs/QueryStatus.md)
- - [QueryStatusAllOf](comodash_api_client_lowlevel/docs/QueryStatusAllOf.md)
- - [QueryStatusAllOfStatus](comodash_api_client_lowlevel/docs/QueryStatusAllOfStatus.md)
+ - [QueryText](comodash_api_client_lowlevel/docs/QueryText.md)
 
 
 ## Documentation For Authorization

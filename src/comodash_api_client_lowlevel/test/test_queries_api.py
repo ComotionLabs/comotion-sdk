@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
     Comotion Dash API
 
@@ -10,20 +8,17 @@
 """
 
 
-from __future__ import absolute_import
-
 import unittest
 
 import comodash_api_client_lowlevel
 from comodash_api.queries_api import QueriesApi  # noqa: E501
-from comodash_api_client_lowlevel.rest import ApiException
 
 
 class TestQueriesApi(unittest.TestCase):
     """QueriesApi unit test stubs"""
 
     def setUp(self):
-        self.api = comodash_api.queries_api.QueriesApi()  # noqa: E501
+        self.api = QueriesApi()  # noqa: E501
 
     def tearDown(self):
         pass

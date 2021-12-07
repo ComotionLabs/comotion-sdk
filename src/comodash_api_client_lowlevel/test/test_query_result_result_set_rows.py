@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
     Comotion Dash API
 
@@ -10,14 +8,14 @@
 """
 
 
-from __future__ import absolute_import
-
+import sys
 import unittest
-import datetime
 
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.models.query_result_result_set_rows import QueryResultResultSetRows  # noqa: E501
-from comodash_api_client_lowlevel.rest import ApiException
+from comodash_api_client_lowlevel.model.query_result_result_set_data import QueryResultResultSetData
+globals()['QueryResultResultSetData'] = QueryResultResultSetData
+from comodash_api_client_lowlevel.model.query_result_result_set_rows import QueryResultResultSetRows
+
 
 class TestQueryResultResultSetRows(unittest.TestCase):
     """QueryResultResultSetRows unit test stubs"""
@@ -28,27 +26,12 @@ class TestQueryResultResultSetRows(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def make_instance(self, include_optional):
-        """Test QueryResultResultSetRows
-            include_option is a boolean, when False only required
-            params are included, when True both required and
-            optional params are included """
-        # model = comodash_api_client_lowlevel.models.query_result_result_set_rows.QueryResultResultSetRows()  # noqa: E501
-        if include_optional :
-            return QueryResultResultSetRows(
-                data = [
-                    comodash_api_client_lowlevel.models.query_result_result_set_data.QueryResult_resultSet_Data(
-                        var_char_value = '', )
-                    ]
-            )
-        else :
-            return QueryResultResultSetRows(
-        )
-
     def testQueryResultResultSetRows(self):
         """Test QueryResultResultSetRows"""
-        inst_req_only = self.make_instance(include_optional=False)
-        inst_req_and_optional = self.make_instance(include_optional=True)
+        # FIXME: construct object with mandatory attributes with example values
+        # model = QueryResultResultSetRows()  # noqa: E501
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

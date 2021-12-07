@@ -4,7 +4,7 @@ __version__ = '0.0.4'
 __projectname__ = 'comotion-sdk'
 __author__ = "Tim Vieyra"
 
-import comotion.como_authenticator
-import comodash_api_client_lowlevel
+import comotion.auth
+from comotion.auth import Auth
 
-import comotion.cli
+import comodash_api_client_lowlevel

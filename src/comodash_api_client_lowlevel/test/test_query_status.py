@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
     Comotion Dash API
 
@@ -10,14 +8,12 @@
 """
 
 
-from __future__ import absolute_import
-
+import sys
 import unittest
-import datetime
 
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.models.query_status import QueryStatus  # noqa: E501
-from comodash_api_client_lowlevel.rest import ApiException
+from comodash_api_client_lowlevel.model.query_status import QueryStatus
+
 
 class TestQueryStatus(unittest.TestCase):
     """QueryStatus unit test stubs"""
@@ -30,8 +26,10 @@ class TestQueryStatus(unittest.TestCase):
 
     def testQueryStatus(self):
         """Test QueryStatus"""
-        # inst_req_only = self.make_instance(include_optional=False)
-        # inst_req_and_optional = self.make_instance(include_optional=True)
+        # FIXME: construct object with mandatory attributes with example values
+        # model = QueryStatus()  # noqa: E501
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
     Comotion Dash API
 
@@ -10,14 +8,12 @@
 """
 
 
-from __future__ import absolute_import
-
+import sys
 import unittest
-import datetime
 
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.models.query_result_result_set_meta_data_column_info import QueryResultResultSetMetaDataColumnInfo  # noqa: E501
-from comodash_api_client_lowlevel.rest import ApiException
+from comodash_api_client_lowlevel.model.query_result_result_set_meta_data_column_info import QueryResultResultSetMetaDataColumnInfo
+
 
 class TestQueryResultResultSetMetaDataColumnInfo(unittest.TestCase):
     """QueryResultResultSetMetaDataColumnInfo unit test stubs"""
@@ -28,25 +24,12 @@ class TestQueryResultResultSetMetaDataColumnInfo(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def make_instance(self, include_optional):
-        """Test QueryResultResultSetMetaDataColumnInfo
-            include_option is a boolean, when False only required
-            params are included, when True both required and
-            optional params are included """
-        # model = comodash_api_client_lowlevel.models.query_result_result_set_meta_data_column_info.QueryResultResultSetMetaDataColumnInfo()  # noqa: E501
-        if include_optional :
-            return QueryResultResultSetMetaDataColumnInfo(
-                name = '', 
-                type = 'timestamp'
-            )
-        else :
-            return QueryResultResultSetMetaDataColumnInfo(
-        )
-
     def testQueryResultResultSetMetaDataColumnInfo(self):
         """Test QueryResultResultSetMetaDataColumnInfo"""
-        inst_req_only = self.make_instance(include_optional=False)
-        inst_req_and_optional = self.make_instance(include_optional=True)
+        # FIXME: construct object with mandatory attributes with example values
+        # model = QueryResultResultSetMetaDataColumnInfo()  # noqa: E501
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -22,7 +22,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Query'
+              $ref: '#/components/schemas/QueryText'
 
       responses:
         202:
@@ -31,11 +31,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QueryId'
-          links:
-            GetQueryById:
-              operationId: getQuery
-              parameters:
-                query_id: '$response.body#/queryId'
+
         400:
           description: Bad request. Problem with query string.
           content:
@@ -69,20 +65,15 @@ paths:
       operationId: getQuery
       summary: Get information about a query
       parameters:
-        - in: path
-          name: query_id
-          required: true
-          description: Unique Identifier for the query
-          schema:
-            type: string
-          example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
+        - $ref: '#/components/parameters/queryId'
+
       responses:
         200:
           description: Details of query status
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QueryStatus'
+                $ref: '#/components/schemas/Query'
 
         400:
           description: Bad request. Query Id of a valid query must be provided.
@@ -117,13 +108,8 @@ paths:
       operationId: stopQuery
       summary: Stop a running query
       parameters:
-        - in: path
-          name: query_id
-          required: true
-          description: Unique Identifier for the query
-          schema:
-            type: string
-          example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
+        - $ref: '#/components/parameters/queryId'
+
       responses:
         200:
           description: Successfully stopped query
@@ -156,19 +142,14 @@ paths:
       security:
         - OAuth2Authorizer:
             - query:write
+
   /query/{query_id}/csv:
     summary: Download the csv result file of a query
     get:
       operationId: downloadCSV
       summary: Download the csv result file of a query
       parameters:
-        - in: path
-          name: query_id
-          required: true
-          description: Unique Identifier for the query
-          schema:
-            type: string
-          example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
+        - $ref: '#/components/parameters/queryId'
       responses:
         200:
           description: Successful redirect will result in a 200 from the download endpoint
@@ -222,13 +203,7 @@ paths:
       operationId: getQueryResults
       summary: Get paginated results of a query
       parameters:
-        - in: path
-          name: query_id
-          required: true
-          description: Unique Identifier for the query
-          schema:
-            type: string
-          example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
+        - $ref: '#/components/parameters/queryId'
         - in: query
           name: next_token
           description: token to get next page of query results.  Will be supplied in the response of the previous call if the result set is truncated.
@@ -275,6 +250,15 @@ paths:
             - query:read
 
 components:
+  parameters:
+    queryId:
+      in: path
+      name: query_id
+      required: true
+      description: Unique Identifier for the query
+      schema:
+        type: string
+      example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
   schemas:
     Error:
       type: object
@@ -282,7 +266,7 @@ components:
         message:
           type: string
           example: An Error Message
-    Query:
+    QueryText:
       type: object
       properties:
         query:
@@ -295,37 +279,34 @@ components:
       properties:
         queryId:
           type: string
-          example: a50fcdb1-1c9b-4264-9b7a-c3d4044abc4a
+          example: s06ba1d95-8c4f-460c-90b3-bc68fddf2fde
       required:
-        - query
-    QueryStatus:
-      allOf:
-      - $ref: '#/components/schemas/Query'
-      - type: object
-        required:
-          - statementType
-          - status
-          - queryId
-        properties:
-          queryId:
-            type: string
-            example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
-          statementType:
-            type: string
-            example: DDL
-          status:
-            type: object
-            properties:
-              state:
-                type: string
-                enum: [QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED]
-                example: SUCCEEDED
-              submissionDateTime:
-                type: string
-                example: 11-28-2021 18:51:01
-              completionDateTime:
-                type: string
-                example: 11-28-2021 18:53:01
+        - queryId
+    Query:
+      type: object
+      properties:
+        query:
+          type: string
+          example: select 'hello'
+        queryId:
+          type: string
+          example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
+        statementType:
+          type: string
+          example: DDL
+        status:
+          type: object
+          properties:
+            state:
+              type: string
+              enum: [QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED]
+              example: SUCCEEDED
+            submissionDateTime:
+              type: string
+              example: 11-28-2021 18:51:01
+            completionDateTime:
+              type: string
+              example: 11-28-2021 18:53:01
     QueryResult:
       type: object
       properties:

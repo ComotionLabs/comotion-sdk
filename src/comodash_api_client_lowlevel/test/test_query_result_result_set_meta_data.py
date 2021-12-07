@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
     Comotion Dash API
 
@@ -10,14 +8,14 @@
 """
 
 
-from __future__ import absolute_import
-
+import sys
 import unittest
-import datetime
 
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.models.query_result_result_set_meta_data import QueryResultResultSetMetaData  # noqa: E501
-from comodash_api_client_lowlevel.rest import ApiException
+from comodash_api_client_lowlevel.model.query_result_result_set_meta_data_column_info import QueryResultResultSetMetaDataColumnInfo
+globals()['QueryResultResultSetMetaDataColumnInfo'] = QueryResultResultSetMetaDataColumnInfo
+from comodash_api_client_lowlevel.model.query_result_result_set_meta_data import QueryResultResultSetMetaData
+
 
 class TestQueryResultResultSetMetaData(unittest.TestCase):
     """QueryResultResultSetMetaData unit test stubs"""
@@ -28,26 +26,12 @@ class TestQueryResultResultSetMetaData(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def make_instance(self, include_optional):
-        """Test QueryResultResultSetMetaData
-            include_option is a boolean, when False only required
-            params are included, when True both required and
-            optional params are included """
-        # model = comodash_api_client_lowlevel.models.query_result_result_set_meta_data.QueryResultResultSetMetaData()  # noqa: E501
-        if include_optional :
-            return QueryResultResultSetMetaData(
-                column_info = [
-                    [{"Name":"column1","Type":"timestamp"},{"Name":"column2","Type":"varchar"},{"Name":"column3","Type":"bigint"},{"Name":"column4","Type":"char"},{"Name":"column5","Type":"date"},{"Name":"column6","Type":"decimal"},{"Name":"column7","Type":"double"}]
-                    ]
-            )
-        else :
-            return QueryResultResultSetMetaData(
-        )
-
     def testQueryResultResultSetMetaData(self):
         """Test QueryResultResultSetMetaData"""
-        inst_req_only = self.make_instance(include_optional=False)
-        inst_req_and_optional = self.make_instance(include_optional=True)
+        # FIXME: construct object with mandatory attributes with example values
+        # model = QueryResultResultSetMetaData()  # noqa: E501
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

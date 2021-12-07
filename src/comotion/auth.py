@@ -24,6 +24,12 @@ class OIDCredirectHandler(BaseHTTPRequestHandler):
         global latest_handled_request
         latest_handled_request = self
 
+    def log_message(self, format, *args):
+        """
+        Overrider log_message to prevent from logging of requests
+        """
+        pass
+
     def _read_query_parameters(self, query_string):
         if query_string == '':
             return
@@ -43,12 +49,12 @@ class OIDCredirectHandler(BaseHTTPRequestHandler):
             return self.server.delegated_endpoint + "?error=true"
         else:
             query_params = {
-                'post_logout_redirect_uri': self.server.como_authenticator.delegated_endpoint,
+                'post_logout_redirect_uri': self.server.como_authenticator.delegated_endpoint, # noqa
                 'client_id': 'comotion_cli',
                 'id_token_hint': self.id_token
             }
 
-            return self.server.como_authenticator.logout_endpoint + "?" + urlencode(query_params)
+            return self.server.como_authenticator.logout_endpoint + "?" + urlencode(query_params) # noqa
 
     def _process_code(self):
         payload = {
@@ -199,13 +205,17 @@ class KeyringCredentialCache(CredentialsCacheInterface):
             token
         )
 
-class ComoAuthenticator():
+class Auth():
 
     """
-    Class that authenticates the
+    Class that authenticates the user, caches credentials
     """
 
-    def __init__(self, issuer, orgname, credentials_cache_class):
+    def __init__(self,
+                 orgname,
+                 issuer='https://auth.comotion.us',
+                 credentials_cache_class=KeyringCredentialCache):
+
         self.issuer = issuer
         self.orgname = orgname
         self.auth_endpoint = "%s/auth/realms/%s/protocol/openid-connect/auth" % (issuer,orgname) # noqa
@@ -216,7 +226,6 @@ class ComoAuthenticator():
 
         # retrieve refresh token from cache?
         self.access_token = None
-        #retrieve current access token
 
         self.credentials_cache = credentials_cache_class(issuer, orgname)
 
@@ -234,9 +243,6 @@ class ComoAuthenticator():
         query_params = "?" + urlencode(query_params)
         return self.auth_endpoint + query_params
 
-# force authenticate
-# retrieve the refresh token
-
     def authenticate(self):
         try:
             state = str(uuid.uuid4())
@@ -248,10 +254,7 @@ class ComoAuthenticator():
                 pkce
             )
 
-            # address_tuple = server.server_address
-            # returns a tuple that looks something like
-            # ('localhost',60120)
-            redirect_server_address = "http://localhost:%s" % (server.server_port)
+            redirect_server_address = "http://localhost:%s" % (server.server_port) # noqa
 
             auth_url = self._build_auth_url(
                 redirect_server_address,
@@ -262,36 +265,39 @@ class ComoAuthenticator():
 
             server.timeout = 180
 
-            # Wait forever for one http request
+            # Wait for timeout for one http request
             server.handle_request()
 
-            # try:
-            #     temp = latest_handled_request # noqa
-            # except NameError as ne:
-            #     if str(ne) == 'name \'latest_handled_request\' is not defined':
-            #         raise RuntimeError("Having trouble completing authorisation in a reasonable time")
-
-            # self._process_code(
-            #     latest_handled_request.code,
-            #     redirect_server_address,
-            #     pkce
-            # )
-
             server.server_close()
-
-            # query_params = {
-            #     'post_logout_redirect_uri': self.delegated_endpoint,
-            #     'client_id': 'comotion_cli',
-            #     'id_token_hint': self.id_token
-            # }
-            # webbrowser.open(self.logout_endpoint + "?" + urlencode(query_params))
 
         finally:
             server.socket.close()
 
+    # TODO: get, cache and refresh access token
+
+    def get_access_token(self):
+
+        refresh_token = self.credentials_cache.get_refresh_token()
+
+        payload = {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": "comotion_cli"  # TODO
+        }
+
+        response = requests.post(
+            self.token_endpoint,
+            data=payload
+        )
+
+        if response.status_code == requests.codes.ok:
+            return json.loads(str(response.text))['access_token']
+        else:
+            raise Exception("Cannot get new token: " + response.text)
+
 
 if __name__ == "__main__":
-    como_authenticator = ComoAuthenticator(
+    como_authenticator = Auth(
         'https://auth.comotion.us',
         'qainitech',
         KeyringCredentialCache

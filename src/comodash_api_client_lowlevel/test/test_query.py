@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
     Comotion Dash API
 
@@ -10,14 +8,14 @@
 """
 
 
-from __future__ import absolute_import
-
+import sys
 import unittest
-import datetime
 
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.models.query import Query  # noqa: E501
-from comodash_api_client_lowlevel.rest import ApiException
+from comodash_api_client_lowlevel.model.query_status import QueryStatus
+globals()['QueryStatus'] = QueryStatus
+from comodash_api_client_lowlevel.model.query import Query
+
 
 class TestQuery(unittest.TestCase):
     """Query unit test stubs"""
@@ -28,25 +26,12 @@ class TestQuery(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def make_instance(self, include_optional):
-        """Test Query
-            include_option is a boolean, when False only required
-            params are included, when True both required and
-            optional params are included """
-        # model = comodash_api_client_lowlevel.models.query.Query()  # noqa: E501
-        if include_optional :
-            return Query(
-                query = 'select 'hello' --should not be multiline'
-            )
-        else :
-            return Query(
-                query = 'select 'hello' --should not be multiline',
-        )
-
     def testQuery(self):
         """Test Query"""
-        inst_req_only = self.make_instance(include_optional=False)
-        inst_req_and_optional = self.make_instance(include_optional=True)
+        # FIXME: construct object with mandatory attributes with example values
+        # model = Query()  # noqa: E501
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

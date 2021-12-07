@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
     Comotion Dash API
 
@@ -10,14 +8,12 @@
 """
 
 
-from __future__ import absolute_import
-
+import sys
 import unittest
-import datetime
 
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.models.error import Error  # noqa: E501
-from comodash_api_client_lowlevel.rest import ApiException
+from comodash_api_client_lowlevel.model.error import Error
+
 
 class TestError(unittest.TestCase):
     """Error unit test stubs"""
@@ -28,24 +24,12 @@ class TestError(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def make_instance(self, include_optional):
-        """Test Error
-            include_option is a boolean, when False only required
-            params are included, when True both required and
-            optional params are included """
-        # model = comodash_api_client_lowlevel.models.error.Error()  # noqa: E501
-        if include_optional :
-            return Error(
-                message = 'An Error Message'
-            )
-        else :
-            return Error(
-        )
-
     def testError(self):
         """Test Error"""
-        inst_req_only = self.make_instance(include_optional=False)
-        inst_req_and_optional = self.make_instance(include_optional=True)
+        # FIXME: construct object with mandatory attributes with example values
+        # model = Error()  # noqa: E501
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

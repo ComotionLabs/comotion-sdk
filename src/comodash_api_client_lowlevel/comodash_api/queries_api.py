@@ -25,7 +25,7 @@ from comodash_api_client_lowlevel.model.error import Error
 from comodash_api_client_lowlevel.model.query import Query
 from comodash_api_client_lowlevel.model.query_id import QueryId
 from comodash_api_client_lowlevel.model.query_result import QueryResult
-from comodash_api_client_lowlevel.model.query_status import QueryStatus
+from comodash_api_client_lowlevel.model.query_text import QueryText
 
 
 class QueriesApi(object):
@@ -197,7 +197,7 @@ class QueriesApi(object):
                 async_req (bool): execute request asynchronously
 
             Returns:
-                QueryStatus
+                Query
                     If the method is called asynchronously, returns the request
                     thread.
             """
@@ -226,7 +226,7 @@ class QueriesApi(object):
 
         self.get_query = _Endpoint(
             settings={
-                'response_type': (QueryStatus,),
+                'response_type': (Query,),
                 'auth': [
                     'OAuth2Authorizer'
                 ],
@@ -403,7 +403,7 @@ class QueriesApi(object):
 
         def __run_query(
             self,
-            query,
+            query_text,
             **kwargs
         ):
             """Run a query  # noqa: E501
@@ -411,11 +411,11 @@ class QueriesApi(object):
             This method makes a synchronous HTTP request by default. To make an
             asynchronous HTTP request, please pass async_req=True
 
-            >>> thread = api.run_query(query, async_req=True)
+            >>> thread = api.run_query(query_text, async_req=True)
             >>> result = thread.get()
 
             Args:
-                query (Query):
+                query_text (QueryText):
 
             Keyword Args:
                 _return_http_data_only (bool): response data without head status
@@ -462,8 +462,8 @@ class QueriesApi(object):
                 '_check_return_type', True
             )
             kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['query'] = \
-                query
+            kwargs['query_text'] = \
+                query_text
             return self.call_with_http_info(**kwargs)
 
         self.run_query = _Endpoint(
@@ -479,10 +479,10 @@ class QueriesApi(object):
             },
             params_map={
                 'all': [
-                    'query',
+                    'query_text',
                 ],
                 'required': [
-                    'query',
+                    'query_text',
                 ],
                 'nullable': [
                 ],
@@ -497,13 +497,13 @@ class QueriesApi(object):
                 'allowed_values': {
                 },
                 'openapi_types': {
-                    'query':
-                        (Query,),
+                    'query_text':
+                        (QueryText,),
                 },
                 'attribute_map': {
                 },
                 'location_map': {
-                    'query': 'body',
+                    'query_text': 'body',
                 },
                 'collection_format_map': {
                 }

@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
     Comotion Dash API
 
@@ -10,14 +8,14 @@
 """
 
 
-from __future__ import absolute_import
-
+import sys
 import unittest
-import datetime
 
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.models.query_result_result_set import QueryResultResultSet  # noqa: E501
-from comodash_api_client_lowlevel.rest import ApiException
+from comodash_api_client_lowlevel.model.query_result_result_set_rows import QueryResultResultSetRows
+globals()['QueryResultResultSetRows'] = QueryResultResultSetRows
+from comodash_api_client_lowlevel.model.query_result_result_set import QueryResultResultSet
+
 
 class TestQueryResultResultSet(unittest.TestCase):
     """QueryResultResultSet unit test stubs"""
@@ -28,24 +26,12 @@ class TestQueryResultResultSet(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def make_instance(self, include_optional):
-        """Test QueryResultResultSet
-            include_option is a boolean, when False only required
-            params are included, when True both required and
-            optional params are included """
-        # model = comodash_api_client_lowlevel.models.query_result_result_set.QueryResultResultSet()  # noqa: E501
-        if include_optional :
-            return QueryResultResultSet(
-                rows = [{"Data":[{"VarCharValue":"column1"},{"VarCharValue":"column2"},{"VarCharValue":"column3"},{"VarCharValue":"column4"},{"VarCharValue":"column5"},{"VarCharValue":"column6"},{"VarCharValue":"column7"}]},{"Data":[{"VarCharValue":"2013-04-10 00:00:00.000"},{"VarCharValue":"string value"},{"VarCharValue":"123"},{"VarCharValue":"C"},{"VarCharValue":"2013-04-10"},{"VarCharValue":"23.23"},{"VarCharValue":"23.24"}]}]
-            )
-        else :
-            return QueryResultResultSet(
-        )
-
     def testQueryResultResultSet(self):
         """Test QueryResultResultSet"""
-        inst_req_only = self.make_instance(include_optional=False)
-        inst_req_and_optional = self.make_instance(include_optional=True)
+        # FIXME: construct object with mandatory attributes with example values
+        # model = QueryResultResultSet()  # noqa: E501
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

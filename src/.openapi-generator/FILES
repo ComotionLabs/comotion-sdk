@@ -15,8 +15,7 @@ comodash_api_client_lowlevel/docs/QueryResultResultSetMetaData.md
 comodash_api_client_lowlevel/docs/QueryResultResultSetMetaDataColumnInfo.md
 comodash_api_client_lowlevel/docs/QueryResultResultSetRows.md
 comodash_api_client_lowlevel/docs/QueryStatus.md
-comodash_api_client_lowlevel/docs/QueryStatusAllOf.md
-comodash_api_client_lowlevel/docs/QueryStatusAllOfStatus.md
+comodash_api_client_lowlevel/docs/QueryText.md
 comodash_api_client_lowlevel/exceptions.py
 comodash_api_client_lowlevel/model/__init__.py
 comodash_api_client_lowlevel/model/error.py
@@ -29,8 +28,7 @@ comodash_api_client_lowlevel/model/query_result_result_set_meta_data.py
 comodash_api_client_lowlevel/model/query_result_result_set_meta_data_column_info.py
 comodash_api_client_lowlevel/model/query_result_result_set_rows.py
 comodash_api_client_lowlevel/model/query_status.py
-comodash_api_client_lowlevel/model/query_status_all_of.py
-comodash_api_client_lowlevel/model/query_status_all_of_status.py
+comodash_api_client_lowlevel/model/query_text.py
 comodash_api_client_lowlevel/model_utils.py
 comodash_api_client_lowlevel/models/__init__.py
 comodash_api_client_lowlevel/rest.py

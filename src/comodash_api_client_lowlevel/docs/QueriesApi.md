@@ -90,7 +90,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_query**
-> QueryStatus get_query(query_id)
+> Query get_query(query_id)
 
 Get information about a query
 
@@ -102,7 +102,7 @@ import time
 import comodash_api_client_lowlevel
 from comodash_api import queries_api
 from comodash_api_client_lowlevel.model.error import Error
-from comodash_api_client_lowlevel.model.query_status import QueryStatus
+from comodash_api_client_lowlevel.model.query import Query
 from pprint import pprint
 # Defining the host is optional and defaults to https://training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
@@ -144,7 +144,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**QueryStatus**](QueryStatus.md)
+[**Query**](Query.md)
 
 ### Authorization
 
@@ -257,7 +257,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **run_query**
-> QueryId run_query(query)
+> QueryId run_query(query_text)
 
 Run a query
 
@@ -267,10 +267,10 @@ Run a query
 ```python
 import time
 import comodash_api_client_lowlevel
-from comodash_api import queries_api
+from comodash_api_client_lowlevel import queries_api
 from comodash_api_client_lowlevel.model.query_id import QueryId
 from comodash_api_client_lowlevel.model.error import Error
-from comodash_api_client_lowlevel.model.query import Query
+from comodash_api_client_lowlevel.model.query_text import QueryText
 from pprint import pprint
 # Defining the host is optional and defaults to https://training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
@@ -292,14 +292,14 @@ configuration = comodash_api_client_lowlevel.Configuration(
 with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = queries_api.QueriesApi(api_client)
-    query = Query(
+    query_text = QueryText(
         query="select 'hello' --should not be multiline",
-    ) # Query | 
+    ) # QueryText |
 
     # example passing only required values which don't have defaults set
     try:
         # Run a query
-        api_response = api_instance.run_query(query)
+        api_response = api_instance.run_query(query_text)
         pprint(api_response)
     except comodash_api_client_lowlevel.ApiException as e:
         print("Exception when calling QueriesApi->run_query: %s\n" % e)
@@ -310,7 +310,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **query** | [**Query**](Query.md)|  |
+ **query_text** | [**QueryText**](QueryText.md)|  |
 
 ### Return type
 
