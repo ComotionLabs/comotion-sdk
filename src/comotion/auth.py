@@ -244,6 +244,10 @@ class Auth():
         return self.auth_endpoint + query_params
 
     def authenticate(self):
+        import logging
+
+        logging.captureWarnings(True)
+        logging.getLogger().setLevel(logging.DEBUG)
         try:
             state = str(uuid.uuid4())
             pkce = PKCE.generate_pkce()

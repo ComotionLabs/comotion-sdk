@@ -72,9 +72,8 @@ def authenticate(config):
     click.echo("logging you in.  You may see a popup screen in your default browser to complete authentication...") # noqa
 
     como_auth = Auth(
-        config.issuer,
         config.orgname,
-        KeyringCredentialCache
+        config.issuer
     )
     como_auth.authenticate()
 
