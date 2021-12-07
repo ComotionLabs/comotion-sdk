@@ -294,12 +294,3 @@ class Auth():
             return json.loads(str(response.text))['access_token']
         else:
             raise Exception("Cannot get new token: " + response.text)
-
-
-if __name__ == "__main__":
-    como_authenticator = Auth(
-        'https://auth.comotion.us',
-        'qainitech',
-        KeyringCredentialCache
-    )
-    como_authenticator.authenticate()
