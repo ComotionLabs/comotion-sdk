@@ -13,11 +13,13 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../src/'))
-import pkg_resources
+from setuptools_scm import get_version
 
 # -- Project information -----------------------------------------------------
-release = pkg_resources.require("comotion-sdk")[0].version
+release = get_version(root='../..', relative_to=__file__)
+
 version='.'.join(release.split('.')[:2])
+from setuptools_scm import get_version
 
 from comotion import __projectname__  # noqa
 from comotion import __author__  # noqa
