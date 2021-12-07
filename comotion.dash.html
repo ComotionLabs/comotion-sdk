@@ -230,6 +230,115 @@
             
   
 <span id="comotion-dash-module"></span><h1 id="comotion-dash--page-root">comotion.dash module<a class="headerlink" href="#comotion-dash--page-root" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="comotion.dash.DashConfig">
+<em class="property">class </em><code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">DashConfig</code><span class="sig-paren">(</span><em class="sig-param">auth: comotion.auth.Auth</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#DashConfig"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Object containing configuration information for Dash API</p>
+<dl class="attribute">
+<dt id="comotion.dash.DashConfig.auth">
+<code class="sig-name descname">auth</code><a class="headerlink" href="#comotion.dash.DashConfig.auth" title="Permalink to this definition">¶</a></dt>
+<dd><p>comotion.Auth object holding information about authentication</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>comotion.Auth</p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
+<dl class="class">
+<dt id="comotion.dash.Query">
+<em class="property">class </em><code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">Query</code><span class="sig-paren">(</span><em class="sig-param">config: comotion.dash.DashConfig</em>, <em class="sig-param">query_text: str = None</em>, <em class="sig-param">query_id: str = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query" title="Permalink to this definition">¶</a></dt>
+<dd><p>The query object starts and tracks a query on Comotion Dash.</p>
+<p>Initialising this class runs a query on Comotion Dash and stores the
+resulting query id in <cite>query_id</cite></p>
+<dl class="attribute">
+<dt id="comotion.dash.Query.COMPLETED_STATES">
+<code class="sig-name descname">COMPLETED_STATES</code><em class="property"> = ['SUCCEEDED', 'CANCELLED', 'FAILED']</em><a class="headerlink" href="#comotion.dash.Query.COMPLETED_STATES" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.download_csv">
+<code class="sig-name descname">download_csv</code><span class="sig-paren">(</span><em class="sig-param">output_file_path</em>, <em class="sig-param">fail_if_exists=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Query.download_csv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.download_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Download csv of results and check that the total file size is correct</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_file_path</strong> (<em>File path</em>) – Path of the file to output to</p></li>
+<li><p><strong>fail_if_exists</strong> (<em>bool</em><em>, </em><em>optional</em>) – If true, then will fail if the target file name already/
+Defaults to false.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>IncompleteRead</strong> – If only part of the file is downloaded, this is raised</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.get_csv_for_streaming">
+<code class="sig-name descname">get_csv_for_streaming</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → urllib3.response.HTTPResponse<a class="reference internal" href="_modules/comotion/dash.html#Query.get_csv_for_streaming"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.get_csv_for_streaming" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a <code class="docutils literal notranslate"><span class="pre">urllib3.response.HTTPResponse</span></code> object that can be used for streaming
+This allows use of the downloaded file without having to save
+it to local storage.</p>
+<p>Be sure to use <code class="docutils literal notranslate"><span class="pre">.release_conn()</span></code> when completed to ensure that the
+connection is released</p>
+<p>This can be achieved using the <cite>with</cite> notation e.g.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">query</span><span class="o">.</span><span class="n">get_csv_for_streaming</span><span class="p">()</span><span class="o">.</span><span class="n">stream</span><span class="p">()</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+  <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
+      <span class="c1"># do somthing with chunk</span>
+      <span class="c1"># chunk is a byte array ``</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.is_complete">
+<code class="sig-name descname">is_complete</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → bool<a class="reference internal" href="_modules/comotion/dash.html#Query.is_complete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.is_complete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates whether the query is in a final state.
+This means it has either succeeded, failed or been cancelled.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Whether query complete</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.query_id">
+<code class="sig-name descname">query_id</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → str<a class="reference internal" href="_modules/comotion/dash.html#Query.query_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.query_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns query id for this query</p>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.state">
+<code class="sig-name descname">state</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → str<a class="reference internal" href="_modules/comotion/dash.html#Query.state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the state of the query.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.stop">
+<code class="sig-name descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Query.stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stop the query</p>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.wait_to_complete">
+<code class="sig-name descname">wait_to_complete</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → bool<a class="reference internal" href="_modules/comotion/dash.html#Query.wait_to_complete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.wait_to_complete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Blocks until query is in a complete state</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Final state, one of ‘SUCCEEDED’, ‘CANCELLED’, ‘FAILED’</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
 <dl class="function">
 <dt id="comotion.dash.create_gzipped_csv_stream_from_df">
 <code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">create_gzipped_csv_stream_from_df</code><span class="sig-paren">(</span><em class="sig-param">df: pandas.core.frame.DataFrame</em><span class="sig-paren">)</span> → _io.BytesIO<a class="reference internal" href="_modules/comotion/dash.html#create_gzipped_csv_stream_from_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.create_gzipped_csv_stream_from_df" title="Permalink to this definition">¶</a></dt>

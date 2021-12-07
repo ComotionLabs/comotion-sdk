@@ -231,13 +231,201 @@
 <span></span><span class="kn">import</span> <span class="nn">io</span>
 <span class="kn">import</span> <span class="nn">requests</span>
 <span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span>
 <span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">join</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">Auth</span>
+<span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">comodash_api_client_lowlevel</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.comodash_api</span> <span class="kn">import</span> <span class="n">queries_api</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.model.query_text</span> <span class="kn">import</span> <span class="n">QueryText</span>
+<span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">IncompleteRead</span>
+<span class="kn">from</span> <span class="nn">urllib3.response</span> <span class="kn">import</span> <span class="n">HTTPResponse</span>
+
+<div class="viewcode-block" id="DashConfig"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashConfig">[docs]</a><span class="k">class</span> <span class="nc">DashConfig</span><span class="p">(</span><span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">Configuration</span><span class="p">):</span>
+    <span class="sd">"""</span>
+<span class="sd">    Object containing configuration information for Dash API</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    auth : comotion.Auth</span>
+<span class="sd">        comotion.Auth object holding information about authentication</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">auth</span><span class="p">:</span> <span class="n">Auth</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">Auth</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"auth must be of type comotion.Auth"</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">auth</span> <span class="o">=</span> <span class="n">auth</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">host</span><span class="o">=</span><span class="s1">'https://</span><span class="si">%s</span><span class="s1">.api.comodash.io/v2'</span> <span class="o">%</span> <span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">orgname</span><span class="p">),</span>
+            <span class="n">access_token</span><span class="o">=</span><span class="n">auth</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
+        <span class="p">)</span></div>
+
+        <span class="c1"># comodash_api_client_lowlevel.Configuration.set_default(config)</span>
+
+
+<div class="viewcode-block" id="Query"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query">[docs]</a><span class="k">class</span> <span class="nc">Query</span><span class="p">():</span>
+    <span class="sd">"""</span>
+<span class="sd">    The query object starts and tracks a query on Comotion Dash.</span>
+
+<span class="sd">    Initialising this class runs a query on Comotion Dash and stores the</span>
+<span class="sd">    resulting query id in `query_id`</span>
+
+<span class="sd">    """</span>
+
+    <span class="n">COMPLETED_STATES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'SUCCEEDED'</span><span class="p">,</span> <span class="s1">'CANCELLED'</span><span class="p">,</span> <span class="s1">'FAILED'</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">DashConfig</span><span class="p">,</span>
+        <span class="n">query_text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">query_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        query_text : str</span>
+<span class="sd">            sql of the query to run</span>
+<span class="sd">        config : DashConfig</span>
+<span class="sd">            Object of type DashConfig including configuration details</span>
+<span class="sd">        query_id : str, optional</span>
+<span class="sd">            Query id of existing query.  If not provided, then a new query will be started on Dash</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        TypeError</span>
+<span class="sd">            If config is not of type DashConfig</span>
+
+<span class="sd">        ValueError</span>
+<span class="sd">            if one of query_id or query_text is not provided</span>
+
+<span class="sd">        """</span>
+
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">DashConfig</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"config must be of type comotion.dash.DashConfig"</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">ApiClient</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">api_client</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span> <span class="o">=</span> <span class="n">queries_api</span><span class="o">.</span><span class="n">QueriesApi</span><span class="p">(</span><span class="n">api_client</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">query_id</span><span class="p">:</span>
+                <span class="n">query_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">get_query</span><span class="p">(</span><span class="n">query_id</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">query_id</span> <span class="o">=</span> <span class="n">query_id</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">query_text</span> <span class="o">=</span> <span class="n">query_info</span><span class="o">.</span><span class="n">query</span>
+            <span class="k">elif</span> <span class="n">query_text</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">query_text</span> <span class="o">=</span> <span class="n">query_text</span>
+                <span class="n">query_text_model</span> <span class="o">=</span> <span class="n">QueryText</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">query_text</span><span class="p">)</span>
+                <span class="n">query_id_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">run_query</span><span class="p">(</span><span class="n">query_text_model</span><span class="p">)</span> <span class="c1"># noqa</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">query_id</span> <span class="o">=</span> <span class="n">query_id_model</span><span class="p">[</span><span class="s1">'query_id'</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"One of query_id or query_text must be provided"</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Query.state"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.state">[docs]</a>    <span class="k">def</span> <span class="nf">state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">"""Gets the state of the query.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">get_query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">)</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">state</span></div>
+
+<div class="viewcode-block" id="Query.is_complete"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.is_complete">[docs]</a>    <span class="k">def</span> <span class="nf">is_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">"""Indicates whether the query is in a final state.</span>
+<span class="sd">        This means it has either succeeded, failed or been cancelled.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            Whether query complete</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">()</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">COMPLETED_STATES</span></div>
+
+<div class="viewcode-block" id="Query.wait_to_complete"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.wait_to_complete">[docs]</a>    <span class="k">def</span> <span class="nf">wait_to_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">"""Blocks until query is in a complete state</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            Final state, one of 'SUCCEEDED', 'CANCELLED', 'FAILED'</span>
+<span class="sd">        """</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">COMPLETED_STATES</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">state</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">()</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">COMPLETED_STATES</span></div>
+
+<div class="viewcode-block" id="Query.query_id"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.query_id">[docs]</a>    <span class="k">def</span> <span class="nf">query_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">"""Returns query id for this query</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_id</span></div>
+
+<div class="viewcode-block" id="Query.get_csv_for_streaming"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.get_csv_for_streaming">[docs]</a>    <span class="k">def</span> <span class="nf">get_csv_for_streaming</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HTTPResponse</span><span class="p">:</span>
+        <span class="sd">""" Returns a ``urllib3.response.HTTPResponse`` object that can be used for streaming</span>
+<span class="sd">            This allows use of the downloaded file without having to save</span>
+<span class="sd">            it to local storage.</span>
+
+<span class="sd">            Be sure to use ``.release_conn()`` when completed to ensure that the</span>
+<span class="sd">            connection is released</span>
+
+<span class="sd">            This can be achieved using the `with` notation e.g.::</span>
+
+<span class="sd">                with query.get_csv_for_streaming().stream() as stream:</span>
+<span class="sd">                  for chunk in stream:</span>
+<span class="sd">                      # do somthing with chunk</span>
+<span class="sd">                      # chunk is a byte array ``</span>
+<span class="sd">        """</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">download_csv</span><span class="p">(</span>
+            <span class="n">query_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">,</span>
+            <span class="n">_preload_content</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">autoclose</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">response</span></div>
+
+<div class="viewcode-block" id="Query.download_csv"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.download_csv">[docs]</a>    <span class="k">def</span> <span class="nf">download_csv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_file_path</span><span class="p">,</span> <span class="n">fail_if_exists</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">"""Download csv of results and check that the total file size is correct</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        output_file_path : File path</span>
+<span class="sd">            Path of the file to output to</span>
+<span class="sd">        fail_if_exists : bool, optional</span>
+<span class="sd">            If true, then will fail if the target file name already/</span>
+<span class="sd">            Defaults to false.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        IncompleteRead</span>
+<span class="sd">            If only part of the file is downloaded, this is raised</span>
+<span class="sd">        """</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_csv_for_streaming</span><span class="p">()</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+            <span class="n">write_mode</span> <span class="o">=</span> <span class="s2">"wb"</span>
+            <span class="k">if</span> <span class="n">fail_if_exists</span><span class="p">:</span>
+                <span class="n">write_mode</span> <span class="o">=</span> <span class="s2">"xb"</span>
+            <span class="k">with</span> <span class="n">io</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">output_file_path</span><span class="p">,</span> <span class="n">write_mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">size</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">content_length</span> <span class="o">=</span> <span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">getheader</span><span class="p">(</span><span class="s1">'Content-Length'</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span><span class="mi">1048576</span><span class="p">):</span>
+                    <span class="n">size</span> <span class="o">=</span> <span class="n">size</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">!=</span> <span class="nb">int</span><span class="p">(</span><span class="n">content_length</span><span class="p">)):</span>
+                    <span class="k">raise</span> <span class="n">IncompleteRead</span><span class="p">(</span>
+                        <span class="n">response</span><span class="o">.</span><span class="n">tell</span><span class="p">(),</span>
+                        <span class="nb">int</span><span class="p">(</span><span class="n">content_length</span><span class="p">)</span> <span class="o">-</span> <span class="n">response</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+                    <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Query.stop"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">""" Stop the query"""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">stop_query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="upload_csv_to_dash"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.upload_csv_to_dash">[docs]</a><span class="k">def</span> <span class="nf">upload_csv_to_dash</span><span class="p">(</span>
-    <span class="n">dash_orgname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">dash_orgname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="c1"># noqa</span>
     <span class="n">dash_api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">dash_table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">csv_gz_stream</span><span class="p">:</span> <span class="n">io</span><span class="o">.</span><span class="n">FileIO</span>
