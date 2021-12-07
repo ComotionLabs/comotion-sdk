@@ -1,0 +1,399 @@
+openapi: 3.0.1
+info:
+  title: Comotion Dash API
+  description: Comotion Dash API
+  version: '2.0'
+servers:
+  - url: https://{orgName}.api.comodash.io/v2
+    variables:
+      orgName:
+        default: 'training'
+        description: OrgName for your organisation
+    
+    x-amazon-apigateway-endpoint-configuration:
+      disableExecuteApiEndpoint: true
+paths:
+  /query:
+    post:
+      summary: Run a query
+      operationId: runQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryText'
+
+      responses:
+        202:
+          description: Query successfully started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryId'
+
+        400:
+          description: Bad request. Problem with query string.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - queries
+
+
+
+      security:
+        - OAuth2Authorizer:
+            - query:write
+
+  /query/{query_id}:
+    summary: Get status information about a query run in Dash
+    get:
+      operationId: getQuery
+      summary: Get information about a query
+      parameters:
+        - $ref: '#/components/parameters/queryId'
+
+      responses:
+        200:
+          description: Details of query status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Query'
+
+        400:
+          description: Bad request. Query Id of a valid query must be provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: A query with the specified ID was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - queries
+      security:
+        - OAuth2Authorizer:
+            - query:read
+    delete:
+      operationId: stopQuery
+      summary: Stop a running query
+      parameters:
+        - $ref: '#/components/parameters/queryId'
+
+      responses:
+        200:
+          description: Successfully stopped query
+        '400':
+          description: Bad request. Query Id of a valid query must be provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: A query with the specified ID was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '5XX':
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - queries
+      security:
+        - OAuth2Authorizer:
+            - query:write
+
+  /query/{query_id}/csv:
+    summary: Download the csv result file of a query
+    get:
+      operationId: downloadCSV
+      summary: Download the csv result file of a query
+      parameters:
+        - $ref: '#/components/parameters/queryId'
+      responses:
+        200:
+          description: Successful redirect will result in a 200 from the download endpoint
+          content:
+            binary/octet-stream:
+              schema:
+                type: string
+                format: binary
+                example: <CSV File>
+
+        302:
+          description: A redirect to a temporary file download link for the results
+
+        '400':
+          description: Bad request. Query Id of a valid query must be provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '401':
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '404':
+          description: A query with the specified ID was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '5XX':
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+      tags:
+        - queries
+      security:
+        - OAuth2Authorizer:
+            - query:read
+
+  /query/{query_id}/result:
+    summary: Get paginated results of a query
+    get:
+      operationId: getQueryResults
+      summary: Get paginated results of a query
+      parameters:
+        - $ref: '#/components/parameters/queryId'
+        - in: query
+          name: next_token
+          description: token to get next page of query results.  Will be supplied in the response of the previous call if the result set is truncated.
+          schema:
+            type: string
+          example: ASevTwsuuWcDHMZcOF7qV32rDnXKzAI1renA2ZVPdqd2Em2scsyxFLuFiFi+ra/nF5Sw+ME8nj6Hs1G9JRC8fKaLy3913htbKw==
+      responses:
+        200:
+          description: Query results page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResult'
+
+
+        '400':
+          description: Bad request. Query Id of a valid query must be provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: A query with the specified ID was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '5XX':
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - queries
+      security:
+        - OAuth2Authorizer:
+            - query:read
+
+components:
+  parameters:
+    queryId:
+      in: path
+      name: query_id
+      required: true
+      description: Unique Identifier for the query
+      schema:
+        type: string
+      example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: An Error Message
+    QueryText:
+      type: object
+      properties:
+        query:
+          type: string
+          example: select 'hello' --should not be multiline
+      required:
+        - query
+    QueryId:
+      type: object
+      properties:
+        queryId:
+          type: string
+          example: s06ba1d95-8c4f-460c-90b3-bc68fddf2fde
+      required:
+        - queryId
+    Query:
+      type: object
+      properties:
+        query:
+          type: string
+          example: select 'hello'
+        queryId:
+          type: string
+          example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
+        statementType:
+          type: string
+          example: DDL
+        status:
+          type: object
+          properties:
+            state:
+              type: string
+              enum: [QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED]
+              example: SUCCEEDED
+            submissionDateTime:
+              type: string
+              example: 11-28-2021 18:51:01
+            completionDateTime:
+              type: string
+              example: 11-28-2021 18:53:01
+    QueryResult:
+      type: object
+      properties:
+        resultSet:
+          type: object
+          properties:
+            Rows:
+              type: array
+              items:
+                type: object
+                properties:
+                  Data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        VarCharValue:
+                          type: string
+              example:
+                - Data:
+                    - VarCharValue:
+                        "column1"
+                    - VarCharValue:
+                        "column2"
+                    - VarCharValue:
+                        "column3"
+                    - VarCharValue:
+                        "column4"
+                    - VarCharValue:
+                        "column5"
+                    - VarCharValue:
+                        "column6"
+                    - VarCharValue:
+                        "column7"
+                - Data:
+                    - VarCharValue:
+                        "2013-04-10 00:00:00.000"
+                    - VarCharValue:
+                        "string value"
+                    - VarCharValue:
+                        "123"
+                    - VarCharValue:
+                        "C"
+                    - VarCharValue:
+                        "2013-04-10"
+                    - VarCharValue:
+                        "23.23"
+                    - VarCharValue:
+                        "23.24"
+        ResultSetMetaData:
+          type: object
+          properties:
+            ColumnInfo:
+              type: array
+              items:
+                type: object
+                properties:
+                  Name:
+                    type: string
+                  Type:
+                    type: string
+                    enum: [timestamp,varchar,bigint,char,date,decimal,double]
+                example:
+                  - Name: column1
+                    Type: timestamp
+                  - Name: column2
+                    Type: varchar
+                  - Name: column3
+                    Type: bigint
+                  - Name: column4
+                    Type: char
+                  - Name: column5
+                    Type: date
+                  - Name: column6
+                    Type: decimal
+                  - Name: column7
+                    Type: double
+
+  securitySchemes:
+    OAuth2Authorizer:
+      type:  http
+      scheme: bearer
+      bearerFormat: JWT
+
+
+
+
+
+
+

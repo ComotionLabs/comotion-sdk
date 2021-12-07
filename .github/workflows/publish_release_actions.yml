@@ -20,6 +20,7 @@ jobs:
     # Standard drop-in approach that should work for most people.
     - uses: ammaraskar/sphinx-action@master
       with:
+        pre-build-command: "apt-get update --allow-releaseinfo-change -y && apt-get install -y git"
         docs-folder: "docs/"
     # Publish built docs to gh-pages branch.
     # ===============================

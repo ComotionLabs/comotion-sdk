@@ -1,2 +1,4 @@
 sphinx-material
 pandas
+setuptools_scm
+jwt
