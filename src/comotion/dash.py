@@ -11,7 +11,7 @@ from comodash_api_client_lowlevel.comodash_api import queries_api
 from comodash_api_client_lowlevel.model.query_text import QueryText
 from urllib3.exceptions import IncompleteRead
 from urllib3.response import HTTPResponse
-from comodash_api_client_lowlevel.model.query import Query as QueryModel
+from comodash_api_client_lowlevel.model.query import Query as QueryInfo
 
 class DashConfig(comodash_api_client_lowlevel.Configuration):
     """
@@ -91,13 +91,28 @@ class Query():
             else:
                 raise ValueError("One of query_id or query_text must be provided")
 
-    def get_query_info(self) -> QueryModel:
+    def get_query_info(self) -> QueryInfo:
         """Gets the state of the query.
 
         Returns
         -------
-        str
-            One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED
+        QueryInfo
+            Model containing all query info, with the following attributes
+
+            `query`
+                query sql
+            `query_id`
+                query_id of query
+            `status`
+                `completion_date_time`
+                    GMT Completion Time
+                `state`
+                    Current state of query. One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED
+                `stateChangeReason`
+                    info about reason for state change (generally failure)
+                submission_date_time`
+                    GMT submission time
+
         """
         return self.query_api_instance.get_query(self.query_id)
 

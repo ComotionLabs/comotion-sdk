@@ -213,6 +213,9 @@ def download(config, query_id, file, sql):
 
     final_query_info = query.wait_to_complete()
 
+    print(final_query_info.__dict__)
+    print(json.dumps(final_query_info))
+
     click.echo("query complete")
 
     if final_query_info.status.state != 'SUCCEEDED':
