@@ -229,7 +229,7 @@ def download(config, query_id, file, sql):
                 length=int(content_length),
                 label='Downloading to ' + file.name
             ) as bar:
-                for chunk in response.stream(1048576):
+                for chunk in response.stream(524288):
                     size = size + len(chunk)
                     f.write(chunk)
                     bar.update(size)
