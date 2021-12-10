@@ -40,7 +40,7 @@ def _validate_orgname(issuer, orgname):
         if well_known_response.status_code != requests.codes.ok:
             raise click.BadParameter("%s cannot be found at %s.  Make sure you have the correct orgname" % (orgname,issuer), param_hint='orgname') # noqa E501
 
-    except requests.exceptions.ConnectionError:
+    except requests.exceptions.ConnectionError as e :
         raise click.UsageError("Struggling to connect to the internet!")
 
 
@@ -209,31 +209,41 @@ def download(config, query_id, file, sql):
             'Either --query_id must be supplied or sql for query must be given'
         )
 
-    final_status = query.wait_to_complete()
+    click.echo("query initiated")
 
-    if final_status != 'SUCCEEDED':
+    final_query_info = query.wait_to_complete()
+
+    print(final_query_info.__dict__)
+    print(json.dumps(final_query_info))
+
+    click.echo("query complete")
+
+    if final_query_info.status.state != 'SUCCEEDED':
         raise click.UsageError(
-            "There was a problem running the query."
+            "There was a problem running the query: "
+            + final_query_info.status.stateChangeReason
         )
+    try:
+        with query.get_csv_for_streaming() as response:
+            f = file
+            size = 0
+            content_length = (response.getheader('Content-Length'))
+            with click.progressbar(
+                length=int(content_length),
+                label='Downloading to ' + file.name
+            ) as bar:
+                for chunk in response.stream(524288):
+                    size = size + len(chunk)
+                    f.write(chunk)
+                    bar.update(size)
 
-    with query.get_csv_for_streaming() as response:
-        f = file
-        size = 0
-        content_length = (response.getheader('Content-Length'))
-        with click.progressbar(
-            length=int(content_length),
-            label='Downloading to ' + file.name
-        ) as bar:
-            for chunk in response.stream(1048576):
-                size = size + len(chunk)
-                f.write(chunk)
-                bar.update(size)
-
-            if (response.tell() != int(content_length)):
-                raise click.UsageError(
-                    "There was a problem downloading the file. The file is incomplete. Please try again."
-                )
-        click.echo("finalising file...")
+                if (response.tell() != int(content_length)):
+                    raise click.UsageError(
+                        "There was a problem downloading the file. The file is incomplete. Please try again."
+                    )
+            click.echo("finalising file...")
+    except Exception as e:
+        raise click.UsageError(e)
 
 #wait
 
