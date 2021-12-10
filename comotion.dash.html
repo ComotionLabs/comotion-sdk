@@ -289,6 +289,37 @@ connection is released</p>
 </div>
 </dd></dl>
 <dl class="method">
+<dt id="comotion.dash.Query.get_query_info">
+<code class="sig-name descname">get_query_info</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → comodash_api_client_lowlevel.model.query.Query<a class="reference internal" href="_modules/comotion/dash.html#Query.get_query_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.get_query_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the state of the query.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><p>Model containing all query info, with the following attributes</p>
+<dl class="simple">
+<dt><cite>query</cite></dt><dd><p>query sql</p>
+</dd>
+<dt><cite>query_id</cite></dt><dd><p>query_id of query</p>
+</dd>
+<dt><cite>status</cite></dt><dd><dl class="simple">
+<dt><cite>completion_date_time</cite></dt><dd><p>GMT Completion Time</p>
+</dd>
+<dt><cite>state</cite></dt><dd><p>Current state of query. One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED</p>
+</dd>
+<dt><cite>stateChangeReason</cite></dt><dd><p>info about reason for state change (generally failure)</p>
+</dd>
+<dt>submission_date_time`</dt><dd><p>GMT submission time</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>QueryInfo</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
 <dt id="comotion.dash.Query.is_complete">
 <code class="sig-name descname">is_complete</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → bool<a class="reference internal" href="_modules/comotion/dash.html#Query.is_complete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.is_complete" title="Permalink to this definition">¶</a></dt>
 <dd><p>Indicates whether the query is in a final state.

@@ -241,6 +241,7 @@
 <span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.model.query_text</span> <span class="kn">import</span> <span class="n">QueryText</span>
 <span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">IncompleteRead</span>
 <span class="kn">from</span> <span class="nn">urllib3.response</span> <span class="kn">import</span> <span class="n">HTTPResponse</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.model.query</span> <span class="kn">import</span> <span class="n">Query</span> <span class="k">as</span> <span class="n">QueryInfo</span>
 
 <div class="viewcode-block" id="DashConfig"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashConfig">[docs]</a><span class="k">class</span> <span class="nc">DashConfig</span><span class="p">(</span><span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">Configuration</span><span class="p">):</span>
     <span class="sd">"""</span>
@@ -320,6 +321,31 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"One of query_id or query_text must be provided"</span><span class="p">)</span>
 
+<div class="viewcode-block" id="Query.get_query_info"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.get_query_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_query_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QueryInfo</span><span class="p">:</span>
+        <span class="sd">"""Gets the state of the query.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        QueryInfo</span>
+<span class="sd">            Model containing all query info, with the following attributes</span>
+
+<span class="sd">            `query`</span>
+<span class="sd">                query sql</span>
+<span class="sd">            `query_id`</span>
+<span class="sd">                query_id of query</span>
+<span class="sd">            `status`</span>
+<span class="sd">                `completion_date_time`</span>
+<span class="sd">                    GMT Completion Time</span>
+<span class="sd">                `state`</span>
+<span class="sd">                    Current state of query. One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED</span>
+<span class="sd">                `stateChangeReason`</span>
+<span class="sd">                    info about reason for state change (generally failure)</span>
+<span class="sd">                submission_date_time`</span>
+<span class="sd">                    GMT submission time</span>
+
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">get_query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="Query.state"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.state">[docs]</a>    <span class="k">def</span> <span class="nf">state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="sd">"""Gets the state of the query.</span>
 
@@ -328,7 +354,7 @@
 <span class="sd">        str</span>
 <span class="sd">            One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED</span>
 <span class="sd">        """</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">get_query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">)</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">state</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_query_info</span><span class="p">()</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">state</span></div>
 
 <div class="viewcode-block" id="Query.is_complete"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.is_complete">[docs]</a>    <span class="k">def</span> <span class="nf">is_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="sd">"""Indicates whether the query is in a final state.</span>
@@ -351,12 +377,11 @@
 <span class="sd">        """</span>
 
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">COMPLETED_STATES</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">state</span>
-            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">()</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">COMPLETED_STATES</span></div>
+            <span class="n">query_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_query_info</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">query_info</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">state</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">query_info</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">state</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">COMPLETED_STATES</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">query_info</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Query.query_id"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.query_id">[docs]</a>    <span class="k">def</span> <span class="nf">query_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="sd">"""Returns query id for this query</span>
