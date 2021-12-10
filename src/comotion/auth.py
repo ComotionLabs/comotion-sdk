@@ -265,9 +265,9 @@ class Auth():
                 state,
                 pkce)
 
-            webbrowser.open(auth_url)
-
             server.timeout = 180
+
+            webbrowser.open(auth_url)
 
             # Wait for timeout for one http request
             server.handle_request()

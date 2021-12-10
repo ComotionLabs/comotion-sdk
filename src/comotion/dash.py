@@ -11,6 +11,7 @@ from comodash_api_client_lowlevel.comodash_api import queries_api
 from comodash_api_client_lowlevel.model.query_text import QueryText
 from urllib3.exceptions import IncompleteRead
 from urllib3.response import HTTPResponse
+from comodash_api_client_lowlevel.model.query import Query as QueryModel
 
 class DashConfig(comodash_api_client_lowlevel.Configuration):
     """
@@ -90,6 +91,16 @@ class Query():
             else:
                 raise ValueError("One of query_id or query_text must be provided")
 
+    def get_query_info(self) -> QueryModel:
+        """Gets the state of the query.
+
+        Returns
+        -------
+        str
+            One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED
+        """
+        return self.query_api_instance.get_query(self.query_id)
+
     def state(self) -> str:
         """Gets the state of the query.
 
@@ -98,7 +109,7 @@ class Query():
         str
             One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED
         """
-        return self.query_api_instance.get_query(self.query_id).status.state
+        return self.get_query_info().status.state
 
     def is_complete(self) -> bool:
         """Indicates whether the query is in a final state.
@@ -121,12 +132,11 @@ class Query():
         """
 
         while True:
-            state = self.state()
-            if state in Query.COMPLETED_STATES:
-                return state
+            query_info = self.get_query_info()
+            print(query_info.status.state)
+            if query_info.status.state in Query.COMPLETED_STATES:
+                return query_info
             time.sleep(5)
-
-        return self.state() in Query.COMPLETED_STATES
 
     def query_id(self) -> str:
         """Returns query id for this query
