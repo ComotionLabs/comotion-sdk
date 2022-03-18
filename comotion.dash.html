@@ -392,7 +392,7 @@ cause an error</p>
 </dd></dl>
 <dl class="function">
 <dt id="comotion.dash.read_and_upload_file_to_dash">
-<code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">read_and_upload_file_to_dash</code><span class="sig-paren">(</span><em class="sig-param">file: Union[str, _io.FileIO], dash_table: str, dash_orgname: str, dash_api_key: str, encoding: str = 'utf-8', chunksize: int = 30000, modify_lambda: Callable = None, path_to_output_for_dryrun: str = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#read_and_upload_file_to_dash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.read_and_upload_file_to_dash" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">read_and_upload_file_to_dash</code><span class="sig-paren">(</span><em class="sig-param">file: Union[str, _io.FileIO], dash_table: str, dash_orgname: str, dash_api_key: str, encoding: str = 'utf-8', chunksize: int = 30000, modify_lambda: Callable = None, path_to_output_for_dryrun: str = None, service_client_id: str = '0'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#read_and_upload_file_to_dash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.read_and_upload_file_to_dash" title="Permalink to this definition">¶</a></dt>
 <dd><p>Reads a file and uploads to dash.</p>
 <p>This function will:
 - Read a csv file
@@ -424,6 +424,8 @@ will be saved to the location specified. This is useful for
 testing.
 multiple files will be created: [table_name].[i].csv.gz where i
 represents multiple file parts</p></li>
+<li><p><strong>service_client_id</strong> (<em>str</em>) – (optional)
+if specified, specifies the service client for the upload. See the dash documentation for an explanation of service client.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -436,7 +438,7 @@ represents multiple file parts</p></li>
 </dd></dl>
 <dl class="function">
 <dt id="comotion.dash.upload_csv_to_dash">
-<code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">upload_csv_to_dash</code><span class="sig-paren">(</span><em class="sig-param">dash_orgname: str</em>, <em class="sig-param">dash_api_key: str</em>, <em class="sig-param">dash_table: str</em>, <em class="sig-param">csv_gz_stream: _io.FileIO</em><span class="sig-paren">)</span> → requests.models.Response<a class="reference internal" href="_modules/comotion/dash.html#upload_csv_to_dash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.upload_csv_to_dash" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">upload_csv_to_dash</code><span class="sig-paren">(</span><em class="sig-param">dash_orgname: str</em>, <em class="sig-param">dash_api_key: str</em>, <em class="sig-param">dash_table: str</em>, <em class="sig-param">csv_gz_stream: _io.FileIO</em>, <em class="sig-param">service_client_id: str = '0'</em><span class="sig-paren">)</span> → requests.models.Response<a class="reference internal" href="_modules/comotion/dash.html#upload_csv_to_dash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.upload_csv_to_dash" title="Permalink to this definition">¶</a></dt>
 <dd><p>Uploads csv gzipped stream to Dash</p>
 <p>Expects a csv gzipped stream to upload to dash.</p>
 <dl class="field-list simple">
