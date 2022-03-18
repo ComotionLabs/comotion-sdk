@@ -148,7 +148,6 @@ class Query():
 
         while True:
             query_info = self.get_query_info()
-            print(query_info.status.state)
             if query_info.status.state in Query.COMPLETED_STATES:
                 return query_info
             time.sleep(5)
@@ -223,7 +222,8 @@ def upload_csv_to_dash(
     dash_orgname: str, # noqa
     dash_api_key: str,
     dash_table: str,
-    csv_gz_stream: io.FileIO
+    csv_gz_stream: io.FileIO,
+    service_client_id: str = '0'
 ) -> requests.Response:
     """Uploads csv gzipped stream to Dash
 
@@ -247,7 +247,7 @@ def upload_csv_to_dash(
 
     headers = {
         'Content-Type': 'application/gzip',
-        'service_client_id': '0',
+        'service_client_id': service_client_id,
         'x-api-key': dash_api_key,
         'org-name': dash_orgname,
         'table-name': dash_table
@@ -306,7 +306,8 @@ def read_and_upload_file_to_dash(
     encoding: str = 'utf-8',
     chunksize: int = 30000,
     modify_lambda: Callable = None,
-    path_to_output_for_dryrun: str = None
+    path_to_output_for_dryrun: str = None,
+    service_client_id: str = '0'
 ):
     """Reads a file and uploads to dash.
 
@@ -348,6 +349,9 @@ def read_and_upload_file_to_dash(
         testing.
         multiple files will be created: [table_name].[i].csv.gz where i
         represents multiple file parts
+    service_client_id: str
+        (optional)
+        if specified, specifies the service client for the upload. See the dash documentation for an explanation of service client.
 
     Returns
     -------
@@ -367,6 +371,7 @@ def read_and_upload_file_to_dash(
         if modify_lambda is not None:
             modify_lambda(file_df)
 
+
         csv_stream = create_gzipped_csv_stream_from_df(file_df)
 
         if path_to_output_for_dryrun is None:
@@ -375,10 +380,12 @@ def read_and_upload_file_to_dash(
                 dash_orgname=dash_orgname,
                 dash_api_key=dash_api_key,
                 dash_table=dash_table,
-                csv_gz_stream=csv_stream
+                csv_gz_stream=csv_stream,
+                service_client_id=service_client_id
             )
 
             responses.append(response.text)
+
         else:
             with open(
                 join(
