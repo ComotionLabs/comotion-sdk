@@ -11,7 +11,22 @@ Documentation for this module can be found [here](https://comotionlabs.github.io
 
 In order to contribute to this project, fork this repo and submit a pull request to this project
 
-pip install --editable .
+In order to set up a local environment, pull this repo and install.
+
+`pipenv` is used to manage dependencies on this project. in order to use it, ensure that pipenv is installed.
+
+```
+pip install --upgrade pip
+pip install pipenv
+```
+
+And then enter the virtual environment for this project that will automatically ensure all dependencies are available
+
+```
+pipenv shell
+pipenv install -e .
+```
+
 
 ## Building docs
 
