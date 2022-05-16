@@ -12,6 +12,7 @@ This documentation helps you get set up on and use the python Comotion SDK.  Thi
    :maxdepth: 2
 
    comotion.dash
+   comotion.auth
 
 This is an open source project, and can be `contributed to <https://github.com/ComotionLabs/comotion-sdk>`_ by the community.
 
@@ -27,8 +28,8 @@ Install the comotion-sdk in your python environment using pip:
    pip install comotion-sdk
 
 
-Using comotion-sdk with Dash
-############################
+Uploading Data to Dash Using the SDK
+####################################
 
 In order to use it in your python file, you must first import it.  In these examples we will import the dash module directly as follows
 
@@ -182,4 +183,52 @@ Here is an example of reading a table named ``my_table`` from a postgres databas
           'my_table_in_dash',
           csv_stream
       )
+
+
+Running Queries and Extracting Data
+####################################
+
+You can use the sdk to run queries on Dash, as well as download the results in csv format.
+
+Logging In
+**********
+
+The query API is built on v2 of the Comotion API - which uses a new way to authenticate.  You do not need an API key, but can log in with your normal user name and password.
+
+In order to do this, after you have installed the SDK, you need to authenticate from the command line.  Type in the following from the command line
+
+::
+
+   > comotion authenticate
+
+You will be prompted for your `orgname` which is your orgnisation's unique name, and then a browser will open for you to login.
+
+Once this process is complete, the relevant keys will automatically be saved in your computers's credentials manager.
+
+
+Running a query
+***************
+
+You can then use the query object [] to create  a query and download the results.  Here is an example code snippet.  You do not need to authenticate in your code - the Auth class takes care of that.
+
+::
+
+   from comotion.dash import DashConfig
+   from comotion.auth import Auth
+   from comotion.dash import Query
+
+   config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+
+   # this step creates the query object and kicks off the query
+   query = Query(query_text="select 1", config=config)
+
+   # this step blocks until the query is complete and provides the query metadata
+   final_query_info = query.wait_to_complete()
+
+
+   with open("myfile.csv", "w") as file:
+      with query.get_csv_for_streaming() as response:
+         for chunk in response.stream(524288):
+            size = size + len(chunk)
+            f.write(chunk)
 
