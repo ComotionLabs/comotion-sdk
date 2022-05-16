@@ -219,7 +219,7 @@
               <ul class="md-nav__list">
         <li class="md-nav__item"><a href="#installation" class="md-nav__link">Installation</a>
         </li>
-        <li class="md-nav__item"><a href="#using-comotion-sdk-with-dash" class="md-nav__link">Using comotion-sdk with Dash</a><nav class="md-nav">
+        <li class="md-nav__item"><a href="#uploading-data-to-dash-using-the-sdk" class="md-nav__link">Uploading Data to Dash Using the SDK</a><nav class="md-nav">
               <ul class="md-nav__list">
         <li class="md-nav__item"><a href="#uploading-a-csv-file-to-dash" class="md-nav__link">Uploading a csv file to Dash</a>
         </li>
@@ -228,6 +228,14 @@
         <li class="md-nav__item"><a href="#testing-and-debugging-an-upload-script" class="md-nav__link">Testing and debugging an upload script</a>
         </li>
         <li class="md-nav__item"><a href="#advanced-usage-with-pandas" class="md-nav__link">Advanced usage with Pandas</a>
+        </li></ul>
+            </nav>
+        </li>
+        <li class="md-nav__item"><a href="#running-queries-and-extracting-data" class="md-nav__link">Running Queries and Extracting Data</a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#logging-in" class="md-nav__link">Logging In</a>
+        </li>
+        <li class="md-nav__item"><a href="#running-a-query" class="md-nav__link">Running a query</a>
         </li></ul>
             </nav>
         </li></ul>
@@ -253,6 +261,7 @@
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="comotion.dash.html">comotion.dash module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="comotion.auth.html">comotion.auth module</a></li>
 </ul>
 </div>
 <p>This is an open source project, and can be <a class="reference external" href="https://github.com/ComotionLabs/comotion-sdk">contributed to</a> by the community.</p>
@@ -267,7 +276,7 @@
 </div>
 
 
-<h2 id="using-comotion-sdk-with-dash">Using comotion-sdk with Dash<a class="headerlink" href="#using-comotion-sdk-with-dash" title="Permalink to this headline">¶</a></h2>
+<h2 id="uploading-data-to-dash-using-the-sdk">Uploading Data to Dash Using the SDK<a class="headerlink" href="#uploading-data-to-dash-using-the-sdk" title="Permalink to this headline">¶</a></h2>
 <p>In order to use it in your python file, you must first import it.  In these examples we will import the dash module directly as follows</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">dash</span>
 </pre></div>
@@ -404,6 +413,44 @@
        <span class="s1">'my_table_in_dash'</span><span class="p">,</span>
        <span class="n">csv_stream</span>
    <span class="p">)</span>
+</pre></div>
+</div>
+
+
+
+<h2 id="running-queries-and-extracting-data">Running Queries and Extracting Data<a class="headerlink" href="#running-queries-and-extracting-data" title="Permalink to this headline">¶</a></h2>
+<p>You can use the sdk to run queries on Dash, as well as download the results in csv format.</p>
+
+<h3 id="logging-in">Logging In<a class="headerlink" href="#logging-in" title="Permalink to this headline">¶</a></h3>
+<p>The query API is built on v2 of the Comotion API - which uses a new way to authenticate.  You do not need an API key, but can log in with your normal user name and password.</p>
+<p>In order to do this, after you have installed the SDK, you need to authenticate from the command line.  Type in the following from the command line</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">comotion</span> <span class="n">authenticate</span>
+</pre></div>
+</div>
+<p>You will be prompted for your <cite>orgname</cite> which is your orgnisation’s unique name, and then a browser will open for you to login.</p>
+<p>Once this process is complete, the relevant keys will automatically be saved in your computers’s credentials manager.</p>
+
+
+<h3 id="running-a-query">Running a query<a class="headerlink" href="#running-a-query" title="Permalink to this headline">¶</a></h3>
+<p>You can then use the query object [] to create  a query and download the results.  Here is an example code snippet.  You do not need to authenticate in your code - the Auth class takes care of that.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">comotion.dash</span> <span class="kn">import</span> <span class="n">DashConfig</span>
+<span class="kn">from</span> <span class="nn">comotion.auth</span> <span class="kn">import</span> <span class="n">Auth</span>
+<span class="kn">from</span> <span class="nn">comotion.dash</span> <span class="kn">import</span> <span class="n">Query</span>
+
+<span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">Auth</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">orgname</span><span class="p">,</span> <span class="n">issuer</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">issuer</span><span class="p">))</span>
+
+<span class="c1"># this step creates the query object and kicks off the query</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="n">query_text</span><span class="o">=</span><span class="s2">"select 1"</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+<span class="c1"># this step blocks until the query is complete and provides the query metadata</span>
+<span class="n">final_query_info</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">wait_to_complete</span><span class="p">()</span>
+
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"myfile.csv"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+   <span class="k">with</span> <span class="n">query</span><span class="o">.</span><span class="n">get_csv_for_streaming</span><span class="p">()</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span><span class="mi">524288</span><span class="p">):</span>
+         <span class="n">size</span> <span class="o">=</span> <span class="n">size</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+         <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
 </pre></div>
 </div>
 
