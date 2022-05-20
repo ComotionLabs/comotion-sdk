@@ -217,7 +217,7 @@ You can then use the query object [] to create  a query and download the results
    from comotion.auth import Auth
    from comotion.dash import Query
 
-   config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+   config = DashConfig(Auth("myorgname"))
 
    # this step creates the query object and kicks off the query
    query = Query(query_text="select 1", config=config)
@@ -230,5 +230,5 @@ You can then use the query object [] to create  a query and download the results
       with query.get_csv_for_streaming() as response:
          for chunk in response.stream(524288):
             size = size + len(chunk)
-            f.write(chunk)
+            file.write(chunk)
 
