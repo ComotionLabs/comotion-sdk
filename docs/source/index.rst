@@ -226,9 +226,8 @@ You can then use the query object [] to create  a query and download the results
    final_query_info = query.wait_to_complete()
 
 
-   with open("myfile.csv", "w") as file:
+   with open("myfile.csv", "wb") as file:
       with query.get_csv_for_streaming() as response:
          for chunk in response.stream(524288):
-            size = size + len(chunk)
             file.write(chunk)
 
