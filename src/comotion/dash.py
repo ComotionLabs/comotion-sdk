@@ -5,6 +5,11 @@ import time
 from typing import Union, Callable
 from os.path import join
 import pandas as pd
+import logging
+import cx_Oracle
+import sqlalchemy
+from datetime import datetime
+from tqdm import tqdm
 from comotion import Auth
 from comotion import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.comodash_api import queries_api
@@ -399,3 +404,248 @@ def read_and_upload_file_to_dash(
         i = i + 1
 
     return responses
+
+def upload_from_oracle( 
+    sql_host: str, 
+    sql_port: int, 
+    sql_service_name: str, 
+    sql_username: str, 
+    sql_password: str, 
+    sql_query: str,   
+    dash_table: str, 
+    dash_orgname: str, 
+    dash_api_key: str, 
+    dtypes: dict = None, 
+    include_snapshot: bool = True, 
+    export_csvs: bool = True, 
+    chunksize: int = 50000, 
+    output_path: str = None, 
+    sep: str ='\t', 
+    max_tries: int = 5 
+): 
+    """
+    Uploads data from a Oracle SQL database object to dash. 
+
+    This function will: 
+    - get the total number of rows chunks need for the sql query
+    - get chunks of data from the SQL database 
+    - upload them to dash 
+    - append them to csv output (if specified)
+    - save error chunks as csv (if any) 
+
+    Parameters 
+    ---------- 
+    sql_host: str
+        SQL hot e.g. '192.168.0.0.1'
+    sql_port: str
+        SQL port number e.g 9005
+    sql_service_name: str
+        SQL service name e.g. 'myservice' 
+    sql_username: str 
+        SQL username, 
+    sql_password: str  
+        SQL password, 
+    sql_query: str  
+        SQL query,  
+    dash_table: str 
+        name of Dash table to upload the data to 
+    dash_orgname: str 
+        orgname of your Dash instance 
+    dash_api_key: str 
+        valid api key for Dash API 
+    export_csvs: 
+        (optional) 
+        If True, data successfully uploaded is exported as csv 
+        Defaults to True i.e. output is included 
+    dtypes: dict 
+        (optional) 
+        A dictionary that contains the column name and data type to convert to. 
+        Defaults to None i.e. load dataframe columns as they are. 
+    chunksize: int 
+        (optional) 
+        the maximum number of lines to be included in each file. 
+        Note that this should be low enough that the zipped file is less 
+        than Dash maximum gzipped file size. 
+        Defaults to 50000. 
+    sep: str 
+        (optional) 
+        Field delimiter for ComoDash table to upload the dataframe to. 
+        Defaults to /t. 
+    output_path: str 
+        (optional) 
+        if specified, no output csv are saved in that location. If not, output is place in the same location as the script
+        Defaults to None 
+    include_snapshot: bool 
+        (optional) 
+        If True, an additional column 'snapshot_timestamp' will be added to the DataFrame. 
+        This column will contain the time that data is loaded in "%Y-%m-%d %H:%M:%S.%f" 
+        format in order to help with database management 
+        Defaults to True i.e. snapshot_timestamp is included 
+    max_tries: int 
+        (optional) 
+        Maximum number of times to retry if there is an HTTP error 
+        Defaults to 5 
+    Returns 
+    ------- 
+    pd.DataFrame 
+        DataFrame with errors 
+    """ 
+
+    # Initialize data upload  
+      
+    print("Initializing. This will take a little while..") 
+    
+    url = "https://api.comodash.io/v1/data-input-file" 
+
+    headers = { 
+        'Content-Type': 'application/gzip', 
+        'service_client_id': '0', 
+        'x-api-key': dash_api_key, 
+        'org-name': dash_orgname, 
+        'table-name': dash_table 
+    } 
+
+    snapshot_timestamp = datetime.now() 
+
+    # Create load id 
+    load_id = dash_table + "_" + snapshot_timestamp.strftime("%Y%m%d%H%M") 
+
+    # Create output folder 
+    if export_csvs: 
+        if output_path: 
+            if not os.path.exists(output_path): 
+                os.mkdir(output_path) 
+    else: 
+        output_path = os.getcwd() 
+
+    # Create log file
+    log_file = os.path.join(output_path, load_id + ".log") 
+    formatter = logging.Formatter( 
+        fmt='%(asctime)s - %(name)-12s %(levelname)-8s %(message)s', 
+        datefmt='%Y-%m-%d,%H:%M:%S' 
+    ) 
+    file_handler = logging.FileHandler(log_file) 
+    file_handler.setFormatter(formatter)    
+    
+    # Create logger
+    logger = logging.getLogger(__name__) 
+    logger.setLevel(logging.INFO) 
+    logger.addHandler(file_handler) 
+
+    # Create sqlalchemy engine 
+    sql_dsn = cx_Oracle.makedsn(sql_host, sql_port, service_name=sql_service_name) 
+    connection_string = 'oracle://{user}:{password}@{dsn}'.format(user=sql_username, password=sql_password, dsn=sql_dsn)
+    engine = sqlalchemy.create_engine(connection_string, max_identifier_length=128) 
+
+    print('Initializing complete. Starting the upload...')
+
+    # Connect to database 
+    with engine.connect() as connection: 
+
+        # Table properties 
+        result = connection.execute(sql_query) 
+        columns = [col for col in result.keys()] 
+        
+        # Calculate results length 
+        length = connection.execute(f"select count(*) from ({sql_query})").fetchall()[0][0] 
+
+        if length % chunksize == 0: 
+            chunk_number = int(length/chunksize) 
+        else: 
+            chunk_number = int(length/chunksize) + 1 
+
+        print(f"Starting to upload table with {length} rows in {chunk_number} chunks.") 
+  
+        # Empty list to store chunks that fail to upload 
+        error_chunks = []   
+
+        with open(os.path.join(output_path, load_id + "_success.csv.gz"), "wb") as f: 
+            
+            for i in tqdm(range(chunk_number)): 
+
+                # Get data chunk
+                chunk = pd.DataFrame(result.fetchmany(chunksize), columns=columns) 
+
+                # Include snapshort time if include_snapshot == True 
+                if include_snapshot: 
+                    chunk['snapshot_timestamp'] = snapshot_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f") 
+                    
+                # Change columns format if dtypes is specified 
+                if dtypes: 
+                    chunk = chunk.astype(dtype=dtypes) 
+
+                # Create gz_stream 
+                csv_stream = io.BytesIO() 
+            
+                chunk.to_csv( 
+                    csv_stream, 
+                    compression="gzip", 
+                    encoding="utf-8", 
+                    index=False, 
+                    quoting=csv.QUOTE_MINIMAL, 
+                    sep=sep 
+                ) 
+
+                trial = 1 
+
+                while True: 
+                    try: 
+                        response = requests.request( 
+                            method="POST", 
+                            url=url, 
+                            headers=headers, 
+                            data=csv_stream.getbuffer() 
+                        ) 
+
+                        response.raise_for_status() 
+
+                        if response.status_code == 200: 
+
+                            logger.info(response.text) 
+
+                            trial = 1 
+
+                            if export_csvs:                        
+                                f.write(csv_stream.getvalue()) 
+
+                            break 
+                    except: 
+
+                        if trial >= max_tries: 
+
+                            logger.info(response.text) 
+
+                            error_chunks.append(chunk) 
+
+                            trial = 1 
+
+                            break 
+
+                        else: 
+                            logger.info(response.text) 
+
+                            if export_csvs:                        
+                                f.write(csv_stream.getvalue()) 
+                            trial += 1 
+
+    print(f"Data uploaded with {len(error_chunks)} error files") 
+
+    # Combine error chunks and export them as csv 
+
+    if len(error_chunks) > 0: 
+
+        print("Exporting errors...") 
+        
+        error_df = pd.concat(error_chunks) 
+
+        error_df.to_csv( 
+            os.path.join(output_path, load_id + "_fail.csv.gz"), 
+            compression="gzip", 
+            index=False, 
+            sep=sep 
+        ) 
+
+        return error_df 
+
+    else: 
+        return None
