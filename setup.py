@@ -39,7 +39,11 @@ if __name__ == "__main__":
             'click>=8.0.3',
             'keyring>=23.2.1',
             'pyjwt',
-            'urllib3>=1.25.3'
+            'urllib3>=1.25.3',
+            'cx_Oracle>=8.3.0',
+            'sqlalchemy>=1.4.36',
+            'tqdm>=4.64.0'
+            
         ],
         tests_require=[
             'mock',
