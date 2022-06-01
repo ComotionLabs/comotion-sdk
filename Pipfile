@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 comotion-sdk = {editable = true, path = "."}
+cx-oracle = "*"
 
 [dev-packages]
 pytest = "*"

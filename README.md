@@ -27,6 +27,26 @@ pipenv shell
 pipenv install -e .
 ```
 
+## Adding modules
+
+
+Ensure dependencies are also added to setup.py in the `install_requires` section.  Then run
+
+```
+pipenv install -e .
+```
+
+Ensure you understand pipenv when [installing new libraries] (https://pipenv.pypa.io/en/latest/install/#installing-packages-for-your-project).
+
+
+## running tests
+
+To run tests
+```
+pipenv install --deploy --dev
+pipenv run test -v
+```
+
 
 ## Building docs
 
