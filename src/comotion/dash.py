@@ -1,4 +1,5 @@
 import io
+import os
 import requests
 import csv
 import time
@@ -536,8 +537,6 @@ def upload_from_oracle(
     sql_dsn = cx_Oracle.makedsn(sql_host, sql_port, service_name=sql_service_name) 
     connection_string = 'oracle://{user}:{password}@{dsn}'.format(user=sql_username, password=sql_password, dsn=sql_dsn)
     engine = sqlalchemy.create_engine(connection_string, max_identifier_length=128) 
-
-    print('Initializing complete. Starting the upload...')
 
     # Connect to database 
     with engine.connect() as connection: 
