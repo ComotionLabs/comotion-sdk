@@ -230,12 +230,21 @@
             
   <h1 id="modules-comotion-dash--page-root">Source code for comotion.dash</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">requests</span>
 <span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span>
 <span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">join</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">cx_Oracle</span>
+    <span class="kn">import</span> <span class="nn">sqlalchemy</span>
+    <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">pass</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
 <span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">Auth</span>
 <span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">comodash_api_client_lowlevel</span>
 <span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.comodash_api</span> <span class="kn">import</span> <span class="n">queries_api</span>
@@ -630,6 +639,249 @@
         <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
 
     <span class="k">return</span> <span class="n">responses</span></div>
+
+<div class="viewcode-block" id="upload_from_oracle"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.upload_from_oracle">[docs]</a><span class="k">def</span> <span class="nf">upload_from_oracle</span><span class="p">(</span> 
+    <span class="n">sql_host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+    <span class="n">sql_port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> 
+    <span class="n">sql_service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+    <span class="n">sql_username</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+    <span class="n">sql_password</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+    <span class="n">sql_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>   
+    <span class="n">dash_table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+    <span class="n">dash_orgname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+    <span class="n">dash_api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+    <span class="n">dtypes</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+    <span class="n">include_snapshot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> 
+    <span class="n">export_csvs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> 
+    <span class="n">chunksize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50000</span><span class="p">,</span> 
+    <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+    <span class="n">sep</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span><span class="s1">'</span><span class="se">\t</span><span class="s1">'</span><span class="p">,</span> 
+    <span class="n">max_tries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span> 
+<span class="p">):</span> 
+    <span class="sd">"""</span>
+<span class="sd">    Uploads data from a Oracle SQL database object to dash. </span>
+
+<span class="sd">    This function will: </span>
+<span class="sd">    - get the total number of rows chunks need for the sql query</span>
+<span class="sd">    - get chunks of data from the SQL database </span>
+<span class="sd">    - upload them to dash </span>
+<span class="sd">    - append them to csv output (if specified)</span>
+<span class="sd">    - save error chunks as csv (if any) </span>
+
+<span class="sd">    Parameters </span>
+<span class="sd">    ---------- </span>
+<span class="sd">    sql_host: str</span>
+<span class="sd">        SQL hot e.g. '192.168.0.0.1'</span>
+<span class="sd">    sql_port: str</span>
+<span class="sd">        SQL port number e.g 9005</span>
+<span class="sd">    sql_service_name: str</span>
+<span class="sd">        SQL service name e.g. 'myservice' </span>
+<span class="sd">    sql_username: str </span>
+<span class="sd">        SQL username, </span>
+<span class="sd">    sql_password: str  </span>
+<span class="sd">        SQL password, </span>
+<span class="sd">    sql_query: str  </span>
+<span class="sd">        SQL query,  </span>
+<span class="sd">    dash_table: str </span>
+<span class="sd">        name of Dash table to upload the data to </span>
+<span class="sd">    dash_orgname: str </span>
+<span class="sd">        orgname of your Dash instance </span>
+<span class="sd">    dash_api_key: str </span>
+<span class="sd">        valid api key for Dash API </span>
+<span class="sd">    export_csvs: </span>
+<span class="sd">        (optional) </span>
+<span class="sd">        If True, data successfully uploaded is exported as csv </span>
+<span class="sd">        Defaults to True i.e. output is included </span>
+<span class="sd">    dtypes: dict </span>
+<span class="sd">        (optional) </span>
+<span class="sd">        A dictionary that contains the column name and data type to convert to. </span>
+<span class="sd">        Defaults to None i.e. load dataframe columns as they are. </span>
+<span class="sd">    chunksize: int </span>
+<span class="sd">        (optional) </span>
+<span class="sd">        the maximum number of lines to be included in each file. </span>
+<span class="sd">        Note that this should be low enough that the zipped file is less </span>
+<span class="sd">        than Dash maximum gzipped file size. </span>
+<span class="sd">        Defaults to 50000. </span>
+<span class="sd">    sep: str </span>
+<span class="sd">        (optional) </span>
+<span class="sd">        Field delimiter for ComoDash table to upload the dataframe to. </span>
+<span class="sd">        Defaults to /t. </span>
+<span class="sd">    output_path: str </span>
+<span class="sd">        (optional) </span>
+<span class="sd">        if specified, no output csv are saved in that location. If not, output is place in the same location as the script</span>
+<span class="sd">        Defaults to None </span>
+<span class="sd">    include_snapshot: bool </span>
+<span class="sd">        (optional) </span>
+<span class="sd">        If True, an additional column 'snapshot_timestamp' will be added to the DataFrame. </span>
+<span class="sd">        This column will contain the time that data is loaded in "%Y-%m-%d %H:%M:%S.%f" </span>
+<span class="sd">        format in order to help with database management </span>
+<span class="sd">        Defaults to True i.e. snapshot_timestamp is included </span>
+<span class="sd">    max_tries: int </span>
+<span class="sd">        (optional) </span>
+<span class="sd">        Maximum number of times to retry if there is an HTTP error </span>
+<span class="sd">        Defaults to 5 </span>
+<span class="sd">    Returns </span>
+<span class="sd">    ------- </span>
+<span class="sd">    pd.DataFrame </span>
+<span class="sd">        DataFrame with errors </span>
+<span class="sd">    """</span> 
+
+    <span class="c1"># Initialize data upload  </span>
+      
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Initializing. This will take a little while.."</span><span class="p">)</span> 
+    
+    <span class="n">url</span> <span class="o">=</span> <span class="s2">"https://api.comodash.io/v1/data-input-file"</span> 
+
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span> 
+        <span class="s1">'Content-Type'</span><span class="p">:</span> <span class="s1">'application/gzip'</span><span class="p">,</span> 
+        <span class="s1">'service_client_id'</span><span class="p">:</span> <span class="s1">'0'</span><span class="p">,</span> 
+        <span class="s1">'x-api-key'</span><span class="p">:</span> <span class="n">dash_api_key</span><span class="p">,</span> 
+        <span class="s1">'org-name'</span><span class="p">:</span> <span class="n">dash_orgname</span><span class="p">,</span> 
+        <span class="s1">'table-name'</span><span class="p">:</span> <span class="n">dash_table</span> 
+    <span class="p">}</span> 
+
+    <span class="n">snapshot_timestamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> 
+
+    <span class="c1"># Create load id </span>
+    <span class="n">load_id</span> <span class="o">=</span> <span class="n">dash_table</span> <span class="o">+</span> <span class="s2">"_"</span> <span class="o">+</span> <span class="n">snapshot_timestamp</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">%H%M"</span><span class="p">)</span> 
+
+    <span class="c1"># Create output folder </span>
+    <span class="k">if</span> <span class="n">export_csvs</span><span class="p">:</span> 
+        <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span> 
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_path</span><span class="p">):</span> 
+                <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span> 
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span> 
+
+    <span class="c1"># Create log file</span>
+    <span class="n">log_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">load_id</span> <span class="o">+</span> <span class="s2">".log"</span><span class="p">)</span> 
+    <span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span> 
+        <span class="n">fmt</span><span class="o">=</span><span class="s1">'</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(name)-12s</span><span class="s1"> </span><span class="si">%(levelname)-8s</span><span class="s1"> </span><span class="si">%(message)s</span><span class="s1">'</span><span class="p">,</span> 
+        <span class="n">datefmt</span><span class="o">=</span><span class="s1">'%Y-%m-</span><span class="si">%d</span><span class="s1">,%H:%M:%S'</span> 
+    <span class="p">)</span> 
+    <span class="n">file_handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="n">log_file</span><span class="p">)</span> 
+    <span class="n">file_handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>    
+    
+    <span class="c1"># Create logger</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span> 
+    <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span> 
+    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">file_handler</span><span class="p">)</span> 
+
+    <span class="c1"># Create sqlalchemy engine </span>
+    <span class="n">sql_dsn</span> <span class="o">=</span> <span class="n">cx_Oracle</span><span class="o">.</span><span class="n">makedsn</span><span class="p">(</span><span class="n">sql_host</span><span class="p">,</span> <span class="n">sql_port</span><span class="p">,</span> <span class="n">service_name</span><span class="o">=</span><span class="n">sql_service_name</span><span class="p">)</span> 
+    <span class="n">connection_string</span> <span class="o">=</span> <span class="s1">'oracle://</span><span class="si">{user}</span><span class="s1">:</span><span class="si">{password}</span><span class="s1">@</span><span class="si">{dsn}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">sql_username</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="n">sql_password</span><span class="p">,</span> <span class="n">dsn</span><span class="o">=</span><span class="n">sql_dsn</span><span class="p">)</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">sqlalchemy</span><span class="o">.</span><span class="n">create_engine</span><span class="p">(</span><span class="n">connection_string</span><span class="p">,</span> <span class="n">max_identifier_length</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span> 
+
+    <span class="c1"># Connect to database </span>
+    <span class="k">with</span> <span class="n">engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">connection</span><span class="p">:</span> 
+
+        <span class="c1"># Table properties </span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql_query</span><span class="p">)</span> 
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span> 
+        
+        <span class="c1"># Calculate results length </span>
+        <span class="n">length</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">"select count(*) from (</span><span class="si">{sql_query}</span><span class="s2">)"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> 
+
+        <span class="k">if</span> <span class="n">length</span> <span class="o">%</span> <span class="n">chunksize</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> 
+            <span class="n">chunk_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">length</span><span class="o">/</span><span class="n">chunksize</span><span class="p">)</span> 
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="n">chunk_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">length</span><span class="o">/</span><span class="n">chunksize</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> 
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Starting to upload table with </span><span class="si">{length}</span><span class="s2"> rows in </span><span class="si">{chunk_number}</span><span class="s2"> chunks."</span><span class="p">)</span> 
+  
+        <span class="c1"># Empty list to store chunks that fail to upload </span>
+        <span class="n">error_chunks</span> <span class="o">=</span> <span class="p">[]</span>   
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">load_id</span> <span class="o">+</span> <span class="s2">"_success.csv.gz"</span><span class="p">),</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> 
+            
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">chunk_number</span><span class="p">)):</span> 
+
+                <span class="c1"># Get data chunk</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">fetchmany</span><span class="p">(</span><span class="n">chunksize</span><span class="p">),</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span> 
+
+                <span class="c1"># Include snapshort time if include_snapshot == True </span>
+                <span class="k">if</span> <span class="n">include_snapshot</span><span class="p">:</span> 
+                    <span class="n">chunk</span><span class="p">[</span><span class="s1">'snapshot_timestamp'</span><span class="p">]</span> <span class="o">=</span> <span class="n">snapshot_timestamp</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S.</span><span class="si">%f</span><span class="s2">"</span><span class="p">)</span> 
+                    
+                <span class="c1"># Change columns format if dtypes is specified </span>
+                <span class="k">if</span> <span class="n">dtypes</span><span class="p">:</span> 
+                    <span class="n">chunk</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtypes</span><span class="p">)</span> 
+
+                <span class="c1"># Create gz_stream </span>
+                <span class="n">csv_stream</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span> 
+            
+                <span class="n">chunk</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span> 
+                    <span class="n">csv_stream</span><span class="p">,</span> 
+                    <span class="n">compression</span><span class="o">=</span><span class="s2">"gzip"</span><span class="p">,</span> 
+                    <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> 
+                    <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
+                    <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span> 
+                    <span class="n">sep</span><span class="o">=</span><span class="n">sep</span> 
+                <span class="p">)</span> 
+
+                <span class="n">trial</span> <span class="o">=</span> <span class="mi">1</span> 
+
+                <span class="k">while</span> <span class="kc">True</span><span class="p">:</span> 
+                    <span class="k">try</span><span class="p">:</span> 
+                        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">request</span><span class="p">(</span> 
+                            <span class="n">method</span><span class="o">=</span><span class="s2">"POST"</span><span class="p">,</span> 
+                            <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span> 
+                            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> 
+                            <span class="n">data</span><span class="o">=</span><span class="n">csv_stream</span><span class="o">.</span><span class="n">getbuffer</span><span class="p">()</span> 
+                        <span class="p">)</span> 
+
+                        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span> 
+
+                        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span> 
+
+                            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> 
+
+                            <span class="n">trial</span> <span class="o">=</span> <span class="mi">1</span> 
+
+                            <span class="k">if</span> <span class="n">export_csvs</span><span class="p">:</span>                        
+                                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">csv_stream</span><span class="o">.</span><span class="n">getvalue</span><span class="p">())</span> 
+
+                            <span class="k">break</span> 
+                    <span class="k">except</span><span class="p">:</span> 
+
+                        <span class="k">if</span> <span class="n">trial</span> <span class="o">&gt;=</span> <span class="n">max_tries</span><span class="p">:</span> 
+
+                            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> 
+
+                            <span class="n">error_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span> 
+
+                            <span class="n">trial</span> <span class="o">=</span> <span class="mi">1</span> 
+
+                            <span class="k">break</span> 
+
+                        <span class="k">else</span><span class="p">:</span> 
+                            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> 
+
+                            <span class="k">if</span> <span class="n">export_csvs</span><span class="p">:</span>                        
+                                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">csv_stream</span><span class="o">.</span><span class="n">getvalue</span><span class="p">())</span> 
+                            <span class="n">trial</span> <span class="o">+=</span> <span class="mi">1</span> 
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Data uploaded with {len(error_chunks)} error files"</span><span class="p">)</span> 
+
+    <span class="c1"># Combine error chunks and export them as csv </span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">error_chunks</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> 
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Exporting errors..."</span><span class="p">)</span> 
+        
+        <span class="n">error_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">error_chunks</span><span class="p">)</span> 
+
+        <span class="n">error_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span> 
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">load_id</span> <span class="o">+</span> <span class="s2">"_fail.csv.gz"</span><span class="p">),</span> 
+            <span class="n">compression</span><span class="o">=</span><span class="s2">"gzip"</span><span class="p">,</span> 
+            <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
+            <span class="n">sep</span><span class="o">=</span><span class="n">sep</span> 
+        <span class="p">)</span> 
+
+        <span class="k">return</span> <span class="n">error_df</span> 
+
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="k">return</span> <span class="kc">None</span></div>
 </pre></div>
 
           </article>
