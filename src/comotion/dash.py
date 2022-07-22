@@ -7,10 +7,13 @@ from typing import Union, Callable
 from os.path import join
 import pandas as pd
 import logging
-import cx_Oracle
-import sqlalchemy
+try:
+    import cx_Oracle
+    import sqlalchemy
+    from tqdm import tqdm
+except ImportError:
+    pass
 from datetime import datetime
-from tqdm import tqdm
 from comotion import Auth
 from comotion import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.comodash_api import queries_api
