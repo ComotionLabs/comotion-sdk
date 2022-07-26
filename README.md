@@ -23,8 +23,8 @@ pip install pipenv
 And then enter the virtual environment for this project that will automatically ensure all dependencies are available
 
 ```
-pipenv shell
 pipenv install -e .
+pipenv shell
 ```
 
 ## Adding modules
