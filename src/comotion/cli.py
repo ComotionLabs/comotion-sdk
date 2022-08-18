@@ -7,6 +7,11 @@ from comotion.dash import DashConfig
 from comotion.auth import Auth
 from comotion.dash import Query
 
+CONTEXT_SETTINGS = dict(
+    help_option_names=['-h', '--help'],
+    auto_envvar_prefix='COMOTION'
+)
+
 class Config(object):
     """
     Config object that allows config to be shared between multiple actions
@@ -14,7 +19,7 @@ class Config(object):
 
     def __init__(self):
         self.orgname = None
-        self.issuer = 'https://auth.comotion.us'
+        self.issuer = None
 
 
 # make a decorator the allows for config to be passed to multiple actions
@@ -44,20 +49,29 @@ def _validate_orgname(issuer, orgname):
         raise click.UsageError("Struggling to connect to the internet!")
 
 
-@click.group()
+@click.group(context_settings=CONTEXT_SETTINGS)
 @click.option(
     "-o", "--orgname", "orgname",
     type=str,
     required=True,
     prompt=True,
     help='unique identifier for your organisation')
+@click.option(
+    "-i", "--issuer", "issuer",
+    type=str,
+    required=False,
+    prompt=False,
+    default='https://auth.comotion.us',
+    help='override issuer for testing')
 @pass_config
-def cli(config, orgname):
+def cli(config, orgname, issuer):
     """
     Command Line Interface for interacting with the Comotion APIs.
     """
-
     config.orgname = orgname
+    config.issuer = issuer
+
+
 
     _validate_orgname(config.issuer, config.orgname)
 
@@ -76,6 +90,16 @@ def authenticate(config):
         config.issuer
     )
     como_auth.authenticate()
+
+
+@cli.command()
+@pass_config
+def get_issuer(config):
+    """
+    Authenticate the user against the provided orgname
+    """
+
+    click.echo(config.issuer)
 
 
 @cli.command()
