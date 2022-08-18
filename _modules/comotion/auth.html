@@ -275,18 +275,6 @@
         <span class="k">if</span> <span class="s1">'state'</span> <span class="ow">in</span> <span class="n">parsed_qs</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">errorDescription</span> <span class="o">=</span> <span class="n">parsed_qs</span><span class="p">[</span><span class="s1">'state'</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">_get_redirect_url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">error</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">delegated_endpoint</span> <span class="o">+</span> <span class="s2">"?error=true"</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">query_params</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s1">'post_logout_redirect_uri'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">como_authenticator</span><span class="o">.</span><span class="n">delegated_endpoint</span><span class="p">,</span> <span class="c1"># noqa</span>
-                <span class="s1">'client_id'</span><span class="p">:</span> <span class="s1">'comotion_cli'</span><span class="p">,</span>
-                <span class="s1">'id_token_hint'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_token</span>
-            <span class="p">}</span>
-
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">como_authenticator</span><span class="o">.</span><span class="n">logout_endpoint</span> <span class="o">+</span> <span class="s2">"?"</span> <span class="o">+</span> <span class="n">urlencode</span><span class="p">(</span><span class="n">query_params</span><span class="p">)</span> <span class="c1"># noqa</span>
-
     <span class="k">def</span> <span class="nf">_process_code</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">"grant_type"</span><span class="p">:</span> <span class="s2">"authorization_code"</span><span class="p">,</span>
@@ -301,24 +289,51 @@
             <span class="n">data</span><span class="o">=</span><span class="n">payload</span>
         <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">id_token</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">))[</span><span class="s1">'id_token'</span><span class="p">]</span>
+        <span class="n">json_response</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_token</span> <span class="o">=</span> <span class="n">json_response</span><span class="p">[</span><span class="s1">'id_token'</span><span class="p">]</span>
 
-        <span class="n">id_token_decoded</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_token_decoded</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">id_token</span><span class="p">,</span>
             <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s2">"verify_signature"</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
         <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">como_authenticator</span><span class="o">.</span><span class="n">credentials_cache</span><span class="o">.</span><span class="n">set_refresh_token</span><span class="p">(</span>
-            <span class="n">id_token_decoded</span><span class="p">[</span><span class="s1">'preferred_username'</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">id_token_decoded</span><span class="p">[</span><span class="s1">'preferred_username'</span><span class="p">],</span>
             <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">))[</span><span class="s1">'refresh_token'</span><span class="p">])</span>
 
     <span class="c1"># Handler for the redirect from keycloak</span>
 <div class="viewcode-block" id="OIDCredirectHandler.do_GET"><a class="viewcode-back" href="../../comotion.auth.html#comotion.auth.OIDCredirectHandler.do_GET">[docs]</a>    <span class="k">def</span> <span class="nf">do_GET</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_read_query_parameters</span><span class="p">(</span><span class="n">urlparse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">query</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_process_code</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">302</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s1">'Location'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_redirect_url</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">myheader</span> <span class="o">=</span> <span class="s2">"There was a problem authenticating:"</span> <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">error</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">myheader</span> <span class="o">=</span> <span class="s2">"Authentication complete for "</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_token_decoded</span><span class="p">[</span><span class="s1">'preferred_username'</span><span class="p">]</span>
+        <span class="n">message</span><span class="o">=</span><span class="s2">"""</span>
+<span class="s2">        &lt;html&gt;</span>
+<span class="s2">            &lt;head&gt;</span>
+<span class="s2">                &lt;title&gt;Comotion Auth&lt;/title&gt;</span>
+<span class="s2">            &lt;/head&gt;</span>
+<span class="s2">            &lt;body&gt;</span>
+<span class="s2">                &lt;span style="font-family:'Courier New'"&gt;</span>
+<span class="s2">                    &lt;br/&gt;</span>
+<span class="s2">                    &lt;center&gt;</span>
+<span class="s2">                        &lt;h1&gt; Comotion Auth &lt;/h1&gt;</span>
+<span class="s2">                        &lt;h2&gt;</span>
+<span class="s2">                            </span><span class="si">{myheader}</span><span class="s2"></span>
+<span class="s2">                        &lt;/h2&gt;</span>
+<span class="s2">                        Authenticated at: </span><span class="si">{issuer}</span><span class="s2"></span>
+<span class="s2">                        &lt;br/&gt;</span>
+<span class="s2">                        &lt;br/&gt;</span>
+<span class="s2">                        Go ahead and close this window, your keys are saved in your computer's credentials manager.</span>
+<span class="s2">                    &lt;/center&gt;</span>
+<span class="s2">                &lt;/span&gt;</span>
+<span class="s2">            &lt;/body&gt;</span>
+<span class="s2">        &lt;html&gt;</span>
+<span class="s2">        """</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">myheader</span><span class="o">=</span><span class="n">myheader</span><span class="p">,</span> <span class="n">issuer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">id_token_decoded</span><span class="p">[</span><span class="s1">'iss'</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">message</span><span class="p">,</span><span class="s2">"utf-8"</span><span class="p">))</span>
         <span class="k">return</span></div></div>
 
 
@@ -452,7 +467,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">auth_endpoint</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%s</span><span class="s2">/auth/realms/</span><span class="si">%s</span><span class="s2">/protocol/openid-connect/auth"</span> <span class="o">%</span> <span class="p">(</span><span class="n">issuer</span><span class="p">,</span><span class="n">orgname</span><span class="p">)</span> <span class="c1"># noqa</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">token_endpoint</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%s</span><span class="s2">/auth/realms/</span><span class="si">%s</span><span class="s2">/protocol/openid-connect/token"</span> <span class="o">%</span> <span class="p">(</span><span class="n">issuer</span><span class="p">,</span><span class="n">orgname</span><span class="p">)</span> <span class="c1"># noqa</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logout_endpoint</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%s</span><span class="s2">/auth/realms/</span><span class="si">%s</span><span class="s2">/protocol/openid-connect/logout"</span> <span class="o">%</span> <span class="p">(</span><span class="n">issuer</span><span class="p">,</span><span class="n">orgname</span><span class="p">)</span> <span class="c1"># noqa</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">delegated_endpoint</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%s</span><span class="s2">/auth/realms/</span><span class="si">%s</span><span class="s2">/protocol/openid-connect/delegated"</span> <span class="o">%</span> <span class="p">(</span><span class="n">issuer</span><span class="p">,</span><span class="n">orgname</span><span class="p">)</span> <span class="c1"># noqa</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delegated_endpoint</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%s</span><span class="s2">/auth/realms/</span><span class="si">%s</span><span class="s2">/account"</span> <span class="o">%</span> <span class="p">(</span><span class="n">issuer</span><span class="p">,</span><span class="n">orgname</span><span class="p">)</span> <span class="c1"># noqa</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh_token</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="c1"># retrieve refresh token from cache?</span>
@@ -508,7 +523,6 @@
         <span class="k">finally</span><span class="p">:</span>
             <span class="n">server</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
-    <span class="c1"># TODO: get, cache and refresh access token</span>
 
 <div class="viewcode-block" id="Auth.get_access_token"><a class="viewcode-back" href="../../comotion.auth.html#comotion.auth.Auth.get_access_token">[docs]</a>    <span class="k">def</span> <span class="nf">get_access_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 
