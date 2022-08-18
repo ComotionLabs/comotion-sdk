@@ -205,11 +205,24 @@ You will be prompted for your `orgname` which is your orgnisation's unique name,
 
 Once this process is complete, the relevant keys will automatically be saved in your computers's credentials manager.
 
+To prevent asking for orgname every time, you can save your orgname as an environment variable `COMOTION_ORGNAME`
+
+::
+
+   > export COMOTION_ORGNAME=orgname
+   > comotion authenticate
+
+or, include it directly in the comment line:
+
+::
+
+   > comotion -o orgname authenticate
+
 
 Running a query
 ***************
 
-You can then use the query object [] to create  a query and download the results.  Here is an example code snippet.  You do not need to authenticate in your code - the Auth class takes care of that.
+You can then use the query object in the :doc:`./comotion.dash` to create  a query and download the results.  Here is an example code snippet.  You do not need to authenticate in your code - the Auth class takes care of that.
 
 ::
 

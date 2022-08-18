@@ -44,18 +44,6 @@ class OIDCredirectHandler(BaseHTTPRequestHandler):
         if 'state' in parsed_qs:
             self.errorDescription = parsed_qs['state']
 
-    def _get_redirect_url(self):
-        if (self.error is not None):
-            return self.server.delegated_endpoint + "?error=true"
-        else:
-            query_params = {
-                'post_logout_redirect_uri': self.server.como_authenticator.delegated_endpoint, # noqa
-                'client_id': 'comotion_cli',
-                'id_token_hint': self.id_token
-            }
-
-            return self.server.como_authenticator.logout_endpoint + "?" + urlencode(query_params) # noqa
-
     def _process_code(self):
         payload = {
             "grant_type": "authorization_code",
@@ -70,24 +58,51 @@ class OIDCredirectHandler(BaseHTTPRequestHandler):
             data=payload
         )
 
-        self.id_token = json.loads(str(response.text))['id_token']
+        json_response = json.loads(str(response.text))
+        self.id_token = json_response['id_token']
 
-        id_token_decoded = jwt.decode(
+        self.id_token_decoded = jwt.decode(
             self.id_token,
             options={"verify_signature": False}
         )
 
         self.server.como_authenticator.credentials_cache.set_refresh_token(
-            id_token_decoded['preferred_username'],
+            self.id_token_decoded['preferred_username'],
             json.loads(str(response.text))['refresh_token'])
 
     # Handler for the redirect from keycloak
     def do_GET(self):
         self._read_query_parameters(urlparse(self.path).query)
         self._process_code()
-        self.send_response(302)
-        self.send_header('Location', self._get_redirect_url())
+        self.send_response(200)
         self.end_headers()
+        if self.error is not None:
+            myheader = "There was a problem authenticating:" +self.error
+        else:
+            myheader = "Authentication complete for " + self.id_token_decoded['preferred_username']
+        message="""
+        <html>
+            <head>
+                <title>Comotion Auth</title>
+            </head>
+            <body>
+                <span style="font-family:'Courier New'">
+                    <br/>
+                    <center>
+                        <h1> Comotion Auth </h1>
+                        <h2>
+                            {myheader}
+                        </h2>
+                        Authenticated at: {issuer}
+                        <br/>
+                        <br/>
+                        Go ahead and close this window, your keys are saved in your computer's credentials manager.
+                    </center>
+                </span>
+            </body>
+        <html>
+        """.format(myheader=myheader, issuer=self.id_token_decoded['iss'])
+        self.wfile.write(bytes(message,"utf-8"))
         return
 
 
@@ -221,7 +236,7 @@ class Auth():
         self.auth_endpoint = "%s/auth/realms/%s/protocol/openid-connect/auth" % (issuer,orgname) # noqa
         self.token_endpoint = "%s/auth/realms/%s/protocol/openid-connect/token" % (issuer,orgname) # noqa
         self.logout_endpoint = "%s/auth/realms/%s/protocol/openid-connect/logout" % (issuer,orgname) # noqa
-        self.delegated_endpoint = "%s/auth/realms/%s/protocol/openid-connect/delegated" % (issuer,orgname) # noqa
+        self.delegated_endpoint = "%s/auth/realms/%s/account" % (issuer,orgname) # noqa
         self.refresh_token = None
 
         # retrieve refresh token from cache?
@@ -277,7 +292,6 @@ class Auth():
         finally:
             server.socket.close()
 
-    # TODO: get, cache and refresh access token
 
     def get_access_token(self):
 
