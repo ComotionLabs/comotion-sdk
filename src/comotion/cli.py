@@ -178,8 +178,10 @@ def start_query(config, sql):
 def stop_query(config, query_id):
     """ Stop a query"""
     config = DashConfig(Auth(config.orgname, issuer=config.issuer))
-    Query(query_id=query_id, config=config)
+    Query(query_id=query_id, config=config).stop()
+
     click.echo('Query stopped')
+
 
 
 @dash.command()
@@ -194,6 +196,24 @@ def query_state(config, query_id):
     config = DashConfig(Auth(config.orgname, issuer=config.issuer))
     query = Query(query_id=query_id, config=config)
     click.echo(query.state())
+
+
+@dash.command()
+@click.option(
+    '-q', '--query_id',
+    required=True,
+    help='query_id of query'
+)
+@pass_config
+def query_info(config, query_id):
+    """Get info about the state of a query.  Takes the query_id as an argument"""
+    config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+    query = Query(query_id=query_id, config=config)
+    query_info = query.get_query_info()
+    result = query_info.status.state
+    if (hasattr(query_info.status,'stateChangeReason')):
+        result = result + ' - ' + query_info.status.stateChangeReason
+    click.echo(result)
 
 
 @dash.command()
