@@ -370,7 +370,8 @@ def read_and_upload_file_to_dash(
     file_reader = pd.read_csv(
         file,
         chunksize=chunksize,
-        encoding=encoding
+        encoding=encoding,
+        dtype=str  # Set all columns to strings.  Dash will still infer the type, but this makes sure it doesnt mess with the contents of the csv before upload
     )
 
     i = 1
