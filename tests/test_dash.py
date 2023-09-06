@@ -46,7 +46,8 @@ class TestDashModule(unittest.TestCase):
         read_csv.assert_called_once_with(
             'file',
             chunksize=30000,
-            encoding='utf-8')
+            encoding='utf-8',
+            dtype=str)
 
 
         create_gzipped_csv_stream_from_df_calls = [call(1),call(2),call(3)]
@@ -115,7 +116,8 @@ class TestDashModule(unittest.TestCase):
         read_csv.assert_called_once_with(
             'file',
             chunksize=30000,
-            encoding='utf-8')
+            encoding='utf-8',
+            dtype=str)
 
 
         create_gzipped_csv_stream_from_df_calls = [call(1),call(2),call(3)]
