@@ -7,7 +7,7 @@ Method | HTTP request | Description
 [**commit_load**](LoadsApi.md#commit_load) | **POST** /load/{load_id}/commit | Commit a load operation
 [**create_load**](LoadsApi.md#create_load) | **POST** /load | Create a new load
 [**generate_presigned_url_for_file_upload**](LoadsApi.md#generate_presigned_url_for_file_upload) | **POST** /load/{load_id}/file | Generate presigned URL for file upload
-[**get_load_metadata**](LoadsApi.md#get_load_metadata) | **GET** /load/{load_id} | Get load metadata
+[**get_load**](LoadsApi.md#get_load) | **GET** /load/{load_id} | Get load metadata
 
 
 # **commit_load**
@@ -46,7 +46,7 @@ configuration = comodash_api_client_lowlevel.Configuration(
 )
 
 # Enter a context with an instance of the API client
-async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = comodash_api_client_lowlevel.LoadsApi(api_client)
     load_id = '20231117085806_355d42f6_0684_4b8f_b274_225bf7237494' # str | Unique identifier for the load operation
@@ -54,7 +54,7 @@ async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
     try:
         # Commit a load operation
-        api_response = await api_instance.commit_load(load_id, load_commit)
+        api_response = api_instance.commit_load(load_id, load_commit)
         print("The response of LoadsApi->commit_load:\n")
         pprint(api_response)
     except Exception as e:
@@ -129,14 +129,14 @@ configuration = comodash_api_client_lowlevel.Configuration(
 )
 
 # Enter a context with an instance of the API client
-async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = comodash_api_client_lowlevel.LoadsApi(api_client)
     load = comodash_api_client_lowlevel.Load() # Load | 
 
     try:
         # Create a new load
-        api_response = await api_instance.create_load(load)
+        api_response = api_instance.create_load(load)
         print("The response of LoadsApi->create_load:\n")
         pprint(api_response)
     except Exception as e:
@@ -210,7 +210,7 @@ configuration = comodash_api_client_lowlevel.Configuration(
 )
 
 # Enter a context with an instance of the API client
-async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = comodash_api_client_lowlevel.LoadsApi(api_client)
     load_id = '20231117085806_355d42f6_0684_4b8f_b274_225bf7237494' # str | Unique identifier for the load operation
@@ -218,7 +218,7 @@ async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
     try:
         # Generate presigned URL for file upload
-        api_response = await api_instance.generate_presigned_url_for_file_upload(load_id, file_upload_request=file_upload_request)
+        api_response = api_instance.generate_presigned_url_for_file_upload(load_id, file_upload_request=file_upload_request)
         print("The response of LoadsApi->generate_presigned_url_for_file_upload:\n")
         pprint(api_response)
     except Exception as e:
@@ -257,8 +257,8 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **get_load_metadata**
-> LoadMetaData get_load_metadata(load_id)
+# **get_load**
+> LoadMetaData get_load(load_id)
 
 Get load metadata
 
@@ -292,18 +292,18 @@ configuration = comodash_api_client_lowlevel.Configuration(
 )
 
 # Enter a context with an instance of the API client
-async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = comodash_api_client_lowlevel.LoadsApi(api_client)
     load_id = '20231117085806_355d42f6_0684_4b8f_b274_225bf7237494' # str | Unique identifier for the load operation
 
     try:
         # Get load metadata
-        api_response = await api_instance.get_load_metadata(load_id)
-        print("The response of LoadsApi->get_load_metadata:\n")
+        api_response = api_instance.get_load(load_id)
+        print("The response of LoadsApi->get_load:\n")
         pprint(api_response)
     except Exception as e:
-        print("Exception when calling LoadsApi->get_load_metadata: %s\n" % e)
+        print("Exception when calling LoadsApi->get_load: %s\n" % e)
 ```
 
 

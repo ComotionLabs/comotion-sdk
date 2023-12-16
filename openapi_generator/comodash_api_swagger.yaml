@@ -334,7 +334,7 @@ paths:
     get:
       summary: "Get load metadata"
       description: "Retrieves metadata for a specific load based on the provided load_id."
-      operationId: "getLoadMetadata"
+      operationId: "getLoad"
       parameters:
         - $ref: '#/components/parameters/loadId'
       tags:

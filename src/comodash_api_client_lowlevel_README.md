@@ -19,7 +19,6 @@ To be able to use it, you will need these dependencies in your own package that 
 
 * urllib3 >= 1.25.3
 * python-dateutil
-* aiohttp
 * pydantic
 
 ## Getting Started
@@ -52,7 +51,7 @@ configuration = comodash_api_client_lowlevel.Configuration(
 
 
 # Enter a context with an instance of the API client
-async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = comodash_api_client_lowlevel.LoadsApi(api_client)
     load_id = '20231117085806_355d42f6_0684_4b8f_b274_225bf7237494' # str | Unique identifier for the load operation
@@ -60,7 +59,7 @@ async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
     try:
         # Commit a load operation
-        api_response = await api_instance.commit_load(load_id, load_commit)
+        api_response = api_instance.commit_load(load_id, load_commit)
         print("The response of LoadsApi->commit_load:\n")
         pprint(api_response)
     except ApiException as e:
@@ -77,7 +76,7 @@ Class | Method | HTTP request | Description
 *LoadsApi* | [**commit_load**](comodash_api_client_lowlevel/docs/LoadsApi.md#commit_load) | **POST** /load/{load_id}/commit | Commit a load operation
 *LoadsApi* | [**create_load**](comodash_api_client_lowlevel/docs/LoadsApi.md#create_load) | **POST** /load | Create a new load
 *LoadsApi* | [**generate_presigned_url_for_file_upload**](comodash_api_client_lowlevel/docs/LoadsApi.md#generate_presigned_url_for_file_upload) | **POST** /load/{load_id}/file | Generate presigned URL for file upload
-*LoadsApi* | [**get_load_metadata**](comodash_api_client_lowlevel/docs/LoadsApi.md#get_load_metadata) | **GET** /load/{load_id} | Get load metadata
+*LoadsApi* | [**get_load**](comodash_api_client_lowlevel/docs/LoadsApi.md#get_load) | **GET** /load/{load_id} | Get load metadata
 *QueriesApi* | [**download_csv**](comodash_api_client_lowlevel/docs/QueriesApi.md#download_csv) | **GET** /query/{query_id}/csv | Download the csv result file of a query
 *QueriesApi* | [**get_query**](comodash_api_client_lowlevel/docs/QueriesApi.md#get_query) | **GET** /query/{query_id} | Get information about a query
 *QueriesApi* | [**get_query_results**](comodash_api_client_lowlevel/docs/QueriesApi.md#get_query_results) | **GET** /query/{query_id}/result | Get paginated results of a query

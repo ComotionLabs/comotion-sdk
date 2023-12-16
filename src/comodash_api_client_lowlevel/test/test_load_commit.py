@@ -42,6 +42,9 @@ class TestLoadCommit(unittest.TestCase):
             )
         else:
             return LoadCommit(
+                check_sum = {
+                    'key' : null
+                    },
         )
         """
 

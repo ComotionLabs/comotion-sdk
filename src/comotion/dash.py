@@ -4,10 +4,11 @@ import asyncio
 import requests
 import csv
 import time
-from typing import Union, Callable
+from typing import Union, Callable, List, Optional, Dict
 from os.path import join
 import pandas as pd
 import logging
+
 try:
     import cx_Oracle
     import sqlalchemy
@@ -17,15 +18,20 @@ except ImportError:
 from datetime import datetime
 from comotion import Auth
 from comotion import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.comodash_api import QueriesApi, LoadsApi
+from comodash_api_client_lowlevel import QueriesApi, LoadsApi
 from comodash_api_client_lowlevel.models.query_text import QueryText
 from urllib3.exceptions import IncompleteRead
 from urllib3.response import HTTPResponse
 from comodash_api_client_lowlevel.models.query import Query as QueryInfo
-
+from comodash_api_client_lowlevel.models.load import Load as LoadInfo
+from comodash_api_client_lowlevel.models.file_upload_request import FileUploadRequest
+from comodash_api_client_lowlevel.models.file_upload_response import FileUploadResponse
+from comodash_api_client_lowlevel.models.load_commit import LoadCommit
 from comodash_api_client_lowlevel.models.load import Load
 from comodash_api_client_lowlevel.models.query_id import QueryId
 from comodash_api_client_lowlevel.rest import ApiException
+
+
 
 class DashConfig(comodash_api_client_lowlevel.Configuration):
     """
@@ -56,15 +62,17 @@ class Load():
 
     Initialising this class starts a Load on Comotion Dash and stores the
     resulting load_id in `load_id`
+
+    @TODO Outline of how to use this class to upload a file here.
     """
 
-    async def __init__(
+    def __init__(
             self,
             config: DashConfig,
             load_type: str,
             table_name: str,
             load_as_service_client_id: str = None,
-            partitions: list[str] = None
+            partitions: Optional[List[str]] = None
     ):
         """
         Parameters
@@ -83,23 +91,101 @@ class Load():
             Note that any load can only allow for up to 100 partitions, otherwise it will error out.
             If the table already exists, then this is ignored.
         """
+        load_data = locals()
 
         if not(isinstance(config, DashConfig)):
             raise TypeError("config must be of type comotion.dash.DashConfig")
 
         # Enter a context with an instance of the API client
-        async with comodash_api_client_lowlevel.ApiClient(config) as api_client:
-            
+        with comodash_api_client_lowlevel.ApiClient(config) as api_client:
             # Create an instance of the API class with provided parameters
             self.loads_api_instance = LoadsApi(api_client)
-            load_data = locals()
             del load_data['config']
             del load_data['self']
             load = comodash_api_client_lowlevel.Load(**load_data)
 
             # Create a new load
-            load_id_model = await self.loads_api_instance.create_load(load)
+            load_id_model = self.loads_api_instance.create_load(load)
             self.load_id = load_id_model['load_id']
+
+    def get_load_info(self) -> LoadInfo:
+        """Gets the state of the load
+
+        Returns
+        -------
+        LoadInfo
+            Model containint all the load info, with the following attributes
+            
+            `load_status`
+                Status of the load, one of OPEN, PROCESSING, FAIL or SUCCESS
+            `error_type`
+                Type of error if the load status is FAIL.
+            `error_messages`
+                Detailed error messages if the load status is FAIL.
+
+        """
+        return self.load_api_instance.get_load(self.load_id)
+
+    def generate_presigned_url_for_file_upload(self, file_key: str = None) -> FileUploadResponse:
+        """Generates presigned urls and sts credentials for a new file upload
+
+        Parameters
+        ----------
+        file_key : str
+            Optional custom key for the file. This will ensure idempontence. 
+            If multiple files are uploaded to the same load with the same file_key, 
+            only the last one will be loaded. Must be lowercase, can include underscores, 
+            and must end with '.parquet'.
+
+        Returns
+        -------
+        FileUploadResponse
+            Model containing all the relevant credentials to be able to upload a file to s3 as part of the load
+            `presigned_url`
+                Presigned URL data for S3 file upload. The file can be posted to this endpoint using any AWS s3 compatible toolset. 
+                Temporary credentials are included in the url, so no other credentials are required.
+            `sts_credentials`
+                Alternatively to the presigned_url, these Temporary AWS STS credentials 
+                that can be used to upload the file to the location specified by `path` and `bucket.
+                This is required for various advanced toolsets, including AWS Wrangler
+            `path`
+                Path of the file in the S3 bucket. See description of `sts_credentials`.
+            `bucket`
+                Name of the S3 bucket. See description of `sts_credentials`.
+
+        """
+        file_upload_request = FileUploadRequest()
+        if file_key:
+            file_upload_request = FileUploadRequest(file_key=file_key)
+
+        return self.load_api_instance.generate_presigned_url_for_file_upload(self.load_id, file_upload_request=file_upload_request)
+        
+    def commit(self, check_sum: Dict[str, Union[int, float, str]]):
+        """
+        Kicks off the commit of the load. A checksum must be provided
+        which is checked on the server side to ensure that the data provided
+        has integrity.  You can then use the `get_load_info` function to see
+        when it is successful.
+
+        Parameters
+        ----------
+        check_sum : Dict[str, Union[int, float, str]]
+            Checksum data for the files to be committed.
+            Checksums must be in the form of a dictionary, with presto / trino expressions
+            as the key, and the expected result as the value. 
+            At least one is required
+            Example:
+
+            ```
+                {
+                    "count(*)" : 53,
+                    "sum(my_value): 123.3
+                }
+            ```
+        """
+        load_commit = comodash_api_client_lowlevel.LoadCommit(check_sum=check_sum)
+        return self.load_api_instance.commit_load(self.load_id, load_commit)
+
 
 class Query():
     """

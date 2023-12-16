@@ -45,6 +45,8 @@ class TestLoad(unittest.TestCase):
             )
         else:
             return Load(
+                load_type = 'APPEND_ONLY',
+                table_name = 'q2c3v8s7djuy2zmetozkhdomha2bae48b9ocvx9o64ow3eg8p7qw_qklp7l5y121fogx',
         )
         """
 

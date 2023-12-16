@@ -43,14 +43,14 @@ configuration = comodash_api_client_lowlevel.Configuration(
 )
 
 # Enter a context with an instance of the API client
-async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = comodash_api_client_lowlevel.QueriesApi(api_client)
     query_id = '06ba1d95-8c4f-460c-90b3-bc68fddf2fde' # str | Unique Identifier for the query
 
     try:
         # Download the csv result file of a query
-        api_response = await api_instance.download_csv(query_id)
+        api_response = api_instance.download_csv(query_id)
         print("The response of QueriesApi->download_csv:\n")
         pprint(api_response)
     except Exception as e:
@@ -123,14 +123,14 @@ configuration = comodash_api_client_lowlevel.Configuration(
 )
 
 # Enter a context with an instance of the API client
-async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = comodash_api_client_lowlevel.QueriesApi(api_client)
     query_id = '06ba1d95-8c4f-460c-90b3-bc68fddf2fde' # str | Unique Identifier for the query
 
     try:
         # Get information about a query
-        api_response = await api_instance.get_query(query_id)
+        api_response = api_instance.get_query(query_id)
         print("The response of QueriesApi->get_query:\n")
         pprint(api_response)
     except Exception as e:
@@ -202,7 +202,7 @@ configuration = comodash_api_client_lowlevel.Configuration(
 )
 
 # Enter a context with an instance of the API client
-async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = comodash_api_client_lowlevel.QueriesApi(api_client)
     query_id = '06ba1d95-8c4f-460c-90b3-bc68fddf2fde' # str | Unique Identifier for the query
@@ -210,7 +210,7 @@ async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
     try:
         # Get paginated results of a query
-        api_response = await api_instance.get_query_results(query_id, next_token=next_token)
+        api_response = api_instance.get_query_results(query_id, next_token=next_token)
         print("The response of QueriesApi->get_query_results:\n")
         pprint(api_response)
     except Exception as e:
@@ -284,14 +284,14 @@ configuration = comodash_api_client_lowlevel.Configuration(
 )
 
 # Enter a context with an instance of the API client
-async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = comodash_api_client_lowlevel.QueriesApi(api_client)
     query_text = comodash_api_client_lowlevel.QueryText() # QueryText | 
 
     try:
         # Run a query
-        api_response = await api_instance.run_query(query_text)
+        api_response = api_instance.run_query(query_text)
         print("The response of QueriesApi->run_query:\n")
         pprint(api_response)
     except Exception as e:
@@ -361,14 +361,14 @@ configuration = comodash_api_client_lowlevel.Configuration(
 )
 
 # Enter a context with an instance of the API client
-async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = comodash_api_client_lowlevel.QueriesApi(api_client)
     query_id = '06ba1d95-8c4f-460c-90b3-bc68fddf2fde' # str | Unique Identifier for the query
 
     try:
         # Stop a running query
-        await api_instance.stop_query(query_id)
+        api_instance.stop_query(query_id)
     except Exception as e:
         print("Exception when calling QueriesApi->stop_query: %s\n" % e)
 ```

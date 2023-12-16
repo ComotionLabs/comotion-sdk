@@ -14,7 +14,7 @@
 
 import unittest
 
-from comodash_api.queries_api import QueriesApi
+from comodash_api_client_lowlevel.api.queries_api import QueriesApi
 
 
 class TestQueriesApi(unittest.TestCase):

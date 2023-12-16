@@ -1,27 +1,30 @@
 import unittest
 from unittest import mock
-from unittest.mock import Mock, patch, MagicMock,AsyncMock
+from unittest.mock import Mock, patch, MagicMock,create_autospec
 from unittest.mock import call
 from comotion import dash
 from comotion.dash import DashConfig
 import requests
 import io
 
+from comodash_api_client_lowlevel.models.file_upload_response import FileUploadResponse
 
 class TestDashModuleLoadClass(unittest.TestCase):
 
     @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
-    @patch('comotion.dash.comodash_api_client_lowlevel.LoadsApi')
-    def test_init_valid_input(self, mock_loads_api, mock_api_client):
+    @patch('comotion.dash.LoadsApi')
+    @patch('comodash_api_client_lowlevel.Load')
+    def test_init_valid_input(self, mock_comodash_api_client_lowlevel_load, mock_loads_api, mock_api_client):
         # Mock the DashConfig object
         mock_config = MagicMock(spec=DashConfig)
 
-        # Mock the API client context manager
-        mock_api_client_instance = mock_api_client.return_value.__aenter__.return_value
+        # Mock the API client and LoadsApi
+        mock_api_client_instance = mock_api_client.return_value.__enter__.return_value
         mock_loads_api_instance = mock_loads_api.return_value
-        mock_loads_api_instance.create_load.return_value = AsyncMock(return_value={'load_id': '123'})
-
-        from comodash_api_client_lowlevel.models.load import Load
+        mock_load_id_model = {'load_id': '123'}
+        mock_loads_api_instance.create_load.return_value = mock_load_id_model
+        
+        from comotion.dash import Load
         # Test valid initialization
         load = Load(
             config=mock_config,
@@ -30,20 +33,114 @@ class TestDashModuleLoadClass(unittest.TestCase):
             load_as_service_client_id='service_client',
             partitions=['partition1', 'partition2']
         )
-
+        mock_comodash_api_client_lowlevel_load.assert_called_once_with(load_type='APPEND_ONLY', table_name='test_table', load_as_service_client_id='service_client', partitions=['partition1', 'partition2'])
+        mock_loads_api.assert_called_once_with(mock_api_client_instance)
+        mock_loads_api_instance.create_load.assert_called_once_with(mock_comodash_api_client_lowlevel_load.return_value)
         self.assertIsNotNone(load)
         self.assertEqual(load.load_id, '123')
 
     def test_init_invalid_config_type(self):
         with self.assertRaises(TypeError):
-            from comodash_api_client_lowlevel.models.load import Load
+            from comotion.dash import Load
             Load(
                 config='invalid_config',  # This should be of type DashConfig
                 load_type='APPEND_ONLY',
                 table_name='test_table'
             )
 
-    # Additional tests for other scenarios like invalid load_type, table_name, etc.
+    @patch('comotion.dash.LoadInfo')  # Patch LoadInfo if it's from a different module
+    @patch('comotion.dash.Load.__init__', lambda self, *args, **kwargs: None)
+    def test_get_load_info(self, mock_load_info):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+        # Create a mock Load instance
+        from comotion.dash import Load
+        # mock_load = create_autospec(Load, instance=True)
+        mock_load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2']
+        )
+        mock_load.load_api_instance = MagicMock()
+        mock_load.load_id = '123'
+
+        # Set up the return value for the mocked get_load method
+        mock_load_info_instance = mock_load_info.return_value
+        mock_load.load_api_instance.get_load.return_value = mock_load_info_instance
+
+        # Call the method
+        result = mock_load.get_load_info()
+
+        # Assertions
+        mock_load.load_api_instance.get_load.assert_called_once_with('123')
+        self.assertEqual(result, mock_load_info_instance)
+        # Add any additional assertions here, e.g., checking attributes of result if necessary
+
+    @patch('comotion.dash.FileUploadResponse')  # Patch FileUploadResponse if it's from a different module
+    @patch('comotion.dash.Load.__init__', lambda self, *args, **kwargs: None)
+    def test_generate_presigned_url_for_file_upload(self, mock_file_upload_response):
+        # Create a Load instance without running its __init__ method
+        from comotion.dash import Load
+        mock_load = Load()
+        # Manually set necessary attributes
+        mock_load.load_api_instance = MagicMock()
+        mock_load.load_id = '123'
+
+        # Set up the return value for the mocked generate_presigned_url_for_file_upload method
+        mock_file_upload_response_instance = mock_file_upload_response.return_value
+        mock_load.load_api_instance.generate_presigned_url_for_file_upload.return_value = mock_file_upload_response_instance
+
+        # Call the method without file_key
+        result = mock_load.generate_presigned_url_for_file_upload()
+        # Assertions
+        from comodash_api_client_lowlevel.models.file_upload_request import FileUploadRequest
+        mock_load.load_api_instance.generate_presigned_url_for_file_upload.assert_called_once_with('123', file_upload_request=FileUploadRequest())
+        self.assertEqual(result, mock_file_upload_response_instance)
+
+        # Reset mock
+        mock_load.load_api_instance.generate_presigned_url_for_file_upload.reset_mock()
+
+        # Call the method with file_key
+        result_with_key = mock_load.generate_presigned_url_for_file_upload(file_key='test_key.parquet')
+        # Assertions
+        mock_load.load_api_instance.generate_presigned_url_for_file_upload.assert_called_once_with('123', file_upload_request=FileUploadRequest(file_key='test_key.parquet'))
+        self.assertEqual(result_with_key, mock_file_upload_response_instance)
+
+    @patch('comotion.dash.comodash_api_client_lowlevel.LoadCommit')
+    @patch('comotion.dash.Load.__init__', lambda self, *args, **kwargs: None)
+    def test_commit(self, mock_load_commit_class):
+        # Create a Load instance without running its __init__ method
+        from comotion.dash import Load
+        mock_load = Load()
+        # Manually set necessary attributes
+        mock_load.load_api_instance = MagicMock()
+        mock_load.load_id = '123'
+
+        # Set up the return value for the mocked commit_load method
+        mock_commit_response = MagicMock()  # Or a more specific mock based on expected response
+        mock_load.load_api_instance.commit_load.return_value = mock_commit_response
+
+        # Define a test checksum dictionary
+        test_check_sum = {
+            "count(*)": 53,
+            "sum(my_value)": 123.3
+        }
+
+        # Mock the LoadCommit class to return a specific instance
+        from comodash_api_client_lowlevel.models.load_commit import LoadCommit
+        mock_load_commit_instance = MagicMock(spec=LoadCommit)
+        mock_load_commit_class.return_value = mock_load_commit_instance
+
+        # Call the method
+        result = mock_load.commit(test_check_sum)
+
+        # Assertions
+        mock_load_commit_class.assert_called_once_with(check_sum=test_check_sum)
+        mock_load.load_api_instance.commit_load.assert_called_once_with('123', mock_load_commit_instance)
+        self.assertEqual(result, mock_commit_response)
+
 
 
 class TestDashModule(unittest.TestCase):

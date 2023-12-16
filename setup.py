@@ -43,7 +43,8 @@ if __name__ == "__main__":
             'sqlalchemy>=1.4.36',
             'tqdm>=4.64.0',
             'aiohttp',
-            'python-dateutil'
+            'python-dateutil',
+            'pydantic'
         ],
         tests_require=[
             'mock',

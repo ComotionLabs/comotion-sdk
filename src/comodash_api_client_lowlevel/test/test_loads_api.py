@@ -14,7 +14,7 @@
 
 import unittest
 
-from comodash_api.loads_api import LoadsApi
+from comodash_api_client_lowlevel.api.loads_api import LoadsApi
 
 
 class TestLoadsApi(unittest.TestCase):

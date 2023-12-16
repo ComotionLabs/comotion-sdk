@@ -70,9 +70,10 @@ java -jar \
         -i ./openapi_generator/comodash_api_swagger.yaml\
         -g python \
         --package-name comodash_api_client_lowlevel \
-        --api-package comodash_api \
         --additional-properties \
-            generateSourceCodeOnly=True,\
-            library=asyncio \
+            generateSourceCodeOnly=True,library=urllib3 \
         -o ./src/
 ```
+We have changed from asyncio to urllib3 to ensure simplicity in coding without requiring "await" and "async"
+
+        --api-package comodash_api \
