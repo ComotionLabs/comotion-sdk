@@ -66,7 +66,7 @@ Download latest [jar of OpenAPI Generator](https://github.com/OpenAPITools/opena
 
 `
 java -jar \
-./openapi_generator/openapi-generator-cli-5.2.1.jar generate \
+./openapi_generator/openapi-generator-cli.jar generate \
   -i ./openapi_generator/comodash_api_swagger.yaml\
   -g python \
   --package-name comodash_api_client_lowlevel \

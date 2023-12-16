@@ -9,9 +9,6 @@ servers:
       orgName:
         default: 'training'
         description: OrgName for your organisation
-    
-    x-amazon-apigateway-endpoint-configuration:
-      disableExecuteApiEndpoint: true
 paths:
   /query:
     post:
@@ -44,7 +41,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        500:
+        5XX:
           description: Unexpected error.
           content:
             application/json:
@@ -217,8 +214,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QueryResult'
-
-
         '400':
           description: Bad request. Query Id of a valid query must be provided.
           content:
@@ -247,7 +242,81 @@ paths:
         - queries
       security:
         - OAuth2Authorizer:
-            - query:read
+            - query:read  
+  /load:
+    post:
+      security:
+      - OAuth2Authorizer:
+        - "load:write"
+      responses:
+        202:
+          description: Load successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryId'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /load/{load_id}/commit:
+    post:
+      summary: "Commit a load operation"
+      description: "Initiates a commit operation for a given load, identified by the load_id."
+      operationId: "commitLoad"
+      parameters:
+        - $ref: '#/components/parameters/loadId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoadCommit'
+      responses:
+        200:
+          description: "Commit initiated successfully."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  message:
+                    type: "string"
+        400:
+          description: "Invalid request, such as invalid checksum data."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: "Internal server error or unhandled exception."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+          - "load:write"
 
 components:
   parameters:
@@ -259,6 +328,14 @@ components:
       schema:
         type: string
       example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
+    loadId:
+      name: "load_id"
+      in: "path"
+      description: "Unique identifier for the load operation"
+      required: true
+      schema:
+        type: "string"
+      example: 20231117085806_355d42f6_0684_4b8f_b274_225bf7237494
   schemas:
     Error:
       type: object
@@ -384,6 +461,19 @@ components:
                     Type: decimal
                   - Name: column7
                     Type: double
+    LoadCommit:
+      description: Load request body schema
+      type: "object"
+      properties:
+        check_sum:
+          type: "object"
+          additionalProperties: 
+            oneOf:
+              - type: "string"
+              - type: "integer"
+              - type: "number"
+          description: "Checksum data for the files to be committed."
+
 
   securitySchemes:
     OAuth2Authorizer:
