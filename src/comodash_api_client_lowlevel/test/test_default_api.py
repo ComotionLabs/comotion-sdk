@@ -33,10 +33,17 @@ class TestDefaultApi(unittest.TestCase):
         """
         pass
 
-    def test_create_load(self) -> None:
-        """Test case for create_load
+    def test_generate_presigned_url_for_file_upload(self) -> None:
+        """Test case for generate_presigned_url_for_file_upload
 
-        Create a new load
+        Generate presigned URL for file upload
+        """
+        pass
+
+    def test_get_load_metadata(self) -> None:
+        """Test case for get_load_metadata
+
+        Get load metadata
         """
         pass
 
