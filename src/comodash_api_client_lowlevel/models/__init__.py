@@ -16,9 +16,12 @@
 # import models into model package
 from comodash_api_client_lowlevel.models.commit_load200_response import CommitLoad200Response
 from comodash_api_client_lowlevel.models.error import Error
+from comodash_api_client_lowlevel.models.file_upload_request import FileUploadRequest
+from comodash_api_client_lowlevel.models.file_upload_response import FileUploadResponse
 from comodash_api_client_lowlevel.models.load import Load
 from comodash_api_client_lowlevel.models.load_commit import LoadCommit
 from comodash_api_client_lowlevel.models.load_commit_check_sum_value import LoadCommitCheckSumValue
+from comodash_api_client_lowlevel.models.load_meta_data import LoadMetaData
 from comodash_api_client_lowlevel.models.query import Query
 from comodash_api_client_lowlevel.models.query_id import QueryId
 from comodash_api_client_lowlevel.models.query_result import QueryResult

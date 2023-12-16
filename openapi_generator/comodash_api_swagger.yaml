@@ -254,6 +254,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Load'
+      tags:
+        - loads
       security:
       - OAuth2Authorizer:
         - "load:write"
@@ -307,6 +309,83 @@ paths:
                     type: "string"
         400:
           description: "Invalid request, such as invalid checksum data."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: "Internal server error or unhandled exception."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+          - "load:write"
+  /load/{load_id}:
+    get:
+      summary: "Get load metadata"
+      description: "Retrieves metadata for a specific load based on the provided load_id."
+      operationId: "getLoadMetadata"
+      parameters:
+        - $ref: '#/components/parameters/loadId'
+      responses:
+        200:
+          description: "Load metadata retrieved successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadMetaData'
+        400:
+          description: "Invalid request."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: "Internal server error or unhandled exception."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+          - "load:read"
+  /load/{load_id}/file:
+    post:
+      summary: "Generate presigned URL for file upload"
+      description: "Generates a presigned URL and STS credentials for uploading a file to a specified load."
+      operationId: "generatePresignedUrlForFileUpload"
+      parameters:
+        - $ref: '#/components/parameters/loadId'
+      requestBody:
+        description: "Optional parameters for file upload"
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileUploadRequest'
+      responses:
+        200:
+          description: "Presigned URL generated successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+        400:
+          description: "Invalid request."
           content:
             application/json:
               schema:
@@ -501,6 +580,46 @@ components:
           items:
             type: "string"
           description: "List of partition names."
+    LoadMetaData:
+      type: "object"
+      properties:
+        LoadStatus:
+          type: "string"
+          enum: ["OPEN", "PROCESSING", "FAIL", "SUCCESS"]
+          description: "Current status of the load."
+        ErrorType:
+          type: "string"
+          nullable: true
+          description: "Type of error if the load status is FAIL."
+        ErrorMessages:
+          type: "object"
+          additionalProperties:
+            type: "string"
+          nullable: true
+          description: "Detailed error messages if the load status is FAIL."
+    FileUploadRequest:
+      type: "object"
+      properties:
+        file_key:
+          type: "string"
+          pattern: "^[a-z_]+[a-z0-9_]*[a-z0-9]\\.parquet$"
+          description: "Optional custom key for the file. This will ensure idempontence.  If multiple files are uploaded to the same load with the same file_key, only the last one will be loaded. Must be lowercase, can include underscores, and must end with '.parquet'."
+    FileUploadResponse:
+      type: "object"
+      properties:
+        presigned_url:
+          type: "object"
+          description: "Presigned URL data for S3 file upload.  The file can be posted to this endpoint using any AWS s3 compatible toolset.  Temporary credentials are included in the url, so no other credentials are required."
+        sts_credentials:
+          type: "object"
+          description: "Alternatively to the presigned_url, these Temporary AWS STS credentials that can be used to upload the file to the location specified by `path` and `bucket."
+        path:
+          type: "string"
+          description: "Path of the file in the S3 bucket.  See description of `sts_credentials`."
+        bucket:
+          type: "string"
+          description: "Name of the S3 bucket.  See description of `sts_credentials`."
+
 
 
   securitySchemes:

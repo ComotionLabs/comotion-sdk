@@ -76,6 +76,8 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *DefaultApi* | [**commit_load**](comodash_api_client_lowlevel/docs/DefaultApi.md#commit_load) | **POST** /load/{load_id}/commit | Commit a load operation
 *DefaultApi* | [**create_load**](comodash_api_client_lowlevel/docs/DefaultApi.md#create_load) | **POST** /load | Create a new load
+*DefaultApi* | [**generate_presigned_url_for_file_upload**](comodash_api_client_lowlevel/docs/DefaultApi.md#generate_presigned_url_for_file_upload) | **POST** /load/{load_id}/file | Generate presigned URL for file upload
+*DefaultApi* | [**get_load_metadata**](comodash_api_client_lowlevel/docs/DefaultApi.md#get_load_metadata) | **GET** /load/{load_id} | Get load metadata
 *QueriesApi* | [**download_csv**](comodash_api_client_lowlevel/docs/QueriesApi.md#download_csv) | **GET** /query/{query_id}/csv | Download the csv result file of a query
 *QueriesApi* | [**get_query**](comodash_api_client_lowlevel/docs/QueriesApi.md#get_query) | **GET** /query/{query_id} | Get information about a query
 *QueriesApi* | [**get_query_results**](comodash_api_client_lowlevel/docs/QueriesApi.md#get_query_results) | **GET** /query/{query_id}/result | Get paginated results of a query
@@ -87,9 +89,12 @@ Class | Method | HTTP request | Description
 
  - [CommitLoad200Response](comodash_api_client_lowlevel/docs/CommitLoad200Response.md)
  - [Error](comodash_api_client_lowlevel/docs/Error.md)
+ - [FileUploadRequest](comodash_api_client_lowlevel/docs/FileUploadRequest.md)
+ - [FileUploadResponse](comodash_api_client_lowlevel/docs/FileUploadResponse.md)
  - [Load](comodash_api_client_lowlevel/docs/Load.md)
  - [LoadCommit](comodash_api_client_lowlevel/docs/LoadCommit.md)
  - [LoadCommitCheckSumValue](comodash_api_client_lowlevel/docs/LoadCommitCheckSumValue.md)
+ - [LoadMetaData](comodash_api_client_lowlevel/docs/LoadMetaData.md)
  - [Query](comodash_api_client_lowlevel/docs/Query.md)
  - [QueryId](comodash_api_client_lowlevel/docs/QueryId.md)
  - [QueryResult](comodash_api_client_lowlevel/docs/QueryResult.md)
