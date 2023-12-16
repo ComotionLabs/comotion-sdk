@@ -291,6 +291,8 @@ paths:
       operationId: "commitLoad"
       parameters:
         - $ref: '#/components/parameters/loadId'
+      tags:
+        - loads
       requestBody:
         required: true
         content:
@@ -335,6 +337,8 @@ paths:
       operationId: "getLoadMetadata"
       parameters:
         - $ref: '#/components/parameters/loadId'
+      tags:
+        - loads
       responses:
         200:
           description: "Load metadata retrieved successfully."
@@ -367,7 +371,9 @@ paths:
     post:
       summary: "Generate presigned URL for file upload"
       description: "Generates a presigned URL and STS credentials for uploading a file to a specified load."
-      operationId: "generatePresignedUrlForFileUpload"
+      operationId: "getUploadCredentialsForFile"
+      tags:
+        - loads
       parameters:
         - $ref: '#/components/parameters/loadId'
       requestBody:

@@ -14,14 +14,14 @@
 
 import unittest
 
-from comodash_api.default_api import DefaultApi
+from comodash_api.loads_api import LoadsApi
 
 
-class TestDefaultApi(unittest.TestCase):
-    """DefaultApi unit test stubs"""
+class TestLoadsApi(unittest.TestCase):
+    """LoadsApi unit test stubs"""
 
     def setUp(self) -> None:
-        self.api = DefaultApi()
+        self.api = LoadsApi()
 
     def tearDown(self) -> None:
         pass
@@ -37,6 +37,20 @@ class TestDefaultApi(unittest.TestCase):
         """Test case for create_load
 
         Create a new load
+        """
+        pass
+
+    def test_generate_presigned_url_for_file_upload(self) -> None:
+        """Test case for generate_presigned_url_for_file_upload
+
+        Generate presigned URL for file upload
+        """
+        pass
+
+    def test_get_load_metadata(self) -> None:
+        """Test case for get_load_metadata
+
+        Get load metadata
         """
         pass
 
