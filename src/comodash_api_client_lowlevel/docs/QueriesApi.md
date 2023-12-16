@@ -12,7 +12,7 @@ Method | HTTP request | Description
 
 
 # **download_csv**
-> file_type download_csv(query_id)
+> bytearray download_csv(query_id)
 
 Download the csv result file of a query
 
@@ -21,10 +21,11 @@ Download the csv result file of a query
 * Bearer (JWT) Authentication (OAuth2Authorizer):
 ```python
 import time
+import os
 import comodash_api_client_lowlevel
-from comodash_api import queries_api
-from comodash_api_client_lowlevel.model.error import Error
+from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
+
 # Defining the host is optional and defaults to https://training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
@@ -38,34 +39,35 @@ configuration = comodash_api_client_lowlevel.Configuration(
 
 # Configure Bearer authorization (JWT): OAuth2Authorizer
 configuration = comodash_api_client_lowlevel.Configuration(
-    access_token = 'YOUR_BEARER_TOKEN'
+    access_token = os.environ["BEARER_TOKEN"]
 )
 
 # Enter a context with an instance of the API client
-with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = queries_api.QueriesApi(api_client)
-    query_id = "06ba1d95-8c4f-460c-90b3-bc68fddf2fde" # str | Unique Identifier for the query
+    api_instance = comodash_api_client_lowlevel.QueriesApi(api_client)
+    query_id = '06ba1d95-8c4f-460c-90b3-bc68fddf2fde' # str | Unique Identifier for the query
 
-    # example passing only required values which don't have defaults set
     try:
         # Download the csv result file of a query
-        api_response = api_instance.download_csv(query_id)
+        api_response = await api_instance.download_csv(query_id)
+        print("The response of QueriesApi->download_csv:\n")
         pprint(api_response)
-    except comodash_api_client_lowlevel.ApiException as e:
+    except Exception as e:
         print("Exception when calling QueriesApi->download_csv: %s\n" % e)
 ```
+
 
 
 ### Parameters
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **query_id** | **str**| Unique Identifier for the query |
+ **query_id** | **str**| Unique Identifier for the query | 
 
 ### Return type
 
-**file_type**
+**bytearray**
 
 ### Authorization
 
@@ -75,7 +77,6 @@ Name | Type | Description  | Notes
 
  - **Content-Type**: Not defined
  - **Accept**: binary/octet-stream, application/json
-
 
 ### HTTP response details
 | Status code | Description | Response headers |
@@ -99,11 +100,12 @@ Get information about a query
 * Bearer (JWT) Authentication (OAuth2Authorizer):
 ```python
 import time
+import os
 import comodash_api_client_lowlevel
-from comodash_api import queries_api
-from comodash_api_client_lowlevel.model.error import Error
-from comodash_api_client_lowlevel.model.query import Query
+from comodash_api_client_lowlevel.models.query import Query
+from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
+
 # Defining the host is optional and defaults to https://training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
@@ -117,30 +119,31 @@ configuration = comodash_api_client_lowlevel.Configuration(
 
 # Configure Bearer authorization (JWT): OAuth2Authorizer
 configuration = comodash_api_client_lowlevel.Configuration(
-    access_token = 'YOUR_BEARER_TOKEN'
+    access_token = os.environ["BEARER_TOKEN"]
 )
 
 # Enter a context with an instance of the API client
-with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = queries_api.QueriesApi(api_client)
-    query_id = "06ba1d95-8c4f-460c-90b3-bc68fddf2fde" # str | Unique Identifier for the query
+    api_instance = comodash_api_client_lowlevel.QueriesApi(api_client)
+    query_id = '06ba1d95-8c4f-460c-90b3-bc68fddf2fde' # str | Unique Identifier for the query
 
-    # example passing only required values which don't have defaults set
     try:
         # Get information about a query
-        api_response = api_instance.get_query(query_id)
+        api_response = await api_instance.get_query(query_id)
+        print("The response of QueriesApi->get_query:\n")
         pprint(api_response)
-    except comodash_api_client_lowlevel.ApiException as e:
+    except Exception as e:
         print("Exception when calling QueriesApi->get_query: %s\n" % e)
 ```
+
 
 
 ### Parameters
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **query_id** | **str**| Unique Identifier for the query |
+ **query_id** | **str**| Unique Identifier for the query | 
 
 ### Return type
 
@@ -155,7 +158,6 @@ Name | Type | Description  | Notes
  - **Content-Type**: Not defined
  - **Accept**: application/json
 
-
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
@@ -168,7 +170,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_query_results**
-> QueryResult get_query_results(query_id)
+> QueryResult get_query_results(query_id, next_token=next_token)
 
 Get paginated results of a query
 
@@ -177,11 +179,12 @@ Get paginated results of a query
 * Bearer (JWT) Authentication (OAuth2Authorizer):
 ```python
 import time
+import os
 import comodash_api_client_lowlevel
-from comodash_api import queries_api
-from comodash_api_client_lowlevel.model.error import Error
-from comodash_api_client_lowlevel.model.query_result import QueryResult
+from comodash_api_client_lowlevel.models.query_result import QueryResult
+from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
+
 # Defining the host is optional and defaults to https://training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
@@ -195,41 +198,33 @@ configuration = comodash_api_client_lowlevel.Configuration(
 
 # Configure Bearer authorization (JWT): OAuth2Authorizer
 configuration = comodash_api_client_lowlevel.Configuration(
-    access_token = 'YOUR_BEARER_TOKEN'
+    access_token = os.environ["BEARER_TOKEN"]
 )
 
 # Enter a context with an instance of the API client
-with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = queries_api.QueriesApi(api_client)
-    query_id = "06ba1d95-8c4f-460c-90b3-bc68fddf2fde" # str | Unique Identifier for the query
-    next_token = "ASevTwsuuWcDHMZcOF7qV32rDnXKzAI1renA2ZVPdqd2Em2scsyxFLuFiFi+ra/nF5Sw+ME8nj6Hs1G9JRC8fKaLy3913htbKw==" # str | token to get next page of query results.  Will be supplied in the response of the previous call if the result set is truncated. (optional)
+    api_instance = comodash_api_client_lowlevel.QueriesApi(api_client)
+    query_id = '06ba1d95-8c4f-460c-90b3-bc68fddf2fde' # str | Unique Identifier for the query
+    next_token = 'ASevTwsuuWcDHMZcOF7qV32rDnXKzAI1renA2ZVPdqd2Em2scsyxFLuFiFi+ra/nF5Sw+ME8nj6Hs1G9JRC8fKaLy3913htbKw==' # str | token to get next page of query results.  Will be supplied in the response of the previous call if the result set is truncated. (optional)
 
-    # example passing only required values which don't have defaults set
     try:
         # Get paginated results of a query
-        api_response = api_instance.get_query_results(query_id)
+        api_response = await api_instance.get_query_results(query_id, next_token=next_token)
+        print("The response of QueriesApi->get_query_results:\n")
         pprint(api_response)
-    except comodash_api_client_lowlevel.ApiException as e:
-        print("Exception when calling QueriesApi->get_query_results: %s\n" % e)
-
-    # example passing only required values which don't have defaults set
-    # and optional values
-    try:
-        # Get paginated results of a query
-        api_response = api_instance.get_query_results(query_id, next_token=next_token)
-        pprint(api_response)
-    except comodash_api_client_lowlevel.ApiException as e:
+    except Exception as e:
         print("Exception when calling QueriesApi->get_query_results: %s\n" % e)
 ```
+
 
 
 ### Parameters
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **query_id** | **str**| Unique Identifier for the query |
- **next_token** | **str**| token to get next page of query results.  Will be supplied in the response of the previous call if the result set is truncated. | [optional]
+ **query_id** | **str**| Unique Identifier for the query | 
+ **next_token** | **str**| token to get next page of query results.  Will be supplied in the response of the previous call if the result set is truncated. | [optional] 
 
 ### Return type
 
@@ -243,7 +238,6 @@ Name | Type | Description  | Notes
 
  - **Content-Type**: Not defined
  - **Accept**: application/json
-
 
 ### HTTP response details
 | Status code | Description | Response headers |
@@ -266,12 +260,13 @@ Run a query
 * Bearer (JWT) Authentication (OAuth2Authorizer):
 ```python
 import time
+import os
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel import queries_api
-from comodash_api_client_lowlevel.model.query_id import QueryId
-from comodash_api_client_lowlevel.model.error import Error
-from comodash_api_client_lowlevel.model.query_text import QueryText
+from comodash_api_client_lowlevel.models.query_id import QueryId
+from comodash_api_client_lowlevel.models.query_text import QueryText
+from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
+
 # Defining the host is optional and defaults to https://training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
@@ -285,32 +280,31 @@ configuration = comodash_api_client_lowlevel.Configuration(
 
 # Configure Bearer authorization (JWT): OAuth2Authorizer
 configuration = comodash_api_client_lowlevel.Configuration(
-    access_token = 'YOUR_BEARER_TOKEN'
+    access_token = os.environ["BEARER_TOKEN"]
 )
 
 # Enter a context with an instance of the API client
-with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = queries_api.QueriesApi(api_client)
-    query_text = QueryText(
-        query="select 'hello' --should not be multiline",
-    ) # QueryText |
+    api_instance = comodash_api_client_lowlevel.QueriesApi(api_client)
+    query_text = comodash_api_client_lowlevel.QueryText() # QueryText | 
 
-    # example passing only required values which don't have defaults set
     try:
         # Run a query
-        api_response = api_instance.run_query(query_text)
+        api_response = await api_instance.run_query(query_text)
+        print("The response of QueriesApi->run_query:\n")
         pprint(api_response)
-    except comodash_api_client_lowlevel.ApiException as e:
+    except Exception as e:
         print("Exception when calling QueriesApi->run_query: %s\n" % e)
 ```
+
 
 
 ### Parameters
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **query_text** | [**QueryText**](QueryText.md)|  |
+ **query_text** | [**QueryText**](QueryText.md)|  | 
 
 ### Return type
 
@@ -325,14 +319,13 @@ Name | Type | Description  | Notes
  - **Content-Type**: application/json
  - **Accept**: application/json
 
-
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **202** | Query successfully started |  -  |
 **400** | Bad request. Problem with query string. |  -  |
 **401** | Authorization information is missing or invalid. |  -  |
-**500** | Unexpected error. |  -  |
+**5XX** | Unexpected error. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
@@ -346,10 +339,11 @@ Stop a running query
 * Bearer (JWT) Authentication (OAuth2Authorizer):
 ```python
 import time
+import os
 import comodash_api_client_lowlevel
-from comodash_api import queries_api
-from comodash_api_client_lowlevel.model.error import Error
+from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
+
 # Defining the host is optional and defaults to https://training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
@@ -363,29 +357,29 @@ configuration = comodash_api_client_lowlevel.Configuration(
 
 # Configure Bearer authorization (JWT): OAuth2Authorizer
 configuration = comodash_api_client_lowlevel.Configuration(
-    access_token = 'YOUR_BEARER_TOKEN'
+    access_token = os.environ["BEARER_TOKEN"]
 )
 
 # Enter a context with an instance of the API client
-with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
+async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = queries_api.QueriesApi(api_client)
-    query_id = "06ba1d95-8c4f-460c-90b3-bc68fddf2fde" # str | Unique Identifier for the query
+    api_instance = comodash_api_client_lowlevel.QueriesApi(api_client)
+    query_id = '06ba1d95-8c4f-460c-90b3-bc68fddf2fde' # str | Unique Identifier for the query
 
-    # example passing only required values which don't have defaults set
     try:
         # Stop a running query
-        api_instance.stop_query(query_id)
-    except comodash_api_client_lowlevel.ApiException as e:
+        await api_instance.stop_query(query_id)
+    except Exception as e:
         print("Exception when calling QueriesApi->stop_query: %s\n" % e)
 ```
+
 
 
 ### Parameters
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **query_id** | **str**| Unique Identifier for the query |
+ **query_id** | **str**| Unique Identifier for the query | 
 
 ### Return type
 
@@ -399,7 +393,6 @@ void (empty response body)
 
  - **Content-Type**: Not defined
  - **Accept**: application/json
-
 
 ### HTTP response details
 | Status code | Description | Response headers |

@@ -245,6 +245,15 @@ paths:
             - query:read  
   /load:
     post:
+      summary: "Create a new load"
+      description: "Creates a new load with the given parameters."
+      operationId: "createLoad"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Load'
       security:
       - OAuth2Authorizer:
         - "load:write"
@@ -473,6 +482,25 @@ components:
               - type: "integer"
               - type: "number"
           description: "Checksum data for the files to be committed."
+    Load:
+      type: "object"
+      properties:
+        load_type:
+          type: "string"
+          enum: ["APPEND_ONLY"]
+          description: "Type of the load operation."
+        table_name:
+          type: "string"
+          pattern: "^[a-z_]+[a-z0-9_]*[a-z0-9]$"
+          description: "Name of the table.  Only lowercase with underscores."
+        load_as_service_client_id:
+          type: "string"
+          description: "Optional parameter to force the load to act as a certain service_client_id."
+        partitions:
+          type: "array"
+          items:
+            type: "string"
+          description: "List of partition names."
 
 
   securitySchemes:

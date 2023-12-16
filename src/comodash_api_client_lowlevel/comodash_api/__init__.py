@@ -1,3 +1,6 @@
-# do not import all apis into this module because that uses a lot of memory and stack frames
-# if you need the ability to import all apis from one package, import them with
-# from comodash_api_client_lowlevel.apis import QueriesApi
+# flake8: noqa
+
+# import apis into api package
+from comodash_api.default_api import DefaultApi
+from comodash_api.queries_api import QueriesApi
+
