@@ -1,10 +1,50 @@
 import unittest
 from unittest import mock
-from unittest.mock import Mock
+from unittest.mock import Mock, patch, MagicMock,AsyncMock
 from unittest.mock import call
 from comotion import dash
+from comotion.dash import DashConfig
 import requests
 import io
+
+
+class TestDashModuleLoadClass(unittest.TestCase):
+
+    @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.comodash_api_client_lowlevel.LoadsApi')
+    def test_init_valid_input(self, mock_loads_api, mock_api_client):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+
+        # Mock the API client context manager
+        mock_api_client_instance = mock_api_client.return_value.__aenter__.return_value
+        mock_loads_api_instance = mock_loads_api.return_value
+        mock_loads_api_instance.create_load.return_value = AsyncMock(return_value={'load_id': '123'})
+
+        from comodash_api_client_lowlevel.models.load import Load
+        # Test valid initialization
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2']
+        )
+
+        self.assertIsNotNone(load)
+        self.assertEqual(load.load_id, '123')
+
+    def test_init_invalid_config_type(self):
+        with self.assertRaises(TypeError):
+            from comodash_api_client_lowlevel.models.load import Load
+            Load(
+                config='invalid_config',  # This should be of type DashConfig
+                load_type='APPEND_ONLY',
+                table_name='test_table'
+            )
+
+    # Additional tests for other scenarios like invalid load_type, table_name, etc.
+
 
 class TestDashModule(unittest.TestCase):
 

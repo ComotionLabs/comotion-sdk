@@ -17,7 +17,6 @@
 __version__ = "1.0.0"
 
 # import apis into sdk package
-from comodash_api.default_api import DefaultApi
 from comodash_api.loads_api import LoadsApi
 from comodash_api.queries_api import QueriesApi
 
@@ -40,6 +39,7 @@ from comodash_api_client_lowlevel.models.file_upload_response import FileUploadR
 from comodash_api_client_lowlevel.models.load import Load
 from comodash_api_client_lowlevel.models.load_commit import LoadCommit
 from comodash_api_client_lowlevel.models.load_commit_check_sum_value import LoadCommitCheckSumValue
+from comodash_api_client_lowlevel.models.load_id import LoadId
 from comodash_api_client_lowlevel.models.load_meta_data import LoadMetaData
 from comodash_api_client_lowlevel.models.query import Query
 from comodash_api_client_lowlevel.models.query_id import QueryId

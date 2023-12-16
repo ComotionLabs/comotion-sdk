@@ -64,13 +64,15 @@ The latest swagger file is stored in openapi_generator/comodash_api_swagger.json
 
 Download latest [jar of OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator#13---download-jar)
 
-`
+```
 java -jar \
-./openapi_generator/openapi-generator-cli.jar generate \
-  -i ./openapi_generator/comodash_api_swagger.yaml\
-  -g python \
-  --package-name comodash_api_client_lowlevel \
-  --api-package comodash_api \
-  --additional-properties generateSourceCodeOnly=True,library=asyncio \
-  -o ./src/
-`
+  ./openapi_generator/openapi-generator-cli.jar generate \
+        -i ./openapi_generator/comodash_api_swagger.yaml\
+        -g python \
+        --package-name comodash_api_client_lowlevel \
+        --api-package comodash_api \
+        --additional-properties \
+            generateSourceCodeOnly=True,\
+            library=asyncio \
+        -o ./src/
+```

@@ -26,10 +26,31 @@ class TestLoadsApi(unittest.TestCase):
     def tearDown(self) -> None:
         pass
 
+    def test_commit_load(self) -> None:
+        """Test case for commit_load
+
+        Commit a load operation
+        """
+        pass
+
     def test_create_load(self) -> None:
         """Test case for create_load
 
         Create a new load
+        """
+        pass
+
+    def test_generate_presigned_url_for_file_upload(self) -> None:
+        """Test case for generate_presigned_url_for_file_upload
+
+        Generate presigned URL for file upload
+        """
+        pass
+
+    def test_get_load_metadata(self) -> None:
+        """Test case for get_load_metadata
+
+        Get load metadata
         """
         pass
 

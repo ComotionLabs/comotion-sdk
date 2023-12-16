@@ -31,8 +31,8 @@ class Load(BaseModel):
     """
     Load
     """ # noqa: E501
-    load_type: Optional[StrictStr] = Field(default=None, description="Type of the load operation.")
-    table_name: Optional[Annotated[str, Field(strict=True)]] = Field(default=None, description="Name of the table.  Only lowercase with underscores.")
+    load_type: StrictStr = Field(description="Type of the load operation.")
+    table_name: Annotated[str, Field(strict=True)] = Field(description="Name of the table.  Only lowercase with underscores.")
     load_as_service_client_id: Optional[StrictStr] = Field(default=None, description="Optional parameter to force the load to act as a certain service_client_id.")
     partitions: Optional[List[StrictStr]] = Field(default=None, description="List of partition names.")
     __properties: ClassVar[List[str]] = ["load_type", "table_name", "load_as_service_client_id", "partitions"]
@@ -40,9 +40,6 @@ class Load(BaseModel):
     @field_validator('load_type')
     def load_type_validate_enum(cls, value):
         """Validates the enum"""
-        if value is None:
-            return value
-
         if value not in ('APPEND_ONLY'):
             raise ValueError("must be one of enum values ('APPEND_ONLY')")
         return value
@@ -50,9 +47,6 @@ class Load(BaseModel):
     @field_validator('table_name')
     def table_name_validate_regular_expression(cls, value):
         """Validates the regular expression"""
-        if value is None:
-            return value
-
         if not re.match(r"^[a-z_]+[a-z0-9_]*[a-z0-9]$", value):
             raise ValueError(r"must validate the regular expression /^[a-z_]+[a-z0-9_]*[a-z0-9]$/")
         return value

@@ -5,7 +5,7 @@ Load request body schema
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**check_sum** | [**Dict[str, LoadCommitCheckSumValue]**](LoadCommitCheckSumValue.md) | Checksum data for the files to be committed. | [optional] 
+**check_sum** | [**Dict[str, LoadCommitCheckSumValue]**](LoadCommitCheckSumValue.md) | Checksum data for the files to be committed. | 
 
 ## Example
 

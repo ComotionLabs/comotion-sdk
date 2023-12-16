@@ -4,8 +4,8 @@
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**load_type** | **str** | Type of the load operation. | [optional] 
-**table_name** | **str** | Name of the table.  Only lowercase with underscores. | [optional] 
+**load_type** | **str** | Type of the load operation. | 
+**table_name** | **str** | Name of the table.  Only lowercase with underscores. | 
 **load_as_service_client_id** | **str** | Optional parameter to force the load to act as a certain service_client_id. | [optional] 
 **partitions** | **List[str]** | List of partition names. | [optional] 
 

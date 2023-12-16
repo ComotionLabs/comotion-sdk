@@ -265,7 +265,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QueryId'
+                $ref: '#/components/schemas/LoadId'
         400:
           description: Bad request
           content:
@@ -291,6 +291,8 @@ paths:
       operationId: "commitLoad"
       parameters:
         - $ref: '#/components/parameters/loadId'
+      tags:
+        - loads
       requestBody:
         required: true
         content:
@@ -335,6 +337,8 @@ paths:
       operationId: "getLoadMetadata"
       parameters:
         - $ref: '#/components/parameters/loadId'
+      tags:
+        - loads
       responses:
         200:
           description: "Load metadata retrieved successfully."
@@ -370,6 +374,8 @@ paths:
       operationId: "generatePresignedUrlForFileUpload"
       parameters:
         - $ref: '#/components/parameters/loadId'
+      tags:
+        - loads
       requestBody:
         description: "Optional parameters for file upload"
         required: false
@@ -552,6 +558,8 @@ components:
     LoadCommit:
       description: Load request body schema
       type: "object"
+      required:
+        - check_sum
       properties:
         check_sum:
           type: "object"
@@ -563,6 +571,9 @@ components:
           description: "Checksum data for the files to be committed."
     Load:
       type: "object"
+      required:
+        - load_type
+        - table_name
       properties:
         load_type:
           type: "string"
@@ -580,6 +591,14 @@ components:
           items:
             type: "string"
           description: "List of partition names."
+    LoadId:
+      type: object
+      properties:
+        loadId:
+          type: string
+          example: 20231117085806_355d42f6_0684_4b8f_b274_225bf7237494
+      required:
+        - loadId
     LoadMetaData:
       type: "object"
       properties:

@@ -19,20 +19,19 @@ import json
 
 
 from typing import Any, ClassVar, Dict, List
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictStr
 from pydantic import Field
-from comodash_api_client_lowlevel.models.load_commit_check_sum_value import LoadCommitCheckSumValue
 try:
     from typing import Self
 except ImportError:
     from typing_extensions import Self
 
-class LoadCommit(BaseModel):
+class LoadId(BaseModel):
     """
-    Load request body schema
+    LoadId
     """ # noqa: E501
-    check_sum: Dict[str, LoadCommitCheckSumValue] = Field(description="Checksum data for the files to be committed.")
-    __properties: ClassVar[List[str]] = ["check_sum"]
+    load_id: StrictStr = Field(alias="loadId")
+    __properties: ClassVar[List[str]] = ["loadId"]
 
     model_config = {
         "populate_by_name": True,
@@ -51,7 +50,7 @@ class LoadCommit(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Self:
-        """Create an instance of LoadCommit from a JSON string"""
+        """Create an instance of LoadId from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -70,18 +69,11 @@ class LoadCommit(BaseModel):
             },
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each value in check_sum (dict)
-        _field_dict = {}
-        if self.check_sum:
-            for _key in self.check_sum:
-                if self.check_sum[_key]:
-                    _field_dict[_key] = self.check_sum[_key].to_dict()
-            _dict['check_sum'] = _field_dict
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Dict) -> Self:
-        """Create an instance of LoadCommit from a dict"""
+        """Create an instance of LoadId from a dict"""
         if obj is None:
             return None
 
@@ -89,12 +81,7 @@ class LoadCommit(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "check_sum": dict(
-                (_k, LoadCommitCheckSumValue.from_dict(_v))
-                for _k, _v in obj.get("check_sum").items()
-            )
-            if obj.get("check_sum") is not None
-            else None
+            "loadId": obj.get("loadId")
         })
         return _obj
 

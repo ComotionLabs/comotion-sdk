@@ -54,17 +54,17 @@ configuration = comodash_api_client_lowlevel.Configuration(
 # Enter a context with an instance of the API client
 async with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = comodash_api_client_lowlevel.DefaultApi(api_client)
+    api_instance = comodash_api_client_lowlevel.LoadsApi(api_client)
     load_id = '20231117085806_355d42f6_0684_4b8f_b274_225bf7237494' # str | Unique identifier for the load operation
     load_commit = comodash_api_client_lowlevel.LoadCommit() # LoadCommit | 
 
     try:
         # Commit a load operation
         api_response = await api_instance.commit_load(load_id, load_commit)
-        print("The response of DefaultApi->commit_load:\n")
+        print("The response of LoadsApi->commit_load:\n")
         pprint(api_response)
     except ApiException as e:
-        print("Exception when calling DefaultApi->commit_load: %s\n" % e)
+        print("Exception when calling LoadsApi->commit_load: %s\n" % e)
 
 ```
 
@@ -74,10 +74,10 @@ All URIs are relative to *https://training.api.comodash.io/v2*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*DefaultApi* | [**commit_load**](comodash_api_client_lowlevel/docs/DefaultApi.md#commit_load) | **POST** /load/{load_id}/commit | Commit a load operation
-*DefaultApi* | [**generate_presigned_url_for_file_upload**](comodash_api_client_lowlevel/docs/DefaultApi.md#generate_presigned_url_for_file_upload) | **POST** /load/{load_id}/file | Generate presigned URL for file upload
-*DefaultApi* | [**get_load_metadata**](comodash_api_client_lowlevel/docs/DefaultApi.md#get_load_metadata) | **GET** /load/{load_id} | Get load metadata
+*LoadsApi* | [**commit_load**](comodash_api_client_lowlevel/docs/LoadsApi.md#commit_load) | **POST** /load/{load_id}/commit | Commit a load operation
 *LoadsApi* | [**create_load**](comodash_api_client_lowlevel/docs/LoadsApi.md#create_load) | **POST** /load | Create a new load
+*LoadsApi* | [**generate_presigned_url_for_file_upload**](comodash_api_client_lowlevel/docs/LoadsApi.md#generate_presigned_url_for_file_upload) | **POST** /load/{load_id}/file | Generate presigned URL for file upload
+*LoadsApi* | [**get_load_metadata**](comodash_api_client_lowlevel/docs/LoadsApi.md#get_load_metadata) | **GET** /load/{load_id} | Get load metadata
 *QueriesApi* | [**download_csv**](comodash_api_client_lowlevel/docs/QueriesApi.md#download_csv) | **GET** /query/{query_id}/csv | Download the csv result file of a query
 *QueriesApi* | [**get_query**](comodash_api_client_lowlevel/docs/QueriesApi.md#get_query) | **GET** /query/{query_id} | Get information about a query
 *QueriesApi* | [**get_query_results**](comodash_api_client_lowlevel/docs/QueriesApi.md#get_query_results) | **GET** /query/{query_id}/result | Get paginated results of a query
@@ -94,6 +94,7 @@ Class | Method | HTTP request | Description
  - [Load](comodash_api_client_lowlevel/docs/Load.md)
  - [LoadCommit](comodash_api_client_lowlevel/docs/LoadCommit.md)
  - [LoadCommitCheckSumValue](comodash_api_client_lowlevel/docs/LoadCommitCheckSumValue.md)
+ - [LoadId](comodash_api_client_lowlevel/docs/LoadId.md)
  - [LoadMetaData](comodash_api_client_lowlevel/docs/LoadMetaData.md)
  - [Query](comodash_api_client_lowlevel/docs/Query.md)
  - [QueryId](comodash_api_client_lowlevel/docs/QueryId.md)

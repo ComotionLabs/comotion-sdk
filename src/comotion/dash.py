@@ -1,5 +1,6 @@
 import io
 import os
+import asyncio
 import requests
 import csv
 import time
@@ -16,11 +17,15 @@ except ImportError:
 from datetime import datetime
 from comotion import Auth
 from comotion import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.comodash_api import queries_api
-from comodash_api_client_lowlevel.model.query_text import QueryText
+from comodash_api_client_lowlevel.comodash_api import QueriesApi, LoadsApi
+from comodash_api_client_lowlevel.models.query_text import QueryText
 from urllib3.exceptions import IncompleteRead
 from urllib3.response import HTTPResponse
-from comodash_api_client_lowlevel.model.query import Query as QueryInfo
+from comodash_api_client_lowlevel.models.query import Query as QueryInfo
+
+from comodash_api_client_lowlevel.models.load import Load
+from comodash_api_client_lowlevel.models.query_id import QueryId
+from comodash_api_client_lowlevel.rest import ApiException
 
 class DashConfig(comodash_api_client_lowlevel.Configuration):
     """
@@ -45,6 +50,56 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
 
         # comodash_api_client_lowlevel.Configuration.set_default(config)
 
+class Load():
+    """
+    The Load object starts and tracks a multi-file load on Comotion Dash
+
+    Initialising this class starts a Load on Comotion Dash and stores the
+    resulting load_id in `load_id`
+    """
+
+    async def __init__(
+            self,
+            config: DashConfig,
+            load_type: str,
+            table_name: str,
+            load_as_service_client_id: str = None,
+            partitions: list[str] = None
+    ):
+        """
+        Parameters
+        ----------
+        config : DashConfig
+            Object of type DashConfig including configuration details
+        load_type : str
+            Load Type, initially only APPEND_ONLY supported.  APPEND_ONLY means that data is appended to the lake table.
+        table_name : str
+            Name of lake table to be created and / or uploaded to
+        load_as_service_client_id : str, optional
+            If provided, the upload is performed as if run by the service_client specified.
+        partitions : list[str], optional
+            Only applies if table does not already exist, and is created.  The created table will have these partitions.
+            This must be a list of iceberg compatible partitions.
+            Note that any load can only allow for up to 100 partitions, otherwise it will error out.
+            If the table already exists, then this is ignored.
+        """
+
+        if not(isinstance(config, DashConfig)):
+            raise TypeError("config must be of type comotion.dash.DashConfig")
+
+        # Enter a context with an instance of the API client
+        async with comodash_api_client_lowlevel.ApiClient(config) as api_client:
+            
+            # Create an instance of the API class with provided parameters
+            self.loads_api_instance = LoadsApi(api_client)
+            load_data = locals()
+            del load_data['config']
+            del load_data['self']
+            load = comodash_api_client_lowlevel.Load(**load_data)
+
+            # Create a new load
+            load_id_model = await self.loads_api_instance.create_load(load)
+            self.load_id = load_id_model['load_id']
 
 class Query():
     """
@@ -87,7 +142,7 @@ class Query():
             raise TypeError("config must be of type comotion.dash.DashConfig")
 
         with comodash_api_client_lowlevel.ApiClient(config) as api_client:
-            self.query_api_instance = queries_api.QueriesApi(api_client)
+            self.query_api_instance = QueriesApi(api_client)
             if query_id:
                 query_info = self.query_api_instance.get_query(query_id)
                 self.query_id = query_id
