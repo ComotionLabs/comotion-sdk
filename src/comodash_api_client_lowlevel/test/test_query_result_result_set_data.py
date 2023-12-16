@@ -12,11 +12,11 @@ import sys
 import unittest
 
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.model.error import Error
+from comodash_api_client_lowlevel.model.query_result_result_set_data import QueryResultResultSetData
 
 
-class TestError(unittest.TestCase):
-    """Error unit test stubs"""
+class TestQueryResultResultSetData(unittest.TestCase):
+    """QueryResultResultSetData unit test stubs"""
 
     def setUp(self):
         pass
@@ -24,10 +24,10 @@ class TestError(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def testError(self):
-        """Test Error"""
+    def testQueryResultResultSetData(self):
+        """Test QueryResultResultSetData"""
         # FIXME: construct object with mandatory attributes with example values
-        # model = Error()  # noqa: E501
+        # model = QueryResultResultSetData()  # noqa: E501
         pass
 
 

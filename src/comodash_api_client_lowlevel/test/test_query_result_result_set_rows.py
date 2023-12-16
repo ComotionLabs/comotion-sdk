@@ -12,13 +12,13 @@ import sys
 import unittest
 
 import comodash_api_client_lowlevel
+from comodash_api_client_lowlevel.model.query_result_result_set_data import QueryResultResultSetData
+globals()['QueryResultResultSetData'] = QueryResultResultSetData
 from comodash_api_client_lowlevel.model.query_result_result_set_rows import QueryResultResultSetRows
-globals()['QueryResultResultSetRows'] = QueryResultResultSetRows
-from comodash_api_client_lowlevel.model.query_result_result_set import QueryResultResultSet
 
 
-class TestQueryResultResultSet(unittest.TestCase):
-    """QueryResultResultSet unit test stubs"""
+class TestQueryResultResultSetRows(unittest.TestCase):
+    """QueryResultResultSetRows unit test stubs"""
 
     def setUp(self):
         pass
@@ -26,10 +26,10 @@ class TestQueryResultResultSet(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def testQueryResultResultSet(self):
-        """Test QueryResultResultSet"""
+    def testQueryResultResultSetRows(self):
+        """Test QueryResultResultSetRows"""
         # FIXME: construct object with mandatory attributes with example values
-        # model = QueryResultResultSet()  # noqa: E501
+        # model = QueryResultResultSetRows()  # noqa: E501
         pass
 
 

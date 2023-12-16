@@ -13,12 +13,10 @@ import unittest
 
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.model.query_result_result_set_meta_data_column_info import QueryResultResultSetMetaDataColumnInfo
-globals()['QueryResultResultSetMetaDataColumnInfo'] = QueryResultResultSetMetaDataColumnInfo
-from comodash_api_client_lowlevel.model.query_result_result_set_meta_data import QueryResultResultSetMetaData
 
 
-class TestQueryResultResultSetMetaData(unittest.TestCase):
-    """QueryResultResultSetMetaData unit test stubs"""
+class TestQueryResultResultSetMetaDataColumnInfo(unittest.TestCase):
+    """QueryResultResultSetMetaDataColumnInfo unit test stubs"""
 
     def setUp(self):
         pass
@@ -26,10 +24,10 @@ class TestQueryResultResultSetMetaData(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def testQueryResultResultSetMetaData(self):
-        """Test QueryResultResultSetMetaData"""
+    def testQueryResultResultSetMetaDataColumnInfo(self):
+        """Test QueryResultResultSetMetaDataColumnInfo"""
         # FIXME: construct object with mandatory attributes with example values
-        # model = QueryResultResultSetMetaData()  # noqa: E501
+        # model = QueryResultResultSetMetaDataColumnInfo()  # noqa: E501
         pass
 
 

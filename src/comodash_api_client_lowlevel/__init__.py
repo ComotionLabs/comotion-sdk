@@ -17,7 +17,7 @@
 __version__ = "1.0.0"
 
 # import apis into sdk package
-from comodash_api.loads_api import LoadsApi
+from comodash_api.default_api import DefaultApi
 from comodash_api.queries_api import QueriesApi
 
 # import ApiClient
