@@ -106,7 +106,7 @@ class Load():
 
             # Create a new load
             load_id_model = self.loads_api_instance.create_load(load)
-            self.load_id = load_id_model['load_id']
+            self.load_id = load_id_model.load_id
 
     def get_load_info(self) -> LoadInfo:
         """Gets the state of the load
@@ -127,7 +127,8 @@ class Load():
         return self.load_api_instance.get_load(self.load_id)
 
     def generate_presigned_url_for_file_upload(self, file_key: str = None) -> FileUploadResponse:
-        """Generates presigned urls and sts credentials for a new file upload
+        """
+        Generates presigned urls and sts credentials for a new file upload
 
         Parameters
         ----------
@@ -135,22 +136,23 @@ class Load():
             Optional custom key for the file. This will ensure idempontence. 
             If multiple files are uploaded to the same load with the same file_key, 
             only the last one will be loaded. Must be lowercase, can include underscores, 
-            and must end with '.parquet'.
+            and must end with `.parquet`.
 
         Returns
         -------
         FileUploadResponse
-            Model containing all the relevant credentials to be able to upload a file to s3 as part of the load
-            `presigned_url`
+            Model containing all the relevant credentials to be able to upload a file to s3 as part of the load.  This includes the following:
+            l
+            presigned_url :
                 Presigned URL data for S3 file upload. The file can be posted to this endpoint using any AWS s3 compatible toolset. 
                 Temporary credentials are included in the url, so no other credentials are required.
-            `sts_credentials`
+            sts_credentials :
                 Alternatively to the presigned_url, these Temporary AWS STS credentials 
-                that can be used to upload the file to the location specified by `path` and `bucket.
+                that can be used to upload the file to the location specified by `path` and `bucket`.
                 This is required for various advanced toolsets, including AWS Wrangler
-            `path`
+            path :
                 Path of the file in the S3 bucket. See description of `sts_credentials`.
-            `bucket`
+            bucket :
                 Name of the S3 bucket. See description of `sts_credentials`.
 
         """
@@ -176,12 +178,12 @@ class Load():
             At least one is required
             Example:
 
-            ```
+            .. code-block:: python
+
                 {
                     "count(*)" : 53,
-                    "sum(my_value): 123.3
+                    "sum(my_value)": 123.3
                 }
-            ```
         """
         load_commit = comodash_api_client_lowlevel.LoadCommit(check_sum=check_sum)
         return self.load_api_instance.commit_load(self.load_id, load_commit)

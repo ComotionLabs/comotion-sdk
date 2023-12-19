@@ -11,7 +11,7 @@ Method | HTTP request | Description
 
 
 # **commit_load**
-> CommitLoad200Response commit_load(load_id, load_commit)
+> CommitLoad202Response commit_load(load_id, load_commit)
 
 Commit a load operation
 
@@ -24,7 +24,7 @@ Initiates a commit operation for a given load, identified by the load_id.
 import time
 import os
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.models.commit_load200_response import CommitLoad200Response
+from comodash_api_client_lowlevel.models.commit_load202_response import CommitLoad202Response
 from comodash_api_client_lowlevel.models.load_commit import LoadCommit
 from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
@@ -72,7 +72,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**CommitLoad200Response**](CommitLoad200Response.md)
+[**CommitLoad202Response**](CommitLoad202Response.md)
 
 ### Authorization
 
@@ -86,7 +86,7 @@ Name | Type | Description  | Notes
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-**200** | Commit initiated successfully. |  -  |
+**202** | Commit initiated successfully. |  -  |
 **400** | Invalid request, such as invalid checksum data. |  -  |
 **401** | Authorization information is missing or invalid. |  -  |
 **5XX** | Internal server error or unhandled exception. |  -  |

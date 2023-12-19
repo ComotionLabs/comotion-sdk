@@ -300,7 +300,7 @@ paths:
             schema:
               $ref: '#/components/schemas/LoadCommit'
       responses:
-        200:
+        202:
           description: "Commit initiated successfully."
           content:
             application/json:

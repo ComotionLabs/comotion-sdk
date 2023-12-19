@@ -5,7 +5,7 @@ comodash_api_client_lowlevel/api/queries_api.py
 comodash_api_client_lowlevel/api_client.py
 comodash_api_client_lowlevel/api_response.py
 comodash_api_client_lowlevel/configuration.py
-comodash_api_client_lowlevel/docs/CommitLoad200Response.md
+comodash_api_client_lowlevel/docs/CommitLoad202Response.md
 comodash_api_client_lowlevel/docs/Error.md
 comodash_api_client_lowlevel/docs/FileUploadRequest.md
 comodash_api_client_lowlevel/docs/FileUploadResponse.md
@@ -28,7 +28,7 @@ comodash_api_client_lowlevel/docs/QueryStatus.md
 comodash_api_client_lowlevel/docs/QueryText.md
 comodash_api_client_lowlevel/exceptions.py
 comodash_api_client_lowlevel/models/__init__.py
-comodash_api_client_lowlevel/models/commit_load200_response.py
+comodash_api_client_lowlevel/models/commit_load202_response.py
 comodash_api_client_lowlevel/models/error.py
 comodash_api_client_lowlevel/models/file_upload_request.py
 comodash_api_client_lowlevel/models/file_upload_response.py
@@ -49,4 +49,5 @@ comodash_api_client_lowlevel/models/query_status.py
 comodash_api_client_lowlevel/models/query_text.py
 comodash_api_client_lowlevel/rest.py
 comodash_api_client_lowlevel/test/__init__.py
+comodash_api_client_lowlevel/test/test_commit_load202_response.py
 comodash_api_client_lowlevel_README.md

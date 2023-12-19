@@ -5,7 +5,9 @@ import requests
 from .auth import Auth, KeyringCredentialCache
 from comotion.dash import DashConfig
 from comotion.auth import Auth
-from comotion.dash import Query
+from comotion.dash import Query, Load
+
+from pydantic import BaseModel, ValidationError
 
 CONTEXT_SETTINGS = dict(
     help_option_names=['-h', '--help'],
@@ -49,7 +51,7 @@ def _validate_orgname(issuer, orgname):
         raise click.UsageError("Struggling to connect to the internet!")
 
 
-@click.group(context_settings=CONTEXT_SETTINGS)
+@click.group(context_settings=CONTEXT_SETTINGS, epilog="Check out our docs at https://docs.comotion.us")
 @click.option(
     "-o", "--orgname", "orgname",
     type=str,
@@ -144,7 +146,8 @@ def get_current_user(config):
     click.echo(keyring_cache.get_current_user())
 
 
-# Dash cli
+# DASH CLI
+    
 @cli.group()
 @pass_config
 def dash(config):
@@ -154,6 +157,9 @@ def dash(config):
 
     pass
 
+
+
+# QUERY COMMANDS
 
 @dash.command()
 @click.argument(
@@ -166,7 +172,6 @@ def start_query(config, sql):
     config = DashConfig(Auth(config.orgname, issuer=config.issuer))
     query = Query(query_text=sql, config=config)
     click.echo(query.query_id)
-
 
 @dash.command()
 @click.option(
@@ -286,12 +291,55 @@ def download(config, query_id, file, sql):
     except Exception as e:
         raise click.UsageError(e)
 
+@dash.command()
+@click.option(
+    "-t", "--load-type", 
+    default="APPEND_ONLY",
+    type=click.Choice(['APPEND_ONLY'], case_sensitive=True),
+    help="Type of load to create.  Only option currently is APPEND_ONLY.", 
+    show_default=True,
+    required=False
+    )
+@click.argument(
+    'table_name')
+@click.option(
+    "-s", "--load-as-service-client", 
+    help="If provided, the upload is performed as if run by the service_client specified.",
+    type=str,
+    required=False)
+@click.option(
+    "-p","--partitions",
+    help="Only applies if table does not already exist, and is created.  The created table will have these iceberg compatible partitions. For multiple parition definitions, this option can be specified more than once.  Maximum 100 partitions allowed per load.",
+    type=str,
+    multiple=True,
+    required=False
+)
+@pass_config
+def create_load(
+        config, 
+        load_type,
+        table_name,
+        load_as_service_client,
+        partitions
+    ):
+    """ Create a data upload load for Comotion dash for table TABLE_NAME and returns the new LoadId.  
+    Files can be uploaded to a load, and once committed all files will be pushed to the lake in an atomic way. """
+    config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+    load = Load(
+        load_type=load_type,
+        table_name=table_name,
+        load_as_service_client_id=load_as_service_client,
+        partitions=partitions,
+        config=config)
+    click.echo(load.load_id)
+
+
 #wait
 
 # run and download
 
 
-""" wait_and_download waits for a query to be completed and downloads the result.  Either to filename provided or directly to stdout. """
+# """ wait_and_download waits for a query to be completed and downloads the result.  Either to filename provided or directly to stdout. """
 
 
 
@@ -300,3 +348,10 @@ def download(config, query_id, file, sql):
 
 
 # input / output to file
+
+
+# login via cli not browser
+    
+# long running auth3
+    
+#init to initialise your environment with a default orgname

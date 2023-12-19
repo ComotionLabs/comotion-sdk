@@ -29,7 +29,7 @@ from pydantic import StrictStr
 
 from typing import Optional
 
-from comodash_api_client_lowlevel.models.commit_load200_response import CommitLoad200Response
+from comodash_api_client_lowlevel.models.commit_load202_response import CommitLoad202Response
 from comodash_api_client_lowlevel.models.file_upload_request import FileUploadRequest
 from comodash_api_client_lowlevel.models.file_upload_response import FileUploadResponse
 from comodash_api_client_lowlevel.models.load import Load
@@ -72,7 +72,7 @@ class LoadsApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> CommitLoad200Response:
+    ) -> CommitLoad202Response:
         """Commit a load operation
 
         Initiates a commit operation for a given load, identified by the load_id.
@@ -113,7 +113,7 @@ class LoadsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "CommitLoad200Response",
+            '202': "CommitLoad202Response",
             '400': "Error",
             '401': "Error",
             '5XX': "Error"
@@ -147,7 +147,7 @@ class LoadsApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ApiResponse[CommitLoad200Response]:
+    ) -> ApiResponse[CommitLoad202Response]:
         """Commit a load operation
 
         Initiates a commit operation for a given load, identified by the load_id.
@@ -188,7 +188,7 @@ class LoadsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "CommitLoad200Response",
+            '202': "CommitLoad202Response",
             '400': "Error",
             '401': "Error",
             '5XX': "Error"
@@ -263,7 +263,7 @@ class LoadsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "CommitLoad200Response",
+            '202': "CommitLoad202Response",
             '400': "Error",
             '401': "Error",
             '5XX': "Error"

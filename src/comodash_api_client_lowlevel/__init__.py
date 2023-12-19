@@ -32,7 +32,7 @@ from comodash_api_client_lowlevel.exceptions import ApiAttributeError
 from comodash_api_client_lowlevel.exceptions import ApiException
 
 # import models into sdk package
-from comodash_api_client_lowlevel.models.commit_load200_response import CommitLoad200Response
+from comodash_api_client_lowlevel.models.commit_load202_response import CommitLoad202Response
 from comodash_api_client_lowlevel.models.error import Error
 from comodash_api_client_lowlevel.models.file_upload_request import FileUploadRequest
 from comodash_api_client_lowlevel.models.file_upload_response import FileUploadResponse

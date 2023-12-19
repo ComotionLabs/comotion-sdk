@@ -8,6 +8,11 @@ comotion-sdk = {file = ".", editable = true}
 
 [dev-packages]
 pytest = "*"
+setuptools = "*"
+sphinx = "*"
+setuptools-scm = "*"
+sphinx-material = "*"
+jwt = "*"
 
 [requires]
 python_version = "3.8"
