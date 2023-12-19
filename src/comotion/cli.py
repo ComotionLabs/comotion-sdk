@@ -359,6 +359,7 @@ def upload_file(
     if not input_file.lower().endswith('.parquet'):
         raise click.BadParameter("The file must be a parquet file with a parquet extension")
     
+    click.echo("getting upload info")
     # base_name_of_file = os.path.basename(input_file).split('.')[0]
     file_upload_info = load.generate_presigned_url_for_file_upload()
 
@@ -366,6 +367,7 @@ def upload_file(
     # print(file_upload_info.sts_credentials['AccessKeyId'])
 
     with click.open_file(input_file, 'rb') as local_file:
+        click.echo("uploading file")
         my_session = boto3.Session(
             aws_access_key_id=file_upload_info.sts_credentials['AccessKeyId'],
             aws_secret_access_key=file_upload_info.sts_credentials['SecretAccessKey'],
@@ -376,8 +378,7 @@ def upload_file(
             local_file=local_file, 
             path=f"s3://{bucket}/{key}", 
             boto3_session=my_session,
-            use_threads=True,
-            
+            use_threads=True
         )
     
 

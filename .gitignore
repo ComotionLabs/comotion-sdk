@@ -136,3 +136,4 @@ dmypy.json
 # jars
 *.jar
 openapi_generator/OAS30_dqcvi9gsg9_$latest.yaml
+large_3gb.parquet
