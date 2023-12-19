@@ -44,7 +44,8 @@ if __name__ == "__main__":
             'tqdm>=4.64.0',
             'aiohttp',
             'python-dateutil',
-            'pydantic'
+            'pydantic',
+            'awswrangler>=3.4.2'
         ],
         tests_require=[
             'mock',

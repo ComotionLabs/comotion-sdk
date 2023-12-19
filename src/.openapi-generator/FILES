@@ -49,5 +49,4 @@ comodash_api_client_lowlevel/models/query_status.py
 comodash_api_client_lowlevel/models/query_text.py
 comodash_api_client_lowlevel/rest.py
 comodash_api_client_lowlevel/test/__init__.py
-comodash_api_client_lowlevel/test/test_commit_load202_response.py
 comodash_api_client_lowlevel_README.md

@@ -40,8 +40,8 @@ class FileUploadRequest(BaseModel):
         if value is None:
             return value
 
-        if not re.match(r"^[a-z_]+[a-z0-9_]*[a-z0-9]\.parquet$", value):
-            raise ValueError(r"must validate the regular expression /^[a-z_]+[a-z0-9_]*[a-z0-9]\.parquet$/")
+        if not re.match(r"^[a-z_]+[a-z0-9_]*[a-z0-9]$", value):
+            raise ValueError(r"must validate the regular expression /^[a-z_]+[a-z0-9_]*[a-z0-9]$/")
         return value
 
     model_config = {

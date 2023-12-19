@@ -1,13 +1,15 @@
 import click
 import json
 import requests
-
+import os
 from .auth import Auth, KeyringCredentialCache
 from comotion.dash import DashConfig
 from comotion.auth import Auth
 from comotion.dash import Query, Load
 
 from pydantic import BaseModel, ValidationError
+
+import awswrangler as wr
 
 CONTEXT_SETTINGS = dict(
     help_option_names=['-h', '--help'],
@@ -323,7 +325,8 @@ def create_load(
         partitions
     ):
     """ Create a data upload load for Comotion dash for table TABLE_NAME and returns the new LoadId.  
-    Files can be uploaded to a load, and once committed all files will be pushed to the lake in an atomic way. """
+    Files can be uploaded to a load, and once committed all files will be pushed to the lake in an atomic way.
+     This stores the load_id in the COMOTION_DASH_QUERY_ID environment variable for future actions. """
     config = DashConfig(Auth(config.orgname, issuer=config.issuer))
     load = Load(
         load_type=load_type,
@@ -332,6 +335,52 @@ def create_load(
         partitions=partitions,
         config=config)
     click.echo(load.load_id)
+
+
+@dash.command()
+
+@click.argument('input_file', type=click.Path(exists=True, file_okay=True, readable=True, dir_okay=False, resolve_path=True, allow_dash=True))
+@click.option(
+    '--load_id','-l')
+@pass_config
+def upload_file(
+        config, 
+        load_id,
+        input_file
+    ):
+    """ Create a data upload load for Comotion dash for table TABLE_NAME and returns the new LoadId.  
+    Files can be uploaded to a load, and once committed all files will be pushed to the lake in an atomic way. """
+    import boto3
+    import awswrangler as wr
+
+    config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+    load = Load(config=config, load_id=load_id)
+
+    if not input_file.lower().endswith('.parquet'):
+        raise click.BadParameter("The file must be a parquet file with a parquet extension")
+    
+    # base_name_of_file = os.path.basename(input_file).split('.')[0]
+    file_upload_info = load.generate_presigned_url_for_file_upload()
+
+    # print(file_upload_info)
+    # print(file_upload_info.sts_credentials['AccessKeyId'])
+
+    with click.open_file(input_file, 'rb') as local_file:
+        my_session = boto3.Session(
+            aws_access_key_id=file_upload_info.sts_credentials['AccessKeyId'],
+            aws_secret_access_key=file_upload_info.sts_credentials['SecretAccessKey'],
+            aws_session_token=file_upload_info.sts_credentials['SessionToken'])
+        bucket=file_upload_info.bucket
+        key=file_upload_info.path
+        wr.s3.upload(
+            local_file=local_file, 
+            path=f"s3://{bucket}/{key}", 
+            boto3_session=my_session,
+            use_threads=True,
+            
+        )
+    
+
 
 
 #wait

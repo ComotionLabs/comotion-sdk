@@ -63,16 +63,19 @@ class Load():
     Initialising this class starts a Load on Comotion Dash and stores the
     resulting load_id in `load_id`
 
+    If you wish to work with an existing load, then simply supply load_id parameter
+
     @TODO Outline of how to use this class to upload a file here.
     """
 
     def __init__(
             self,
             config: DashConfig,
-            load_type: str,
-            table_name: str,
+            load_type: str = None,
+            table_name: str = None,
             load_as_service_client_id: str = None,
-            partitions: Optional[List[str]] = None
+            partitions: Optional[List[str]] = None,
+            load_id: str = None
     ):
         """
         Parameters
@@ -90,23 +93,34 @@ class Load():
             This must be a list of iceberg compatible partitions.
             Note that any load can only allow for up to 100 partitions, otherwise it will error out.
             If the table already exists, then this is ignored.
+        load_id : str
+            In the case where you want to work with an existing load on dash, supply this parameter, and no other parameter (other than config) will be required
         """
         load_data = locals()
-
         if not(isinstance(config, DashConfig)):
             raise TypeError("config must be of type comotion.dash.DashConfig")
-
-        # Enter a context with an instance of the API client
+        
         with comodash_api_client_lowlevel.ApiClient(config) as api_client:
             # Create an instance of the API class with provided parameters
-            self.loads_api_instance = LoadsApi(api_client)
-            del load_data['config']
-            del load_data['self']
-            load = comodash_api_client_lowlevel.Load(**load_data)
+            self.load_api_instance = LoadsApi(api_client)
 
-            # Create a new load
-            load_id_model = self.loads_api_instance.create_load(load)
-            self.load_id = load_id_model.load_id
+            if (load_id is not None):
+                # if load_id provided, then initialise this object with the provided load_id
+                self.load_id = load_id
+                for key,value in load_data.items():
+                    if key not in  ['load_id', 'config', 'self']:
+                        if value is not None:
+                            raise TypeError("if load_id is supplied, then only the config parameter and no others should be supplied.")
+            else:
+                # Enter a context with an instance of the API client
+                    del load_data['config']
+                    del load_data['self']
+                    del load_data['load_id']
+                    load = comodash_api_client_lowlevel.Load(**load_data)
+
+                    # Create a new load
+                    load_id_model = self.load_api_instance.create_load(load)
+                    self.load_id = load_id_model.load_id
 
     def get_load_info(self) -> LoadInfo:
         """Gets the state of the load

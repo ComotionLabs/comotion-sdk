@@ -621,7 +621,7 @@ components:
       properties:
         file_key:
           type: "string"
-          pattern: "^[a-z_]+[a-z0-9_]*[a-z0-9]\\.parquet$"
+          pattern: "^[a-z_]+[a-z0-9_]*[a-z0-9]$"
           description: "Optional custom key for the file. This will ensure idempontence.  If multiple files are uploaded to the same load with the same file_key, only the last one will be loaded. Must be lowercase, can include underscores, and must end with '.parquet'."
     FileUploadResponse:
       type: "object"
