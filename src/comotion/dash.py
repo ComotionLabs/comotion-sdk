@@ -149,8 +149,7 @@ class Load():
         file_key : str
             Optional custom key for the file. This will ensure idempontence. 
             If multiple files are uploaded to the same load with the same file_key, 
-            only the last one will be loaded. Must be lowercase, can include underscores, 
-            and must end with `.parquet`.
+            only the last one will be loaded. Must be lowercase, can include underscores
 
         Returns
         -------

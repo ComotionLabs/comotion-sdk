@@ -154,9 +154,9 @@ class TestDashModuleLoadClass(unittest.TestCase):
         mock_load.load_api_instance.generate_presigned_url_for_file_upload.reset_mock()
 
         # Call the method with file_key
-        result_with_key = mock_load.generate_presigned_url_for_file_upload(file_key='test_key.parquet')
+        result_with_key = mock_load.generate_presigned_url_for_file_upload(file_key='test_key')
         # Assertions
-        mock_load.load_api_instance.generate_presigned_url_for_file_upload.assert_called_once_with('123', file_upload_request=FileUploadRequest(file_key='test_key.parquet'))
+        mock_load.load_api_instance.generate_presigned_url_for_file_upload.assert_called_once_with('123', file_upload_request=FileUploadRequest(file_key='test_key'))
         self.assertEqual(result_with_key, mock_file_upload_response_instance)
 
     @patch('comotion.dash.comodash_api_client_lowlevel.LoadCommit')

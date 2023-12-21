@@ -341,12 +341,20 @@ def create_load(
 @click.argument('input_file', type=click.Path(exists=True, file_okay=True, readable=True, dir_okay=False, resolve_path=True, allow_dash=True))
 @click.option(
     '--load_id','-l',
+    help="load_id to upload the file to",
     required=True)
+@click.option(
+    '--file_key','-k',
+    help = "Optional custom key for the file. This will ensure idempontence. If multiple files are uploaded to the same load with the same file_key, only the last one will be loaded. Must be lowercase, can include underscores.",
+    required=False
+
+)
 @pass_config
-def upload_file_to_load(
+def upload_file(
         config, 
         load_id,
-        input_file
+        input_file,
+        file_key
     ):
     """ Create a data upload load for Comotion dash for table TABLE_NAME and returns the new LoadId.  
     Files can be uploaded to a load, and once committed all files will be pushed to the lake in an atomic way. """
@@ -360,7 +368,12 @@ def upload_file_to_load(
         raise click.BadParameter("The file must be a parquet file with a parquet extension")
     
     click.echo("getting upload info")
-    file_upload_info = load.generate_presigned_url_for_file_upload()
+    file_upload_info = None
+    if file_key:
+        file_upload_info = load.generate_presigned_url_for_file_upload()
+    else:
+        file_upload_info = load.generate_presigned_url_for_file_upload(file_key=file_key)
+
     with click.open_file(input_file, 'rb') as local_file:
         click.echo("uploading file")
         my_session = boto3.Session(
