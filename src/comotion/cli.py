@@ -170,7 +170,12 @@ def dash(config):
 )
 @pass_config
 def start_query(config, sql):
-    """ Start a query. Takes the sql as an argument """
+    """ Start a query. Takes the sql as an argument.  The only output is the query_id.
+    
+    The an example of how query_id can be saved to a variable as follows:
+    
+    query_id=$(comotion -opoc2 dash start-query "select 1")
+    """
     config = DashConfig(Auth(config.orgname, issuer=config.issuer))
     query = Query(query_text=sql, config=config)
     click.echo(query.query_id)
@@ -324,7 +329,7 @@ def create_load(
         load_as_service_client,
         partitions
     ):
-    """ Create a data upload load for Comotion dash for table TABLE_NAME and returns the new LoadId.  
+    """ Create a data upload load for Dash for table TABLE_NAME and returns the new LoadId.  
     Files can be uploaded to a load, and once committed all files will be pushed to the lake in an atomic way.
      This stores the load_id in the COMOTION_DASH_QUERY_ID environment variable for future actions. """
     config = DashConfig(Auth(config.orgname, issuer=config.issuer))
@@ -347,7 +352,6 @@ def create_load(
     '--file_key','-k',
     help = "Optional custom key for the file. This will ensure idempontence. If multiple files are uploaded to the same load with the same file_key, only the last one will be loaded. Must be lowercase, can include underscores.",
     required=False
-
 )
 @pass_config
 def upload_file(
@@ -356,8 +360,7 @@ def upload_file(
         input_file,
         file_key
     ):
-    """ Create a data upload load for Comotion dash for table TABLE_NAME and returns the new LoadId.  
-    Files can be uploaded to a load, and once committed all files will be pushed to the lake in an atomic way. """
+    """ Upload a file to a Dash Load. """
     import boto3
     import awswrangler as wr
 

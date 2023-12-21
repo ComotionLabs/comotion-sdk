@@ -252,7 +252,7 @@ class Query():
                 self.query_text = query_text
                 query_text_model = QueryText(query=query_text)
                 query_id_model = self.query_api_instance.run_query(query_text_model) # noqa
-                self.query_id = query_id_model['query_id']
+                self.query_id = query_id_model.query_id
             else:
                 raise ValueError("One of query_id or query_text must be provided")
 
@@ -332,15 +332,13 @@ class Query():
 
             This can be achieved using the `with` notation e.g.::
 
-                with query.get_csv_for_streaming().stream() as stream:
+                with query.get_csv_for3_streaming().stream() as stream:
                   for chunk in stream:
                       # do somthing with chunk
                       # chunk is a byte array ``
         """
-
-        response = self.query_api_instance.download_csv(
-            query_id=self.query_id,
-            _preload_content=False)
+        response = self.query_api_instance.download_csv_without_preload_content(
+            query_id=self.query_id)
         response.autoclose = False
         return response
 
@@ -371,7 +369,6 @@ class Query():
                 for chunk in response.stream(1048576):
                     size = size + len(chunk)
                     f.write(chunk)
-
                 if (response.tell() != int(content_length)):
                     raise IncompleteRead(
                         response.tell(),
