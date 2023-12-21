@@ -17,7 +17,7 @@ except ImportError:
     pass
 from datetime import datetime
 from comotion import Auth
-from comotion import comodash_api_client_lowlevel
+import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel import QueriesApi, LoadsApi
 from comodash_api_client_lowlevel.models.query_text import QueryText
 from urllib3.exceptions import IncompleteRead
