@@ -370,9 +370,9 @@ def upload_file(
     click.echo("getting upload info")
     file_upload_info = None
     if file_key:
-        file_upload_info = load.generate_presigned_url_for_file_upload()
-    else:
         file_upload_info = load.generate_presigned_url_for_file_upload(file_key=file_key)
+    else:
+        file_upload_info = load.generate_presigned_url_for_file_upload()
 
     with click.open_file(input_file, 'rb') as local_file:
         click.echo("uploading file")
