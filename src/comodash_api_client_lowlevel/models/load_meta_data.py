@@ -21,6 +21,7 @@ import json
 from typing import Any, ClassVar, Dict, List, Optional
 from pydantic import BaseModel, StrictStr, field_validator
 from pydantic import Field
+from comodash_api_client_lowlevel.models.load_meta_data_error_messages_inner import LoadMetaDataErrorMessagesInner
 try:
     from typing import Self
 except ImportError:
@@ -32,7 +33,7 @@ class LoadMetaData(BaseModel):
     """ # noqa: E501
     load_status: Optional[StrictStr] = Field(default=None, description="Current status of the load.", alias="LoadStatus")
     error_type: Optional[StrictStr] = Field(default=None, description="Type of error if the load status is FAIL.", alias="ErrorType")
-    error_messages: Optional[Dict[str, StrictStr]] = Field(default=None, description="Detailed error messages if the load status is FAIL.", alias="ErrorMessages")
+    error_messages: Optional[List[LoadMetaDataErrorMessagesInner]] = Field(default=None, description="Detailed error messages if the load status is FAIL.", alias="ErrorMessages")
     __properties: ClassVar[List[str]] = ["LoadStatus", "ErrorType", "ErrorMessages"]
 
     @field_validator('load_status')
@@ -81,6 +82,13 @@ class LoadMetaData(BaseModel):
             },
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of each item in error_messages (list)
+        _items = []
+        if self.error_messages:
+            for _item in self.error_messages:
+                if _item:
+                    _items.append(_item.to_dict())
+            _dict['ErrorMessages'] = _items
         # set to None if error_type (nullable) is None
         # and model_fields_set contains the field
         if self.error_type is None and "error_type" in self.model_fields_set:
@@ -105,7 +113,7 @@ class LoadMetaData(BaseModel):
         _obj = cls.model_validate({
             "LoadStatus": obj.get("LoadStatus"),
             "ErrorType": obj.get("ErrorType"),
-            "ErrorMessages": obj.get("ErrorMessages")
+            "ErrorMessages": [LoadMetaDataErrorMessagesInner.from_dict(_item) for _item in obj.get("ErrorMessages")] if obj.get("ErrorMessages") is not None else None
         })
         return _obj
 

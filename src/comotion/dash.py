@@ -128,7 +128,7 @@ class Load():
         Returns
         -------
         LoadInfo
-            Model containint all the load info, with the following attributes
+            Model containing all the load info, with the following attributes
             
             `load_status`
                 Status of the load, one of OPEN, PROCESSING, FAIL or SUCCESS

@@ -77,7 +77,7 @@ def cli(config, orgname, issuer):
 
 
 
-    _validate_orgname(config.issuer, config.orgname)
+    # _validate_orgname(config.issuer, config.orgname)
 
 
 @cli.command()
@@ -338,12 +338,12 @@ def create_load(
 
 
 @dash.command()
-
 @click.argument('input_file', type=click.Path(exists=True, file_okay=True, readable=True, dir_okay=False, resolve_path=True, allow_dash=True))
 @click.option(
-    '--load_id','-l')
+    '--load_id','-l',
+    required=True)
 @pass_config
-def upload_file(
+def upload_file_to_load(
         config, 
         load_id,
         input_file
@@ -360,12 +360,7 @@ def upload_file(
         raise click.BadParameter("The file must be a parquet file with a parquet extension")
     
     click.echo("getting upload info")
-    # base_name_of_file = os.path.basename(input_file).split('.')[0]
     file_upload_info = load.generate_presigned_url_for_file_upload()
-
-    # print(file_upload_info)
-    # print(file_upload_info.sts_credentials['AccessKeyId'])
-
     with click.open_file(input_file, 'rb') as local_file:
         click.echo("uploading file")
         my_session = boto3.Session(
@@ -380,20 +375,102 @@ def upload_file(
             boto3_session=my_session,
             use_threads=True
         )
+    # @TODO move to SDK
+
+@dash.command()
+@click.option(
+    "-c", "--check_sum", 
+    nargs=2,
+    help="Checksum data for the files to be committed.  ", 
+    multiple=True,
+    required=True
+    )
+@click.option(
+    '--load_id','-l',
+    required=True
+)
+@pass_config
+def commit_load(
+        config, 
+        check_sum,
+        load_id
+    ):
+    """ Kicks off the commit of the load. A checksum must be provided
+    which is checked on the server side to ensure that the data provided
+    has integrity.  You can then use the `get-load-function` function to see
+    when it is successful.
     
+    Checksums must be in the form of a dictionary, with presto / trino expressions 
+    as the key, and the expected result as the value. At least one is required. 
+    
+    Example:
+    
+    comotion -imyorgname dash commit-load --load_id myloadid -c "count(*)" "53" -c "sum(my_value)" "123.3"
+
+    """
+    config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+    load = Load(config=config, load_id=load_id)
+    check_sum_dict = {}
+    for check_sum_expression, check_sum_expected in check_sum:
+        # check if duplicates
+        if check_sum_expression in check_sum_dict:
+            raise click.BadOptionUsage(
+                option_name='check_sum',
+                message=f"duplicate checksum provided for checksum '{check_sum_expression}'" )
+        #transform to dict
+        check_sum_dict[check_sum_expression] = check_sum_expected
+    load.commit(check_sum=check_sum_dict)
+
+@dash.command()
+@click.option(
+    '--load_id','-l',
+    required=True
+)
+@pass_config
+def get_load_info(
+        config, 
+        load_id
+    ):
+    """ Gets the state of the load.  If there is an error, prints out the error message.
+    
+    The state is printed to StdOut and the errors to StdErr.
+
+    Status can be one of the following:
+        OPEN: The load is still open, meaning new files can still be added.
+        PROCESSING: The load commit has been initiated and is currently being processed.
+        FAIL: There was an issue or error during the load commit.
+        SUCCESS: The load has been processed successfully.
+    
+    This allows you can get the status in the following way:
+
+    load_status=$(comotion dash get-load-info -l myloadid)
+    
+    And the error messages in this way:
+
+    load_error_messages=$(comotion dash get-load-info -l myloadid 2>&1 > /dev/null)
+
+    y """
+    config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+    load = Load(config=config, load_id=load_id)
+    load_info = load.get_load_info()
+    click.echo(load_info.load_status)
+    if load_info.load_status == "FAIL":
+        for error_message in load_info.error_messages:
+            click.echo(f"{error_message.error_type}:{error_message.error_message}", err=True)
 
 
+# @TODO 4 (SDK AND CLI) upload to multiple tables for a set file structure /{table_name}/files.  Result must include full output of which passed and which failed.
+# @TODO 3 (SDK AND CLI) create upload this filepath - all the files - and wait until fully processed. Must be able to deal with csv and parquet.
+            # Must have an option to not wait until fully processed.   Must take a folder path OR  a list of files.
+            
+# @TODO 2 (SDK and CLI) Convert to parquet and upload.  CSV 
 
-#wait
+# @TODO 1c (SDK And CLI) "waiter" to wait for processing to finish
+            
+# @TODO 1 (SDK)  upload a pandas stream   1. as part of a load 2. without having to create a load  3. deal with pandas streams or modin streams or iterator
+# @TODO 1b (SDK) upload a file object. specify either csv or parquet. must deal with csv.gz
 
-# run and download
-
-
-# """ wait_and_download waits for a query to be completed and downloads the result.  Either to filename provided or directly to stdout. """
-
-
-
-
+# @TODO integration tests integration testing from cli down to api call
 
 
 

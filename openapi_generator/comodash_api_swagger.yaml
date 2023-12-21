@@ -563,11 +563,7 @@ components:
       properties:
         check_sum:
           type: "object"
-          additionalProperties: 
-            oneOf:
-              - type: "string"
-              - type: "integer"
-              - type: "number"
+          additionalProperties: check_sum
           description: "Checksum data for the files to be committed."
     Load:
       type: "object"
@@ -611,9 +607,22 @@ components:
           nullable: true
           description: "Type of error if the load status is FAIL."
         ErrorMessages:
-          type: "object"
-          additionalProperties:
-            type: "string"
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              ErrorType:
+                type: "string"
+                nullable: true
+                description: "type of error for which the message is shown"
+              ErrorMessage:
+                type: "string"
+                nullable: true
+                description: "error message"
+              CheckResult:
+                type: "string"
+                nullable: true
+                description: error state
           nullable: true
           description: "Detailed error messages if the load status is FAIL."
     FileUploadRequest:

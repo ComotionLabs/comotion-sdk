@@ -18,20 +18,22 @@ import re  # noqa: F401
 import json
 
 
-from typing import Any, ClassVar, Dict, List, Union
-from pydantic import BaseModel
+from typing import Any, ClassVar, Dict, List, Optional
+from pydantic import BaseModel, StrictStr
 from pydantic import Field
 try:
     from typing import Self
 except ImportError:
     from typing_extensions import Self
 
-class LoadCommit(BaseModel):
+class LoadMetaDataErrorMessagesInner(BaseModel):
     """
-    Load request body schema
+    LoadMetaDataErrorMessagesInner
     """ # noqa: E501
-    check_sum: Union[str, Any] = Field(description="Checksum data for the files to be committed.")
-    __properties: ClassVar[List[str]] = ["check_sum"]
+    error_type: Optional[StrictStr] = Field(default=None, description="type of error for which the message is shown", alias="ErrorType")
+    error_message: Optional[StrictStr] = Field(default=None, description="error message", alias="ErrorMessage")
+    check_result: Optional[StrictStr] = Field(default=None, description="error state", alias="CheckResult")
+    __properties: ClassVar[List[str]] = ["ErrorType", "ErrorMessage", "CheckResult"]
 
     model_config = {
         "populate_by_name": True,
@@ -50,7 +52,7 @@ class LoadCommit(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Self:
-        """Create an instance of LoadCommit from a JSON string"""
+        """Create an instance of LoadMetaDataErrorMessagesInner from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -69,11 +71,26 @@ class LoadCommit(BaseModel):
             },
             exclude_none=True,
         )
+        # set to None if error_type (nullable) is None
+        # and model_fields_set contains the field
+        if self.error_type is None and "error_type" in self.model_fields_set:
+            _dict['ErrorType'] = None
+
+        # set to None if error_message (nullable) is None
+        # and model_fields_set contains the field
+        if self.error_message is None and "error_message" in self.model_fields_set:
+            _dict['ErrorMessage'] = None
+
+        # set to None if check_result (nullable) is None
+        # and model_fields_set contains the field
+        if self.check_result is None and "check_result" in self.model_fields_set:
+            _dict['CheckResult'] = None
+
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Dict) -> Self:
-        """Create an instance of LoadCommit from a dict"""
+        """Create an instance of LoadMetaDataErrorMessagesInner from a dict"""
         if obj is None:
             return None
 
@@ -81,7 +98,9 @@ class LoadCommit(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "check_sum": obj.get("check_sum")
+            "ErrorType": obj.get("ErrorType"),
+            "ErrorMessage": obj.get("ErrorMessage"),
+            "CheckResult": obj.get("CheckResult")
         })
         return _obj
 

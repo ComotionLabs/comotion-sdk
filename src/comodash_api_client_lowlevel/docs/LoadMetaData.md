@@ -6,7 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **load_status** | **str** | Current status of the load. | [optional] 
 **error_type** | **str** | Type of error if the load status is FAIL. | [optional] 
-**error_messages** | **Dict[str, str]** | Detailed error messages if the load status is FAIL. | [optional] 
+**error_messages** | [**List[LoadMetaDataErrorMessagesInner]**](LoadMetaDataErrorMessagesInner.md) | Detailed error messages if the load status is FAIL. | [optional] 
 
 ## Example
 
