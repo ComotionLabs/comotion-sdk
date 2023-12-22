@@ -290,7 +290,6 @@ class ApiClient:
         :return: ApiResponse
         """
 
-
         response_type = response_types_map.get(str(response_data.status), None)
         if not response_type and isinstance(response_data.status, int) and 100 <= response_data.status <= 599:
             # if not found, look for '1XX', '2XX', etc.
@@ -314,7 +313,6 @@ class ApiClient:
             raise ApiException(http_resp=response_data)
 
         # deserialize response data
-
         if response_type == "bytearray":
             return_data = response_data.data
         elif response_type is None:
@@ -329,7 +327,6 @@ class ApiClient:
             encoding = match.group(1) if match else "utf-8"
             response_text = response_data.data.decode(encoding)
             return_data = self.deserialize(response_text, response_type)
-
         return ApiResponse(
             status_code = response_data.status,
             data = return_data,

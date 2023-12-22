@@ -53,7 +53,7 @@ def _validate_orgname(issuer, orgname):
         raise click.UsageError("Struggling to connect to the internet!")
 
 
-@click.group(context_settings=CONTEXT_SETTINGS, epilog="Check out our docs at https://docs.comotion.us")
+@click.group(name="comotion",context_settings=CONTEXT_SETTINGS, epilog="Check out our docs at https://docs.comotion.us")
 @click.option(
     "-o", "--orgname", "orgname",
     type=str,
@@ -74,8 +74,6 @@ def cli(config, orgname, issuer):
     """
     config.orgname = orgname
     config.issuer = issuer
-
-
 
     # _validate_orgname(config.issuer, config.orgname)
 
