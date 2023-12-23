@@ -485,7 +485,7 @@ def get_load_info(
 # @TODO 1b (SDK) upload a file object. specify either csv or parquet. must deal with csv.gz
 
 # @TODO integration tests integration testing from cli down to api call
-
+# @TODO improve auth flow when no user or when password expired. currently nondescript
 
 
 # input / output to file

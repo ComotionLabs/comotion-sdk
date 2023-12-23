@@ -6,12 +6,20 @@ import unittest
 from unittest import mock
 from click.testing import CliRunner
 from comotion import cli  
-class TestDashStartQueryCommand(unittest.TestCase):
+import os
+from keyrings.cryptfile.file import PlaintextKeyring
+#this is a module that acts as the local keyring so this test can be run in locations without
+
+class TestIntegrationTests(unittest.TestCase):
     # urllib3.PoolManager.request is used by the lowlevel api to make calls
     # requests class is used by Auth class
     @mock.patch('urllib3.PoolManager.request')
     @mock.patch('requests.post')
     def test_dash_start_query(self, mock_requests_post, mock_urllib3_request):
+        os.environ['KEYRING_CRYPTFILE_PASSWORD']='mypassword'
+        kr = PlaintextKeyring()
+        kr.set_password('comotion auth api latest username (https://auth.comotion.us)','test1','myusername')
+        kr.set_password("comotion auth api offline token (https://auth.comotion.u/auth/realms/test1)",'myusername','mypassword')
         # Setup the mock to return a fake response
         mock_urllib3_response = mock.MagicMock(headers={'header1': "2"}, status=202, data=b'{"queryId": "12345"}')
         mock_urllib3_request.return_value = mock_urllib3_response
@@ -27,7 +35,8 @@ class TestDashStartQueryCommand(unittest.TestCase):
         result = runner.invoke(
             cli=cli.cli,
             args=['dash','start-query','SELECT * FROM table'],
-            env={"COMOTION_ORGNAME": "test1"}
+            env={"COMOTION_ORGNAME": "test1"},
+            catch_exceptions=False
         )
 
         # Assertions to ensure the command was called correctly
