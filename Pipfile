@@ -13,6 +13,7 @@ sphinx = "*"
 setuptools-scm = "*"
 sphinx-material = "*"
 jwt = "*"
+"keyrings.cryptfile" = "*"
 
 [requires]
 python_version = "3.8"
