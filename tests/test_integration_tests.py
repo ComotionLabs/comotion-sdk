@@ -31,6 +31,9 @@ class TestDashStartQueryCommand(unittest.TestCase):
         )
 
         # Assertions to ensure the command was called correctly
+        print(result.output)
+        print(result.exception)
+        print(result.exc_info)
         self.assertEqual(result.exit_code, 0)
         mock_urllib3_request.assert_called_once_with(
             'POST',
