@@ -19,7 +19,7 @@ class TestIntegrationTests(unittest.TestCase):
         os.environ['KEYRING_CRYPTFILE_PASSWORD']='mypassword'
         kr = PlaintextKeyring()
         kr.set_password('comotion auth api latest username (https://auth.comotion.us)','test1','myusername')
-        kr.set_password("comotion auth api offline token (https://auth.comotion.u/auth/realms/test1)",'myusername','mypassword')
+        kr.set_password("comotion auth api offline token (https://auth.comotion.us/auth/realms/test1)",'myusername','myrefreshtoken')
         # Setup the mock to return a fake response
         mock_urllib3_response = mock.MagicMock(headers={'header1': "2"}, status=202, data=b'{"queryId": "12345"}')
         mock_urllib3_request.return_value = mock_urllib3_response
@@ -29,7 +29,6 @@ class TestIntegrationTests(unittest.TestCase):
         requests_response.status_code = 200
         requests_response.text='{"access_token": "myaccesstoken"}'
         mock_requests_post.return_value = requests_response
-
         # Setup the CliRunner to invoke your CLI command
         runner = CliRunner()
         result = runner.invoke(
@@ -44,6 +43,7 @@ class TestIntegrationTests(unittest.TestCase):
         print(result.exception)
         print(result.exc_info)
         self.assertEqual(result.exit_code, 0)
+        mock_requests_post.assert_called_once_with('https://auth.comotion.us/auth/realms/test1/protocol/openid-connect/token', data={'grant_type': 'refresh_token', 'refresh_token': 'myrefreshtoken', 'client_id': 'comotion_cli'})
         mock_urllib3_request.assert_called_once_with(
             'POST',
             'https://test1.api.comodash.io/v2/query',  # Replace with the actual URL path your CLI hits
