@@ -1,6 +1,6 @@
 import io
 import os
-import asyncio
+import json
 import requests
 import csv
 import time
@@ -251,7 +251,11 @@ class Query():
             elif query_text:
                 self.query_text = query_text
                 query_text_model = QueryText(query=query_text)
-                query_id_model = self.query_api_instance.run_query(query_text_model) # noqa
+                try:
+                    query_id_model = self.query_api_instance.run_query(query_text_model) # noqa
+                except comodash_api_client_lowlevel.exceptions.BadRequestException as exp:
+                    raise ValueError(json.loads(exp.body)['message'])
+                    
                 self.query_id = query_id_model.query_id
             else:
                 raise ValueError("One of query_id or query_text must be provided")
@@ -279,7 +283,10 @@ class Query():
                     GMT submission time
 
         """
-        return self.query_api_instance.get_query(self.query_id)
+        try:
+            return self.query_api_instance.get_query(self.query_id)
+        except comodash_api_client_lowlevel.exceptions.NotFoundException as exp:
+            raise ValueError("query_id cannot be found")
 
     def state(self) -> str:
         """Gets the state of the query.

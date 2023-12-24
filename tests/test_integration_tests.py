@@ -3,6 +3,7 @@
 # this ensures that the actual calls made by the framework are correct
 
 import unittest
+import comotion
 from unittest import mock
 from click.testing import CliRunner
 from comotion import cli  
@@ -12,6 +13,7 @@ from keyrings.cryptfile.file import PlaintextKeyring
 #this is a module that acts as the local keyring so this test can be run in locations without
 
 class TestIntegrationTests(unittest.TestCase):
+
 
 
     def _generic_integration_test(
@@ -65,15 +67,6 @@ class TestIntegrationTests(unittest.TestCase):
         except pydantic_core._pydantic_core.ValidationError as ve:
             validation_error = ve
 
-        # assert that api call happened properly
-        mock_calls=[]
-        for expected_call in expected_calls:
-            # mock_urllib3_request.assert_called_once_with(
-            mock_call=expected_call['request']
-            mock_calls.append(mock_call)
-        print(mock_urllib3_request.mock_calls)
-        mock_urllib3_request.assert_has_calls(mock_calls, any_order=False)
-        self.assertEqual(mock_urllib3_request.call_count, len(expected_calls))
         # Assertions to ensure the command was called correctly
         if result is not None:
             print(result.output)
@@ -81,6 +74,17 @@ class TestIntegrationTests(unittest.TestCase):
             print(result.exc_info)
             self.assertEqual(result.exit_code, 0)
 
+
+        # assert that api call happened properly
+        mock_calls=[]
+        for expected_call in expected_calls:
+            # mock_urllib3_request.assert_called_once_with(
+            mock_call=expected_call['request']
+            mock_calls.append(mock_call)
+        print(mock_urllib3_request.mock_calls)
+        self.assertEquals(mock_urllib3_request.mock_calls, mock_calls)
+        mock_urllib3_request.assert_has_calls(mock_calls, any_order=False)
+        self.assertEqual(mock_urllib3_request.call_count, len(expected_calls))
 
         # assert that auth call happened properly
         mock_requests_post.assert_called_once_with('https://auth.comotion.us/auth/realms/test1/protocol/openid-connect/token', data={'grant_type': 'refresh_token', 'refresh_token': 'myrefreshtoken', 'client_id': 'comotion_cli'})
@@ -211,7 +215,7 @@ class TestIntegrationTests(unittest.TestCase):
         )
 
 
-        # urllib3.PoolManager.request is used by the lowlevel api to make calls
+    # urllib3.PoolManager.request is used by the lowlevel api to make calls
     # requests class is used by Auth class
     @mock.patch('urllib3.PoolManager.request')
     @mock.patch('requests.post')
@@ -243,7 +247,43 @@ class TestIntegrationTests(unittest.TestCase):
             expected_result='FAILED - THIS IS A BAD REASON\n'
         )
 
+    # urllib3.PoolManager.request is used by the lowlevel api to make calls
+    # requests class is used by Auth class
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_dash_download_csv(self, mock_requests_post, mock_urllib3_request):
+        # with mock.patch('io.open',  new_callable=mock.mock_open) as mock_io_open:
+            self._generic_integration_test(
+                mock_requests_post=mock_requests_post,
+                mock_urllib3_request=mock_urllib3_request,
+                cli_args=['dash','download','-f ./integration_tests_out.csv','--query_id','myqueryid'],
+                expected_calls=[
+                    {  # get query info run when Query object is initialised
+                        'request': unittest.mock.call(
+                            'GET', 
+                            'https://test1.api.comodash.io/v2/query/myqueryid', 
+                            fields={},
+                            timeout=None, 
+                            headers={
+                                'Accept': 'application/json',
+                                'User-Agent': 'OpenAPI-Generator/1.0.0/python',
+                                'Authorization': 'Bearer myaccesstoken'
+                            }, 
+                            preload_content=False),
+                        'response': mock.MagicMock(
+                            headers={'header1': "2"}, 
+                            status=200, 
+                            data=b'{"queryId": "12345", "status": {"state": "FAILED", "state_change_reason":"THIS IS A BAD REASON"}}'
+                        )
+                    }
+                ],
+                expected_result='FAILED - THIS IS A BAD REASON\n'
+            )
 
+            # Verify the file was opened in write-binary mode and the correct content was written
+            # mock_io_open.assert_called_once_with('output.csv', 'wb')  # Adjust if your function uses different parameters
+            # mock_io_open().write.assert_called_once_with(b'some,csv,data\n1,2,3\n')
+            # mock_io_open.stop()
 
     # urllib3.PoolManager.request is used by the lowlevel api to make calls
     # requests class is used by Auth class

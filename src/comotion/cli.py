@@ -6,6 +6,7 @@ from .auth import Auth, KeyringCredentialCache
 from comotion.dash import DashConfig
 from comotion.auth import Auth
 from comotion.dash import Query, Load
+import comotion
 
 from pydantic import BaseModel, ValidationError
 
@@ -255,24 +256,23 @@ def download(config, query_id, file, sql):
     """
     config = DashConfig(Auth(config.orgname, issuer=config.issuer))
 
+    if query_id == None and sql == None:
+        raise click.BadParameter('Either --query_id must be supplied or sql for query must be given')
+
     click.echo("running query...")
     try:
         query = Query(query_id=query_id, query_text=sql, config=config)
-    except ValueError:
-        raise click.BadParameter(
-            'Either --query_id must be supplied or sql for query must be given'
-        )
-
-    click.echo("query initiated")
-
-    final_query_info = query.wait_to_complete()
+        click.echo("query initiated")
+        final_query_info = query.wait_to_complete()
+    except ValueError as e:
+        raise click.BadParameter(e)
 
     click.echo("query complete")
 
     if final_query_info.status.state != 'SUCCEEDED':
         raise click.UsageError(
             "There was a problem running the query: "
-            + final_query_info.status.stateChangeReason
+            + final_query_info.status.state_change_reason
         )
     try:
         with query.get_csv_for_streaming() as response:
