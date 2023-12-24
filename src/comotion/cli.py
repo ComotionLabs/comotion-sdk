@@ -188,8 +188,8 @@ def start_query(config, sql):
 def stop_query(config, query_id):
     """ Stop a query"""
     config = DashConfig(Auth(config.orgname, issuer=config.issuer))
-    Query(query_id=query_id, config=config).stop()
-
+    query=Query(query_id=query_id, config=config)
+    query.stop()
     click.echo('Query stopped')
 
 

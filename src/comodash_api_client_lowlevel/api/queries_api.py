@@ -950,6 +950,7 @@ class QueriesApi:
             _request_timeout=_request_timeout
         )
         response_data.read()
+        # raise Exception(response_data.read())
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
