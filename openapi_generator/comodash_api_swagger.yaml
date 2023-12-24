@@ -472,6 +472,9 @@ components:
               type: string
               enum: [QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED]
               example: SUCCEEDED
+            stateChangeReason: 
+              type: string
+              example: This is an error
             submissionDateTime:
               type: string
               example: 11-28-2021 18:51:01

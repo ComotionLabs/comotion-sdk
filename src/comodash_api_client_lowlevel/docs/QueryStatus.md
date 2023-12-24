@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **state** | **str** |  | [optional] 
+**state_change_reason** | **str** |  | [optional] 
 **submission_date_time** | **str** |  | [optional] 
 **completion_date_time** | **str** |  | [optional] 
 

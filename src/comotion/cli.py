@@ -221,8 +221,8 @@ def query_info(config, query_id):
     query = Query(query_id=query_id, config=config)
     query_info = query.get_query_info()
     result = query_info.status.state
-    if (hasattr(query_info.status,'stateChangeReason')):
-        result = result + ' - ' + query_info.status.stateChangeReason
+    if (hasattr(query_info.status,'state_change_reason') and query_info.status.state_change_reason is not None):
+        result = result + ' - ' + query_info.status.state_change_reason
     click.echo(result)
 
 

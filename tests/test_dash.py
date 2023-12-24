@@ -454,7 +454,7 @@ class TestDashModuleQueryClass(unittest.TestCase):
 
         # Assertions to ensure the query was initialized correctly with the provided ID
         self.assertEqual(query.query_id, provided_query_id)
-        mock_queries_api_instance.get_query.assert_called_once_with(provided_query_id)
+        mock_queries_api_instance.get_query.assert_not_called()
         mock_queries_api_instance.run_query.assert_not_called()  # Ensures a new query wasn't started
 
     @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')

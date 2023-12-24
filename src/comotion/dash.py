@@ -245,9 +245,9 @@ class Query():
         with comodash_api_client_lowlevel.ApiClient(config) as api_client:
             self.query_api_instance = QueriesApi(api_client)
             if query_id:
-                query_info = self.query_api_instance.get_query(query_id)
+                # query_info = self.query_api_instance.get_query(query_id)
                 self.query_id = query_id
-                self.query_text = query_info.query
+                # self.query_text = query_info.query
             elif query_text:
                 self.query_text = query_text
                 query_text_model = QueryText(query=query_text)

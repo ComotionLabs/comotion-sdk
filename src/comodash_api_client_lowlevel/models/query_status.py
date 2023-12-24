@@ -31,9 +31,10 @@ class QueryStatus(BaseModel):
     QueryStatus
     """ # noqa: E501
     state: Optional[StrictStr] = None
+    state_change_reason: Optional[StrictStr] = Field(default=None, alias="stateChangeReason")
     submission_date_time: Optional[StrictStr] = Field(default=None, alias="submissionDateTime")
     completion_date_time: Optional[StrictStr] = Field(default=None, alias="completionDateTime")
-    __properties: ClassVar[List[str]] = ["state", "submissionDateTime", "completionDateTime"]
+    __properties: ClassVar[List[str]] = ["state", "stateChangeReason", "submissionDateTime", "completionDateTime"]
 
     @field_validator('state')
     def state_validate_enum(cls, value):
@@ -94,6 +95,7 @@ class QueryStatus(BaseModel):
 
         _obj = cls.model_validate({
             "state": obj.get("state"),
+            "stateChangeReason": obj.get("stateChangeReason"),
             "submissionDateTime": obj.get("submissionDateTime"),
             "completionDateTime": obj.get("completionDateTime")
         })
