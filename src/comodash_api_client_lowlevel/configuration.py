@@ -121,7 +121,7 @@ class Configuration:
         self.logger_file = None
         """Debug file location
         """
-        self.debug = False
+        self.debug = True
         """Debug switch
         """
 
