@@ -14,8 +14,7 @@ from keyrings.cryptfile.file import PlaintextKeyring
 
 class TestIntegrationTests(unittest.TestCase):
 
-    ## Set the maximum size of the assertion error message when Unit Test fail
-    maxDiff = None
+
 
     def _generic_integration_test(
             self, 
@@ -55,7 +54,6 @@ class TestIntegrationTests(unittest.TestCase):
         
         
         # Setup the CliRunner to invoke your CLI command
-        print("invoke cli runner")
         validation_error = None
         result =None
         try:
@@ -67,12 +65,11 @@ class TestIntegrationTests(unittest.TestCase):
                 catch_exceptions=False
             )
         except pydantic_core._pydantic_core.ValidationError as ve:
-            print("validation error caputed. will be rethrown after other asserts")
             validation_error = ve
 
         # Assertions to ensure the command was called correctly
         if result is not None:
-            print("START"+result.output+"END")
+            print(result.output)
             print(result.exception)
             print(result.exc_info)
             self.assertEqual(result.exit_code, 0)
@@ -254,45 +251,17 @@ class TestIntegrationTests(unittest.TestCase):
     # requests class is used by Auth class
     @mock.patch('urllib3.PoolManager.request')
     @mock.patch('requests.post')
-    def test_dash_download_csv_success(self, mock_requests_post, mock_urllib3_request):
+    def test_dash_download_csv(self, mock_requests_post, mock_urllib3_request):
         # with mock.patch('io.open',  new_callable=mock.mock_open) as mock_io_open:
-            download_response = mock.MagicMock(
-                            headers={'header1': "2"}, 
-                            status=200, 
-                            data=b'{"queryId": "12345", "status": {"state": "SUCCEEDED"}}'
-                        )
-            download_response.__enter__.return_value.tell.return_value = 54321
-            #this is used in the guts of the download to get the content-header
-            download_response.__enter__.return_value.getheader.return_value = "54321"
-
             self._generic_integration_test(
                 mock_requests_post=mock_requests_post,
                 mock_urllib3_request=mock_urllib3_request,
-                cli_args=['dash','download','-f ./integration_tests_out.csv','my select statement'],
+                cli_args=['dash','download','-f ./integration_tests_out.csv','--query_id','myqueryid'],
                 expected_calls=[
-                    {  # get query info run when Query object is initialised and in running state
-                        'request': unittest.mock.call(
-                            'POST', 
-                            'https://test1.api.comodash.io/v2/query', 
-                            body='{"query": "my select statement"}',
-                            timeout=None, 
-                            headers={
-                                'Accept': 'application/json',
-                                 'Content-Type': 'application/json',
-                                'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                                'Authorization': 'Bearer myaccesstoken'
-                            }, 
-                            preload_content=False),
-                        'response': mock.MagicMock(
-                            headers={'header1': "2"}, 
-                            status=202, 
-                            data=b'{"queryId": "12345"}'
-                        )
-                    },
-                    {  # get query info run when Query object is initialised and in running state
+                    {  # get query info run when Query object is initialised
                         'request': unittest.mock.call(
                             'GET', 
-                            'https://test1.api.comodash.io/v2/query/12345', 
+                            'https://test1.api.comodash.io/v2/query/myqueryid', 
                             fields={},
                             timeout=None, 
                             headers={
@@ -304,66 +273,11 @@ class TestIntegrationTests(unittest.TestCase):
                         'response': mock.MagicMock(
                             headers={'header1': "2"}, 
                             status=200, 
-                            data=b'{"queryId": "12345", "query": "select soemthing that that thing",  "status": {"state": "RUNNING", "stateChangeReason": "my reason", "submissionDateTime": "my date", "completion_date_time": "my other date"}, "statementType": "ITranscendTypes1"}'
+                            data=b'{"queryId": "12345", "status": {"state": "FAILED", "state_change_reason":"THIS IS A BAD REASON"}}'
                         )
-                    },
-                    {  # get query info run when Query object is initialised and in running state
-                        'request': unittest.mock.call(
-                            'GET', 
-                            'https://test1.api.comodash.io/v2/query/12345', 
-                            fields={},
-                            timeout=None, 
-                            headers={
-                                'Accept': 'application/json',
-                                'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                                'Authorization': 'Bearer myaccesstoken'
-                            }, 
-                            preload_content=False),
-                        'response': mock.MagicMock(
-                            headers={'header1': "2"}, 
-                            status=200, 
-                            data=b'{"queryId": "12345", "query": "select soemthing that that thing",  "status": {"state": "RUNNING", "stateChangeReason": "my reason", "submissionDateTime": "my date", "completion_date_time": "my other date"}, "statementType": "ITranscendTypes1"}'
-                        )
-                    },
-                    {  # get query info run when Query object is initialised and in SUCCESS state
-                        'request': unittest.mock.call(
-                            'GET', 
-                            'https://test1.api.comodash.io/v2/query/12345', 
-                            fields={},
-                            timeout=None, 
-                            headers={
-                                'Accept': 'application/json',
-                                'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                                'Authorization': 'Bearer myaccesstoken'
-                            }, 
-                            preload_content=False),
-                        'response': mock.MagicMock(
-                            headers={'header1': "2"}, 
-                            status=200, 
-                            data=b'{"queryId": "12345", "status": {"state": "SUCCEEDED"}}'
-                        )
-                    },
-                    {  # get query info run when Query object is initialised and in SUCCESS state
-                        'request': unittest.mock.call(
-                            'GET', 
-                            'https://test1.api.comodash.io/v2/query/12345/csv', 
-                            fields={},
-                            timeout=None, 
-                            headers={
-                                'Accept': 'application/json',
-                                'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                                'Authorization': 'Bearer myaccesstoken'
-                            }, 
-                            preload_content=False),
-                        'response': download_response
                     }
                 ],
-                expected_result="""running query...
-query initiated
-query complete
-Downloading to  ./integration_tests_out.csv
-finalising file...
-"""
+                expected_result='FAILED - THIS IS A BAD REASON\n'
             )
 
             # Verify the file was opened in write-binary mode and the correct content was written

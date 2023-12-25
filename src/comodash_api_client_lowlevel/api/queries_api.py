@@ -239,6 +239,7 @@ class QueriesApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
+
         _param = self._download_csv_serialize(
             query_id=query_id,
             _request_auth=_request_auth,

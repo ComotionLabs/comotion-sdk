@@ -314,7 +314,7 @@ class ApiClient:
             raise ApiException(http_resp=response_data)
 
         # deserialize response data
-        
+
         if response_type == "bytearray":
             return_data = response_data.data
         elif response_type is None:
