@@ -287,8 +287,8 @@ def download(config, query_id, file, sql):
                     size = size + len(chunk)
                     f.write(chunk)
                     bar.update(size)
-
-                if (response.tell() != int(content_length)):
+                tell=response.tell()
+                if (tell != int(content_length)):
                     raise click.UsageError(
                         "There was a problem downloading the file. The file is incomplete. Please try again."
                     )
