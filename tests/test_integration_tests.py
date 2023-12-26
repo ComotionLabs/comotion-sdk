@@ -383,6 +383,11 @@ finalising file...
             with open(file_path, 'r') as file:
                 content = file.read()
             self.assertEqual(content,'this is a bytestream1this is a bytestream2this is a bytestream3this is a bytestream4this is a bytestream5this is a bytestream6this is a bytestream7')
+            try:
+                os.remove(file_path)
+                print(f"File {file_path} has been deleted successfully")
+            except FileNotFoundError:
+                print(f"The file {file_path} does not exist")
 
 if __name__ == '__main__':
     unittest.main()
