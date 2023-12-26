@@ -60,6 +60,7 @@ class TestIntegrationTests(unittest.TestCase):
         result =None
         try:
             runner = CliRunner()
+            # with runner.isolated_filesystem(temp_dir=None):
             result = runner.invoke(
                 cli=cli.cli,
                 args=cli_args,
@@ -85,7 +86,7 @@ class TestIntegrationTests(unittest.TestCase):
             mock_call=expected_call['request']
             mock_calls.append(mock_call)
         print(mock_urllib3_request.mock_calls)
-        self.assertEquals(mock_urllib3_request.mock_calls, mock_calls)
+        self.assertEqual(mock_urllib3_request.mock_calls, mock_calls)
         mock_urllib3_request.assert_has_calls(mock_calls, any_order=False)
         self.assertEqual(mock_urllib3_request.call_count, len(expected_calls))
 
@@ -97,7 +98,7 @@ class TestIntegrationTests(unittest.TestCase):
             raise validation_error
 
         # Check the output
-        self.assertEquals(expected_result, result.output)
+        self.assertEqual(expected_result, result.output)
 
 
 
@@ -259,16 +260,24 @@ class TestIntegrationTests(unittest.TestCase):
             download_response = mock.MagicMock(
                             headers={'header1': "2"}, 
                             status=200, 
-                            data=b'{"queryId": "12345", "status": {"state": "SUCCEEDED"}}'
+                            data=b'this is a bytestream'
                         )
             download_response.__enter__.return_value.tell.return_value = 54321
             #this is used in the guts of the download to get the content-header
             download_response.__enter__.return_value.getheader.return_value = "54321"
-
+            data_stream_list = []
+            data_stream_list.append(b'this is a bytestream1')
+            data_stream_list.append(b'this is a bytestream2')
+            data_stream_list.append(b'this is a bytestream3')
+            data_stream_list.append(b'this is a bytestream4')
+            data_stream_list.append(b'this is a bytestream5')
+            data_stream_list.append(b'this is a bytestream6')
+            data_stream_list.append(b'this is a bytestream7')
+            download_response.__enter__.return_value.stream.return_value=iter(data_stream_list)
             self._generic_integration_test(
                 mock_requests_post=mock_requests_post,
                 mock_urllib3_request=mock_urllib3_request,
-                cli_args=['dash','download','-f ./integration_tests_out.csv','my select statement'],
+                cli_args=['dash','download','-fintegration_tests_out.csv','my select statement'],
                 expected_calls=[
                     {  # get query info run when Query object is initialised and in running state
                         'request': unittest.mock.call(
@@ -361,31 +370,19 @@ class TestIntegrationTests(unittest.TestCase):
                 expected_result="""running query...
 query initiated
 query complete
-Downloading to  ./integration_tests_out.csv
+Downloading to integration_tests_out.csv
 finalising file...
 """
             )
 
-            # Verify the file was opened in write-binary mode and the correct content was written
-            # mock_io_open.assert_called_once_with('output.csv', 'wb')  # Adjust if your function uses different parameters
-            # mock_io_open().write.assert_called_once_with(b'some,csv,data\n1,2,3\n')
-            # mock_io_open.stop()
+            import os
+            print("Current Working Directory:", os.getcwd())
 
-    # urllib3.PoolManager.request is used by the lowlevel api to make calls
-    # requests class is used by Auth class
-    # @mock.patch('urllib3.PoolManager.request')
-    # @mock.patch('requests.post')
-    # def test_dash_stop_query_generic(self, mock_requests_post, mock_urllib3_request):
-    #     self._generic_integration_test(
-    #         mock_requests_post=mock_requests_post,
-    #         mock_urllib3_request=mock_urllib3_request,
-    #         expected_http_call_type='DELETE',
-    #         cli_args=['dash','stop-query','--query_id','myqueryid'],
-    #         expected_http_call_url='https://test1.api.comodash.io/v2/query/12345',
-    #         expected_http_call_body='',
-    #         expected_result='12345'
-    #     )
-
+            # Reading the content of the file and assert it is correct
+            file_path = os.getcwd()+'/integration_tests_out.csv'
+            with open(file_path, 'r') as file:
+                content = file.read()
+            self.assertEqual(content,'this is a bytestream1this is a bytestream2this is a bytestream3this is a bytestream4this is a bytestream5this is a bytestream6this is a bytestream7')
 
 if __name__ == '__main__':
     unittest.main()
