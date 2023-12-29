@@ -565,8 +565,9 @@ finalising file...
 
         # check that the local file is called correctly
 
+        current_directory = os.getcwd()
         self.assertEqual(
-            unittest.mock.call('/Users/timothyvieyra/Documents/comotion-sdk/input_file.parquet', 'rb'),
+            unittest.mock.call(f"{current_directory}/input_file.parquet", 'rb'),
             click_open_file.mock_calls[0]
         )
 
