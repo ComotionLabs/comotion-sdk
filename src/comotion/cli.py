@@ -296,6 +296,9 @@ def download(config, query_id, file, sql):
     except Exception as e:
         raise click.UsageError(e)
 
+
+# LOAD COMMANDS
+
 @dash.command()
 @click.option(
     "-t", "--load-type", 

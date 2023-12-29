@@ -9,6 +9,7 @@ from click.testing import CliRunner
 from comotion import cli  
 import os
 import pydantic_core
+import json
 from keyrings.cryptfile.file import PlaintextKeyring
 #this is a module that acts as the local keyring so this test can be run in locations without
 
@@ -101,6 +102,11 @@ class TestIntegrationTests(unittest.TestCase):
         self.assertEqual(expected_result, result.output)
 
 
+
+    ###############################################################################################
+    ############################  QUERY CLI TEST ##################################################
+    ###############################################################################################
+        
 
     @mock.patch('urllib3.PoolManager.request')
     @mock.patch('requests.post')
@@ -388,6 +394,96 @@ finalising file...
                 print(f"File {file_path} has been deleted successfully")
             except FileNotFoundError:
                 print(f"The file {file_path} does not exist")
+
+    ###############################################################################################
+    ############################  LOAD CLI TESTS  #################################################
+    ###############################################################################################
+
+
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_dash_create_load(self, mock_requests_post, mock_urllib3_request):
+        # Define the CLI arguments for creating a load
+        cli_args = ['dash', 'create-load', '--load-type', 'APPEND_ONLY', 'my_table_name']
+
+        # Define the expected calls to the lower-level SDK/API
+        expected_calls = [
+            {
+                'request': unittest.mock.call(
+                    'POST',
+                    'https://test1.api.comodash.io/v2/load',
+                    body=json.dumps({"load_type": "APPEND_ONLY", "table_name": "my_table_name", "partitions": []}),
+                    timeout=None,
+                    headers={
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'OpenAPI-Generator/1.0.0/python',
+                        'Authorization': 'Bearer myaccesstoken'
+                    },
+                    preload_content=False
+                ),
+                'response': mock.MagicMock(
+                    headers={'header1': "2"},
+                    status=202,
+                    data=b'{"loadId": "load12345"}'
+                )
+            }
+        ]
+
+        # Define the expected result/output from the CLI command
+        expected_result = 'load12345\n'
+
+        # Call the generic integration test function with the above parameters
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=cli_args,
+            expected_calls=expected_calls,
+            expected_result=expected_result
+        )
+    
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_dash_create_load_with_partitions_and_service_client_id(self, mock_requests_post, mock_urllib3_request):
+        # Define the CLI arguments for creating a load
+        cli_args = ['dash', 'create-load', '--load-type', 'APPEND_ONLY', '--load-as-service-client', 'myserviceclient','-pabc','-pdef', 'my_table_name']
+
+        # Define the expected calls to the lower-level SDK/API
+        expected_calls = [
+            {
+                'request': unittest.mock.call(
+                    'POST',
+                    'https://test1.api.comodash.io/v2/load',
+                    body=json.dumps({"load_type": "APPEND_ONLY", "table_name": "my_table_name", "load_as_service_client_id": 'myserviceclient', "partitions": ['abc','def'], }),
+                    timeout=None,
+                    headers={
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'OpenAPI-Generator/1.0.0/python',
+                        'Authorization': 'Bearer myaccesstoken'
+                    },
+                    preload_content=False
+                ),
+                'response': mock.MagicMock(
+                    headers={'header1': "2"},
+                    status=202,
+                    data=b'{"loadId": "load12345"}'
+                )
+            }
+        ]
+
+        # Define the expected result/output from the CLI command
+        expected_result = 'load12345\n'
+
+        # Call the generic integration test function with the above parameters
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=cli_args,
+            expected_calls=expected_calls,
+            expected_result=expected_result
+        )
+
 
 if __name__ == '__main__':
     unittest.main()
