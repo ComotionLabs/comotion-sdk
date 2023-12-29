@@ -650,6 +650,11 @@ components:
         bucket:
           type: "string"
           description: "Name of the S3 bucket.  See description of `sts_credentials`."
+      required:
+        - presigned_url
+        - sts_credentials
+        - path
+        - bucket
 
 
 

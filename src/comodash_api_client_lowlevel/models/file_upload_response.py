@@ -18,7 +18,7 @@ import re  # noqa: F401
 import json
 
 
-from typing import Any, ClassVar, Dict, List, Optional, Union
+from typing import Any, ClassVar, Dict, List, Union
 from pydantic import BaseModel, StrictStr
 from pydantic import Field
 try:
@@ -30,10 +30,10 @@ class FileUploadResponse(BaseModel):
     """
     FileUploadResponse
     """ # noqa: E501
-    presigned_url: Optional[Union[str, Any]] = Field(default=None, description="Presigned URL data for S3 file upload.  The file can be posted to this endpoint using any AWS s3 compatible toolset.  Temporary credentials are included in the url, so no other credentials are required.")
-    sts_credentials: Optional[Union[str, Any]] = Field(default=None, description="Alternatively to the presigned_url, these Temporary AWS STS credentials that can be used to upload the file to the location specified by `path` and `bucket.")
-    path: Optional[StrictStr] = Field(default=None, description="Path of the file in the S3 bucket.  See description of `sts_credentials`.")
-    bucket: Optional[StrictStr] = Field(default=None, description="Name of the S3 bucket.  See description of `sts_credentials`.")
+    presigned_url: Union[str, Any] = Field(description="Presigned URL data for S3 file upload.  The file can be posted to this endpoint using any AWS s3 compatible toolset.  Temporary credentials are included in the url, so no other credentials are required.")
+    sts_credentials: Union[str, Any] = Field(description="Alternatively to the presigned_url, these Temporary AWS STS credentials that can be used to upload the file to the location specified by `path` and `bucket.")
+    path: StrictStr = Field(description="Path of the file in the S3 bucket.  See description of `sts_credentials`.")
+    bucket: StrictStr = Field(description="Name of the S3 bucket.  See description of `sts_credentials`.")
     __properties: ClassVar[List[str]] = ["presigned_url", "sts_credentials", "path", "bucket"]
 
     model_config = {

@@ -12,6 +12,8 @@ import pydantic_core
 import json
 from keyrings.cryptfile.file import PlaintextKeyring
 #this is a module that acts as the local keyring so this test can be run in locations without
+import awswrangler as wr
+
 
 class TestIntegrationTests(unittest.TestCase):
 
@@ -484,6 +486,89 @@ finalising file...
             expected_result=expected_result
         )
 
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    @mock.patch('boto3.Session')
+    @mock.patch('awswrangler.s3.upload')
+    @mock.patch('click.open_file')
+    def test_dash_upload_file(self, click_open_file, wr_s3_upload, boto3_session, mock_requests_post, mock_urllib3_request):
+        # Define the CLI arguments for uploading a file to a load
+        cli_args = ['dash', 'upload-file', '--load_id', 'load12345', '--file_key', 'unique_file_key', 'input_file.parquet']
+
+        boto3_session.return_value = mock.MagicMock()
+        session_object = boto3_session.return_value
+        click_file_opened  = click_open_file.return_value.__enter__.return_value
+
+        ## Create file
+        import pandas as pd
+        import pyarrow.parquet as pq
+
+        # Create a simple DataFrame
+        df = pd.DataFrame({
+            'Column1': [1, 2, 3],
+            'Column2': ['A', 'B', 'C']
+        })
+
+        # Define the path for the dummy parquet file
+        file_path = 'input_file.parquet'
+
+        # Convert the DataFrame to a Parquet file
+        df.to_parquet(file_path)
+
+        # Define the expected calls to the lower-level SDK/API
+        expected_calls = [
+            {
+                'request': unittest.mock.call(
+                    'POST',
+                    'https://test1.api.comodash.io/v2/load/load12345/file',
+                    body='{"file_key": "unique_file_key"}',  # This should be the binary content of the file or a reference to the file.
+                    timeout=None,
+                    headers={
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'OpenAPI-Generator/1.0.0/python',
+                        'Authorization': 'Bearer myaccesstoken'
+                    },
+                    preload_content=False
+                ),
+                'response': mock.MagicMock(
+                    headers={'header1': "2"},
+                    status=200,
+                    data=b'{"presigned_url": "my presigned url", "sts_credentials": {"AccessKeyId": "myaccesskey", "SecretAccessKey": "mysecret", "SessionToken": "mysession"}, "bucket": "mybucket", "path": "mypath"}'
+                )
+            }
+        ]
+
+        # Define the expected result/output from the CLI command
+        expected_result = 'getting upload info\nuploading file\n'
+
+        # Call the generic integration test function with the above parameters
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=cli_args,
+            expected_calls=expected_calls,
+            expected_result=expected_result
+        )
+        print(click_open_file.mock_calls)
+        # check that boto3 session is created properly
+        self.assertEqual(
+            [unittest.mock.call(aws_access_key_id='myaccesskey', aws_secret_access_key='mysecret', aws_session_token='mysession')],
+            boto3_session.mock_calls
+        )
+        # check that the aws wrangler is called in the right way.
+        # decided not to mock the underlying calls of aws wrangler because that is subject to change
+        self.assertEqual(
+            [unittest.mock.call(local_file=click_file_opened, path='s3://mybucket/mypath', boto3_session=session_object, use_threads=True)],
+            wr_s3_upload.mock_calls
+        )
+
+        # check that the local file is called correctly
+
+        self.assertEqual(
+            unittest.mock.call('/Users/timothyvieyra/Documents/comotion-sdk/input_file.parquet', 'rb'),
+            click_open_file.mock_calls[0]
+        )
 
 if __name__ == '__main__':
     unittest.main()

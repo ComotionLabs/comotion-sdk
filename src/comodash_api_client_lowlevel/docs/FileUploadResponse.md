@@ -4,10 +4,10 @@
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**presigned_url** | **object** | Presigned URL data for S3 file upload.  The file can be posted to this endpoint using any AWS s3 compatible toolset.  Temporary credentials are included in the url, so no other credentials are required. | [optional] 
-**sts_credentials** | **object** | Alternatively to the presigned_url, these Temporary AWS STS credentials that can be used to upload the file to the location specified by &#x60;path&#x60; and &#x60;bucket. | [optional] 
-**path** | **str** | Path of the file in the S3 bucket.  See description of &#x60;sts_credentials&#x60;. | [optional] 
-**bucket** | **str** | Name of the S3 bucket.  See description of &#x60;sts_credentials&#x60;. | [optional] 
+**presigned_url** | **object** | Presigned URL data for S3 file upload.  The file can be posted to this endpoint using any AWS s3 compatible toolset.  Temporary credentials are included in the url, so no other credentials are required. | 
+**sts_credentials** | **object** | Alternatively to the presigned_url, these Temporary AWS STS credentials that can be used to upload the file to the location specified by &#x60;path&#x60; and &#x60;bucket. | 
+**path** | **str** | Path of the file in the S3 bucket.  See description of &#x60;sts_credentials&#x60;. | 
+**bucket** | **str** | Name of the S3 bucket.  See description of &#x60;sts_credentials&#x60;. | 
 
 ## Example
 
