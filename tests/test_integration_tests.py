@@ -14,6 +14,7 @@ import os
 import pydantic_core
 import json
 from keyrings.cryptfile.file import PlaintextKeyring
+import comodash_api_client_lowlevel
 #this is a module that acts as the local keyring so this test can be run in locations without
 import awswrangler as wr
 
@@ -615,6 +616,156 @@ finalising file...
             expected_calls=expected_calls,
             expected_result=expected_result
         )
+    
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_dash_get_load_status(self, mock_requests_post, mock_urllib3_request):
+        # Define the CLI arguments for creating a load
+        cli_args = ['dash', 'get-load-info', '-l', 'myloadid']
+
+        # Define the expected calls to the lower-level SDK/API
+        expected_calls = [
+            {
+                'request': unittest.mock.call(
+                    'GET',
+                    'https://test1.api.comodash.io/v2/load/myloadid',
+                    fields = {},
+                    timeout=None,
+                    headers={
+                        'Accept': 'application/json',
+                        'User-Agent': 'OpenAPI-Generator/1.0.0/python',
+                        'Authorization': 'Bearer myaccesstoken'
+                    },
+                    preload_content=False
+                ),
+                'response': mock.MagicMock(
+                    headers={'header1': "2"},
+                    status=200,
+                    data=b'{"LoadStatus": "SUCCESS"}'
+                )
+            }
+        ]
+
+        # Define the expected result/output from the CLI command
+        expected_result = 'SUCCESS\n'
+
+        # Call the generic integration test function with the above parameters
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=cli_args,
+            expected_calls=expected_calls,
+            expected_result=expected_result
+        )
+    
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_dash_get_load_status_fail(self, mock_requests_post, mock_urllib3_request):
+        # Define the CLI arguments for creating a load
+        cli_args = ['dash', 'get-load-info', '-l', 'myloadid']
+
+        # Define the expected calls to the lower-level SDK/API
+        expected_calls = [
+            {
+                'request': unittest.mock.call(
+                    'GET',
+                    'https://test1.api.comodash.io/v2/load/myloadid',
+                    fields = {},
+                    timeout=None,
+                    headers={
+                        'Accept': 'application/json',
+                        'User-Agent': 'OpenAPI-Generator/1.0.0/python',
+                        'Authorization': 'Bearer myaccesstoken'
+                    },
+                    preload_content=False
+                ),
+                'response': mock.MagicMock(
+                    headers={'header1': "2"},
+                    status=200,
+                    data=b'{"LoadStatus": "FAIL","ErrorType": "my error type", "ErrorMessages": [{"ErrorType": "my error type 2", "ErrorMessage": "my error message 2"}]}'
+                )
+            }
+        ]
+
+        # Define the expected result/output from the CLI command
+        expected_result = 'FAIL\nmy error type 2:my error message 2\n'
+
+
+        # Call the generic integration test function with the above parameters
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=cli_args,
+            expected_calls=expected_calls,
+            expected_result=expected_result
+        )
+    
+    
+    #this test is to test that the lower level sdk throws an exception when http is not 200
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_dash_get_load_status_failed_http400(self, mock_requests_post, mock_urllib3_request):
+        # Define the CLI arguments for creating a load
+        cli_args = ['dash', 'get-load-info', '-l', 'myloadid']
+
+        # Define the expected calls to the lower-level SDK/API
+        expected_calls = [
+            {
+                'response': mock.MagicMock(
+                    headers={'header1': "2"},
+                    status=400,
+                    data=b'{"LoadStatus": "FAIL","ErrorType": "my error type", "ErrorMessages": [{"ErrorType": "my error type 2", "ErrorMessage": "my error message 2"}]}'
+                )
+            }
+        ]
+
+        # Define the expected result/output from the CLI command
+        expected_result = None
+
+
+        # Call the generic integration test function with the above parameters and test it gets the exception
+        with self.assertRaises(comodash_api_client_lowlevel.exceptions.BadRequestException) as context:
+            self._generic_integration_test(
+                mock_requests_post=mock_requests_post,
+                mock_urllib3_request=mock_urllib3_request,
+                cli_args=cli_args,
+                expected_calls=expected_calls,
+                expected_result=expected_result
+            )
+
+    #this test is to test that the lower level sdk throws an exception when http is not 200
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_dash_get_load_status_failed_http500(self, mock_requests_post, mock_urllib3_request):
+        # Define the CLI arguments for creating a load
+        cli_args = ['dash', 'get-load-info', '-l', 'myloadid']
+
+        # Define the expected calls to the lower-level SDK/API
+        expected_calls = [
+            {
+                'response': mock.MagicMock(
+                    headers={'header1': "2"},
+                    status=500,
+                    data=b'{"LoadStatus": "FAIL","ErrorType": "my error type", "ErrorMessages": [{"ErrorType": "my error type 2", "ErrorMessage": "my error message 2"}]}'
+                )
+            }
+        ]
+
+        # Define the expected result/output from the CLI command
+        expected_result = None
+
+
+        # Call the generic integration test function with the above parameters and test it gets the exception
+        with self.assertRaises(comodash_api_client_lowlevel.exceptions.ServiceException) as context:
+            self._generic_integration_test(
+                mock_requests_post=mock_requests_post,
+                mock_urllib3_request=mock_urllib3_request,
+                cli_args=cli_args,
+                expected_calls=expected_calls,
+                expected_result=expected_result
+            )
+
+
 
 
 if __name__ == '__main__':

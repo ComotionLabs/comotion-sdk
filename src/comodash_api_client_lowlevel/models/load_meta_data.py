@@ -31,7 +31,7 @@ class LoadMetaData(BaseModel):
     """
     LoadMetaData
     """ # noqa: E501
-    load_status: Optional[StrictStr] = Field(default=None, description="Current status of the load.", alias="LoadStatus")
+    load_status: StrictStr = Field(description="Current status of the load.", alias="LoadStatus")
     error_type: Optional[StrictStr] = Field(default=None, description="Type of error if the load status is FAIL.", alias="ErrorType")
     error_messages: Optional[List[LoadMetaDataErrorMessagesInner]] = Field(default=None, description="Detailed error messages if the load status is FAIL.", alias="ErrorMessages")
     __properties: ClassVar[List[str]] = ["LoadStatus", "ErrorType", "ErrorMessages"]
@@ -39,9 +39,6 @@ class LoadMetaData(BaseModel):
     @field_validator('load_status')
     def load_status_validate_enum(cls, value):
         """Validates the enum"""
-        if value is None:
-            return value
-
         if value not in ('OPEN', 'PROCESSING', 'FAIL', 'SUCCESS'):
             raise ValueError("must be one of enum values ('OPEN', 'PROCESSING', 'FAIL', 'SUCCESS')")
         return value

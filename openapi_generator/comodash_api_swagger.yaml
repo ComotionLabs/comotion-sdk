@@ -628,6 +628,8 @@ components:
                 description: error state
           nullable: true
           description: "Detailed error messages if the load status is FAIL."
+      required:
+      - LoadStatus
     FileUploadRequest:
       type: "object"
       properties:
