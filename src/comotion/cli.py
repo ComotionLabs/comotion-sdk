@@ -437,6 +437,7 @@ def commit_load(
         #transform to dict
         check_sum_dict[check_sum_expression] = check_sum_expected
     load.commit(check_sum=check_sum_dict)
+    click.echo("Load committed")
 
 @dash.command()
 @click.option(

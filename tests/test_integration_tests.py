@@ -2,6 +2,9 @@
 # it does this by calling cli functions, but then mocking and testing the urllib3 requests made by the low level sdk.
 # this ensures that the actual calls made by the framework are correct
 
+# this also acts as unit tests for the cli - though we may want to create specific unit tests for the cli
+# in future to ensure we test all scenarios
+
 import unittest
 import comotion
 from unittest import mock
@@ -570,6 +573,49 @@ finalising file...
             unittest.mock.call(f"{current_directory}/input_file.parquet", 'rb'),
             click_open_file.mock_calls[0]
         )
+
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_dash_commit_load(self, mock_requests_post, mock_urllib3_request):
+        # Define the CLI arguments for creating a load
+        cli_args = ['dash', 'commit-load', '-l', 'myloadid', '-c', 'my','checksum','-c', 'my2','secondchecksum']
+
+        # Define the expected calls to the lower-level SDK/API
+        expected_calls = [
+            {
+                'request': unittest.mock.call(
+                    'POST',
+                    'https://test1.api.comodash.io/v2/load/myloadid/commit',
+                    body='{"check_sum": {"my": "checksum", "my2": "secondchecksum"}}',
+                    timeout=None,
+                    headers={
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'OpenAPI-Generator/1.0.0/python',
+                        'Authorization': 'Bearer myaccesstoken'
+                    },
+                    preload_content=False
+                ),
+                'response': mock.MagicMock(
+                    headers={'header1': "2"},
+                    status=202,
+                    data=b'{"message": "ok"}'
+                )
+            }
+        ]
+
+        # Define the expected result/output from the CLI command
+        expected_result = 'Load committed\n'
+
+        # Call the generic integration test function with the above parameters
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=cli_args,
+            expected_calls=expected_calls,
+            expected_result=expected_result
+        )
+
 
 if __name__ == '__main__':
     unittest.main()
