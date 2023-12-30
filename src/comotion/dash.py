@@ -1,12 +1,14 @@
 import io
 import os
+import json
 import requests
 import csv
 import time
-from typing import Union, Callable
+from typing import Union, Callable, List, Optional, Dict
 from os.path import join
 import pandas as pd
 import logging
+
 try:
     import cx_Oracle
     import sqlalchemy
@@ -15,12 +17,21 @@ except ImportError:
     pass
 from datetime import datetime
 from comotion import Auth
-from comotion import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.comodash_api import queries_api
-from comodash_api_client_lowlevel.model.query_text import QueryText
+import comodash_api_client_lowlevel
+from comodash_api_client_lowlevel import QueriesApi, LoadsApi
+from comodash_api_client_lowlevel.models.query_text import QueryText
 from urllib3.exceptions import IncompleteRead
 from urllib3.response import HTTPResponse
-from comodash_api_client_lowlevel.model.query import Query as QueryInfo
+from comodash_api_client_lowlevel.models.query import Query as QueryInfo
+from comodash_api_client_lowlevel.models.load import Load as LoadInfo
+from comodash_api_client_lowlevel.models.file_upload_request import FileUploadRequest
+from comodash_api_client_lowlevel.models.file_upload_response import FileUploadResponse
+from comodash_api_client_lowlevel.models.load_commit import LoadCommit
+from comodash_api_client_lowlevel.models.load import Load
+from comodash_api_client_lowlevel.models.query_id import QueryId
+from comodash_api_client_lowlevel.rest import ApiException
+
+
 
 class DashConfig(comodash_api_client_lowlevel.Configuration):
     """
@@ -44,6 +55,151 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
         )
 
         # comodash_api_client_lowlevel.Configuration.set_default(config)
+
+class Load():
+    """
+    The Load object starts and tracks a multi-file load on Comotion Dash
+
+    Initialising this class starts a Load on Comotion Dash and stores the
+    resulting load_id in `load_id`
+
+    If you wish to work with an existing load, then simply supply load_id parameter
+
+    @TODO Outline of how to use this class to upload a file here.
+    """
+
+    def __init__(
+            self,
+            config: DashConfig,
+            load_type: str = None,
+            table_name: str = None,
+            load_as_service_client_id: str = None,
+            partitions: Optional[List[str]] = None,
+            load_id: str = None
+    ):
+        """
+        Parameters
+        ----------
+        config : DashConfig
+            Object of type DashConfig including configuration details
+        load_type : str
+            Load Type, initially only APPEND_ONLY supported.  APPEND_ONLY means that data is appended to the lake table.
+        table_name : str
+            Name of lake table to be created and / or uploaded to
+        load_as_service_client_id : str, optional
+            If provided, the upload is performed as if run by the service_client specified.
+        partitions : list[str], optional
+            Only applies if table does not already exist, and is created.  The created table will have these partitions.
+            This must be a list of iceberg compatible partitions.
+            Note that any load can only allow for up to 100 partitions, otherwise it will error out.
+            If the table already exists, then this is ignored.
+        load_id : str
+            In the case where you want to work with an existing load on dash, supply this parameter, and no other parameter (other than config) will be required
+        """
+        load_data = locals()
+        if not(isinstance(config, DashConfig)):
+            raise TypeError("config must be of type comotion.dash.DashConfig")
+        
+        with comodash_api_client_lowlevel.ApiClient(config) as api_client:
+            # Create an instance of the API class with provided parameters
+            self.load_api_instance = LoadsApi(api_client)
+
+            if (load_id is not None):
+                # if load_id provided, then initialise this object with the provided load_id
+                self.load_id = load_id
+                for key,value in load_data.items():
+                    if key not in  ['load_id', 'config', 'self']:
+                        if value is not None:
+                            raise TypeError("if load_id is supplied, then only the config parameter and no others should be supplied.")
+            else:
+                # Enter a context with an instance of the API client
+                    del load_data['config']
+                    del load_data['self']
+                    del load_data['load_id']
+                    load = comodash_api_client_lowlevel.Load(**load_data)
+
+                    # Create a new load
+                    load_id_model = self.load_api_instance.create_load(load)
+                    self.load_id = load_id_model.load_id
+
+    def get_load_info(self) -> LoadInfo:
+        """Gets the state of the load
+
+        Returns
+        -------
+        LoadInfo
+            Model containing all the load info, with the following attributes
+            
+            `load_status`
+                Status of the load, one of OPEN, PROCESSING, FAIL or SUCCESS
+            `error_type`
+                Type of error if the load status is FAIL.
+            `error_messages`
+                Detailed error messages if the load status is FAIL.
+
+        """
+        return self.load_api_instance.get_load(self.load_id)
+
+    def generate_presigned_url_for_file_upload(self, file_key: str = None) -> FileUploadResponse:
+        """
+        Generates presigned urls and sts credentials for a new file upload
+
+        Parameters
+        ----------
+        file_key : str
+            Optional custom key for the file. This will ensure idempontence. 
+            If multiple files are uploaded to the same load with the same file_key, 
+            only the last one will be loaded. Must be lowercase, can include underscores
+
+        Returns
+        -------
+        FileUploadResponse
+            Model containing all the relevant credentials to be able to upload a file to s3 as part of the load.  This includes the following:
+            l
+            presigned_url :
+                Presigned URL data for S3 file upload. The file can be posted to this endpoint using any AWS s3 compatible toolset. 
+                Temporary credentials are included in the url, so no other credentials are required.
+            sts_credentials :
+                Alternatively to the presigned_url, these Temporary AWS STS credentials 
+                that can be used to upload the file to the location specified by `path` and `bucket`.
+                This is required for various advanced toolsets, including AWS Wrangler
+            path :
+                Path of the file in the S3 bucket. See description of `sts_credentials`.
+            bucket :
+                Name of the S3 bucket. See description of `sts_credentials`.
+
+        """
+        file_upload_request = FileUploadRequest()
+        if file_key:
+            file_upload_request = FileUploadRequest(file_key=file_key)
+
+        return self.load_api_instance.generate_presigned_url_for_file_upload(self.load_id, file_upload_request=file_upload_request)
+        
+    def commit(self, check_sum: Dict[str, Union[int, float, str]]):
+        """
+        Kicks off the commit of the load. A checksum must be provided
+        which is checked on the server side to ensure that the data provided
+        has integrity.  You can then use the `get_load_info` function to see
+        when it is successful.
+
+        Parameters
+        ----------
+        check_sum : Dict[str, Union[int, float, str]]
+            Checksum data for the files to be committed.
+            Checksums must be in the form of a dictionary, with presto / trino expressions
+            as the key, and the expected result as the value. 
+            At least one is required
+            Example:
+
+            .. code-block:: python
+
+                {
+                    "count(*)" : 53,
+                    "sum(my_value)": 123.3
+                }
+        """
+        load_commit = comodash_api_client_lowlevel.LoadCommit(check_sum=check_sum)
+        return self.load_api_instance.commit_load(self.load_id, load_commit)
 
 
 class Query():
@@ -87,16 +243,20 @@ class Query():
             raise TypeError("config must be of type comotion.dash.DashConfig")
 
         with comodash_api_client_lowlevel.ApiClient(config) as api_client:
-            self.query_api_instance = queries_api.QueriesApi(api_client)
+            self.query_api_instance = QueriesApi(api_client)
             if query_id:
-                query_info = self.query_api_instance.get_query(query_id)
+                # query_info = self.query_api_instance.get_query(query_id)
                 self.query_id = query_id
-                self.query_text = query_info.query
+                # self.query_text = query_info.query
             elif query_text:
                 self.query_text = query_text
                 query_text_model = QueryText(query=query_text)
-                query_id_model = self.query_api_instance.run_query(query_text_model) # noqa
-                self.query_id = query_id_model['query_id']
+                try:
+                    query_id_model = self.query_api_instance.run_query(query_text_model) # noqa
+                except comodash_api_client_lowlevel.exceptions.BadRequestException as exp:
+                    raise ValueError(json.loads(exp.body)['message'])
+                    
+                self.query_id = query_id_model.query_id
             else:
                 raise ValueError("One of query_id or query_text must be provided")
 
@@ -123,7 +283,10 @@ class Query():
                     GMT submission time
 
         """
-        return self.query_api_instance.get_query(self.query_id)
+        try:
+            return self.query_api_instance.get_query(self.query_id)
+        except comodash_api_client_lowlevel.exceptions.NotFoundException as exp:
+            raise ValueError("query_id cannot be found")
 
     def state(self) -> str:
         """Gets the state of the query.
@@ -176,15 +339,13 @@ class Query():
 
             This can be achieved using the `with` notation e.g.::
 
-                with query.get_csv_for_streaming().stream() as stream:
+                with query.get_csv_for3_streaming().stream() as stream:
                   for chunk in stream:
                       # do somthing with chunk
                       # chunk is a byte array ``
         """
-
-        response = self.query_api_instance.download_csv(
-            query_id=self.query_id,
-            _preload_content=False)
+        response = self.query_api_instance.download_csv_without_preload_content(
+            query_id=self.query_id)
         response.autoclose = False
         return response
 
@@ -215,7 +376,6 @@ class Query():
                 for chunk in response.stream(1048576):
                     size = size + len(chunk)
                     f.write(chunk)
-
                 if (response.tell() != int(content_length)):
                     raise IncompleteRead(
                         response.tell(),

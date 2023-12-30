@@ -1,0 +1,28 @@
+import requests
+import json
+
+# Endpoint URL
+url = "https://poc2.api.comodash.io/v2/load"
+
+# Headers
+headers = {
+    "Accept-Encoding": "identity",
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "User-Agent": "OpenAPI-Generator/1.0.0/python",
+    "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJvZUZUNk85eDlLaWU0cDJxejZ2aEtZbjhuYWVEVFJZLTdhb3UxSWxwYjZvIn0.eyJleHAiOjE3MTE2NDQ4MzMsImlhdCI6MTcwMzAwNDgzMywiYXV0aF90aW1lIjoxNjk1NTc2NDgwLCJqdGkiOiIwZDFmZWEzYi03N2FhLTRkMjEtOTlkMC1lOGYxNDI3ZjhjMjAiLCJpc3MiOiJodHRwczovL2F1dGguY29tb3Rpb24udXMvYXV0aC9yZWFsbXMvcG9jMiIsImF1ZCI6ImRhc2hfYXBpIiwic3ViIjoiYWQ3NjhlZWQtNTdkMy00MjBjLThmNGMtNDA4YmFiNTc1MWUzIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY29tb3Rpb25fY2xpIiwic2Vzc2lvbl9zdGF0ZSI6ImUyYWYwZmRiLWQ0MWUtNGY3OS1hNTAyLTdlYmMyYWUxZDU5YSIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImRhc2hfYXBpIjp7InJvbGVzIjpbImxvYWRfcnVubmVyIiwicXVlcnlfcnVubmVyIl19fSwic2NvcGUiOiJvcGVuaWQgbG9hZDp3cml0ZSBsb2FkOnJlYWQgb2ZmbGluZV9hY2Nlc3MgcXVlcnk6cmVhZCBwcm9maWxlIHF1ZXJ5OndyaXRlIHNlcnZpY2VfY2xpZW50IHN1cGVyc2V0OnVzZXIgZW1haWwiLCJzaWQiOiJlMmFmMGZkYi1kNDFlLTRmNzktYTUwMi03ZWJjMmFlMWQ1OWEiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6InRpbSB2aWV5cmEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJ0aW1vdGh5LnZpZXlyYUBjb21vdGlvbi5jby56YSIsInNlcnZpY2VfY2xpZW50X2lkIjpbIjAiXSwiZ2l2ZW5fbmFtZSI6InRpbSIsImZhbWlseV9uYW1lIjoidmlleXJhIiwiZW1haWwiOiJ0aW1vdGh5LnZpZXlyYUBjb21vdGlvbi5jby56YSJ9.J1lFsl2hPd964GHROXjnHjOEgdfBioKAOZlbG6zvCWWwkdm_U3w1C-MXcadYI42DUTI1575uPL3mKS_oWZkR7MYI_VnkRvHoEm7oot8Jy7C9PV7X28dHk48IeTLoo-Nkaj1ZSvj5QQoiB2PESvvZN3bpjhDFxTiVO6ReeXazxnJFKeoEe_grUyzewgXBF-K5Hyj7uR4La6kzQdV4mCsjvrl4rPJzo4aBGUmJ-M_3dezZ-EWyG4cPsGEYzhoKeclVsxcK8jmVJIqpvfkg4iex-m4hnzA0L1dGVkzJ8f071U6byyJQZ9LBChIGY3OJ1BzrIyKNAGnjXf23oR1-mMfm-w"
+}
+
+# Payload
+payload = {
+    "load_type": "APPEND_ONLY",
+    "table_name": "hello",
+    "partitions": []
+}
+
+# Sending POST request
+response = requests.post(url, headers=headers, data=json.dumps(payload))
+
+# Print response
+print(response.status_code)
+print(response.text)

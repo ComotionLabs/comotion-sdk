@@ -41,8 +41,11 @@ if __name__ == "__main__":
             'pyjwt',
             'urllib3>=1.25.3',
             'sqlalchemy>=1.4.36',
-            'tqdm>=4.64.0'
-            
+            'tqdm>=4.64.0',
+            'aiohttp',
+            'python-dateutil',
+            'pydantic',
+            'awswrangler>=3.4.2'
         ],
         tests_require=[
             'mock',

@@ -52,6 +52,7 @@ pipenv run test -v
 
 Run the following from the docs directly. Ensure to watch out for warnings.
 `
+pipenv install --dev
 make html
 `
 ## Rerunning code generator
@@ -64,13 +65,16 @@ The latest swagger file is stored in openapi_generator/comodash_api_swagger.json
 
 Download latest [jar of OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator#13---download-jar)
 
-`
+```
 java -jar \
-./openapi_generator/openapi-generator-cli-5.2.1.jar generate \
-  -i ./openapi_generator/comodash_api_swagger.yaml\
-  -g python \
-  --package-name comodash_api_client_lowlevel \
-  --api-package comodash_api \
-  --additional-properties generateSourceCodeOnly=True,library=asyncio \
-  -o ./src/
-`
+  ./openapi_generator/openapi-generator-cli.jar generate \
+        -i ./openapi_generator/comodash_api_swagger.yaml\
+        -g python \
+        --package-name comodash_api_client_lowlevel \
+        --additional-properties \
+            generateSourceCodeOnly=True,library=urllib3 \
+        -o ./src/
+```
+We have changed from asyncio to urllib3 to ensure simplicity in coding without requiring "await" and "async"
+
+        --api-package comodash_api \

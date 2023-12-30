@@ -6,4 +6,3 @@ __author__ = "Tim Vieyra"
 import comotion.auth
 from comotion.auth import Auth
 
-import comodash_api_client_lowlevel

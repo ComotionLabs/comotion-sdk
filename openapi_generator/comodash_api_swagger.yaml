@@ -9,9 +9,6 @@ servers:
       orgName:
         default: 'training'
         description: OrgName for your organisation
-    
-    x-amazon-apigateway-endpoint-configuration:
-      disableExecuteApiEndpoint: true
 paths:
   /query:
     post:
@@ -44,7 +41,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        500:
+        5XX:
           description: Unexpected error.
           content:
             application/json:
@@ -217,8 +214,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QueryResult'
-
-
         '400':
           description: Bad request. Query Id of a valid query must be provided.
           content:
@@ -247,7 +242,175 @@ paths:
         - queries
       security:
         - OAuth2Authorizer:
-            - query:read
+            - query:read  
+  /load:
+    post:
+      summary: "Create a new load"
+      description: "Creates a new load with the given parameters."
+      operationId: "createLoad"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Load'
+      tags:
+        - loads
+      security:
+      - OAuth2Authorizer:
+        - "load:write"
+      responses:
+        202:
+          description: Load successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadId'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /load/{load_id}/commit:
+    post:
+      summary: "Commit a load operation"
+      description: "Initiates a commit operation for a given load, identified by the load_id."
+      operationId: "commitLoad"
+      parameters:
+        - $ref: '#/components/parameters/loadId'
+      tags:
+        - loads
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoadCommit'
+      responses:
+        202:
+          description: "Commit initiated successfully."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  message:
+                    type: "string"
+        400:
+          description: "Invalid request, such as invalid checksum data."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: "Internal server error or unhandled exception."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+          - "load:write"
+  /load/{load_id}:
+    get:
+      summary: "Get load metadata"
+      description: "Retrieves metadata for a specific load based on the provided load_id."
+      operationId: "getLoad"
+      parameters:
+        - $ref: '#/components/parameters/loadId'
+      tags:
+        - loads
+      responses:
+        200:
+          description: "Load metadata retrieved successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadMetaData'
+        400:
+          description: "Invalid request."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: "Internal server error or unhandled exception."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+          - "load:read"
+  /load/{load_id}/file:
+    post:
+      summary: "Generate presigned URL for file upload"
+      description: "Generates a presigned URL and STS credentials for uploading a file to a specified load."
+      operationId: "generatePresignedUrlForFileUpload"
+      parameters:
+        - $ref: '#/components/parameters/loadId'
+      tags:
+        - loads
+      requestBody:
+        description: "Optional parameters for file upload"
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileUploadRequest'
+      responses:
+        200:
+          description: "Presigned URL generated successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+        400:
+          description: "Invalid request."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: "Internal server error or unhandled exception."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+          - "load:write"
 
 components:
   parameters:
@@ -259,6 +422,14 @@ components:
       schema:
         type: string
       example: 06ba1d95-8c4f-460c-90b3-bc68fddf2fde
+    loadId:
+      name: "load_id"
+      in: "path"
+      description: "Unique identifier for the load operation"
+      required: true
+      schema:
+        type: "string"
+      example: 20231117085806_355d42f6_0684_4b8f_b274_225bf7237494
   schemas:
     Error:
       type: object
@@ -301,6 +472,9 @@ components:
               type: string
               enum: [QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED]
               example: SUCCEEDED
+            stateChangeReason: 
+              type: string
+              example: This is an error
             submissionDateTime:
               type: string
               example: 11-28-2021 18:51:01
@@ -384,6 +558,107 @@ components:
                     Type: decimal
                   - Name: column7
                     Type: double
+    LoadCommit:
+      description: Load request body schema
+      type: "object"
+      required:
+        - check_sum
+      properties:
+        check_sum:
+          type: "object"
+          additionalProperties: check_sum
+          description: "Checksum data for the files to be committed."
+    Load:
+      type: "object"
+      required:
+        - load_type
+        - table_name
+      properties:
+        load_type:
+          type: "string"
+          enum: ["APPEND_ONLY"]
+          description: "Type of the load operation."
+        table_name:
+          type: "string"
+          pattern: "^[a-z_]+[a-z0-9_]*[a-z0-9]$"
+          description: "Name of the table.  Only lowercase with underscores."
+        load_as_service_client_id:
+          type: "string"
+          description: "Optional parameter to force the load to act as a certain service_client_id."
+        partitions:
+          type: "array"
+          items:
+            type: "string"
+          description: "List of partition names."
+    LoadId:
+      type: object
+      properties:
+        loadId:
+          type: string
+          example: 20231117085806_355d42f6_0684_4b8f_b274_225bf7237494
+      required:
+        - loadId
+    LoadMetaData:
+      type: "object"
+      properties:
+        LoadStatus:
+          type: "string"
+          enum: ["OPEN", "PROCESSING", "FAIL", "SUCCESS"]
+          description: "Current status of the load."
+        ErrorType:
+          type: "string"
+          nullable: true
+          description: "Type of error if the load status is FAIL."
+        ErrorMessages:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              ErrorType:
+                type: "string"
+                nullable: true
+                description: "type of error for which the message is shown"
+              ErrorMessage:
+                type: "string"
+                nullable: true
+                description: "error message"
+              CheckResult:
+                type: "string"
+                nullable: true
+                description: error state
+          nullable: true
+          description: "Detailed error messages if the load status is FAIL."
+      required:
+      - LoadStatus
+    FileUploadRequest:
+      type: "object"
+      properties:
+        file_key:
+          type: "string"
+          pattern: "^[a-z_]+[a-z0-9_]*[a-z0-9]$"
+          description: "Optional custom key for the file. This will ensure idempontence.  If multiple files are uploaded to the same load with the same file_key, only the last one will be loaded. Must be lowercase, can include underscores, and must end with '.parquet'."
+    FileUploadResponse:
+      type: "object"
+      properties:
+        presigned_url:
+          type: "object"
+          description: "Presigned URL data for S3 file upload.  The file can be posted to this endpoint using any AWS s3 compatible toolset.  Temporary credentials are included in the url, so no other credentials are required."
+        sts_credentials:
+          type: "object"
+          description: "Alternatively to the presigned_url, these Temporary AWS STS credentials that can be used to upload the file to the location specified by `path` and `bucket."
+        path:
+          type: "string"
+          description: "Path of the file in the S3 bucket.  See description of `sts_credentials`."
+        bucket:
+          type: "string"
+          description: "Name of the S3 bucket.  See description of `sts_credentials`."
+      required:
+        - presigned_url
+        - sts_credentials
+        - path
+        - bucket
+
+
 
   securitySchemes:
     OAuth2Authorizer:
