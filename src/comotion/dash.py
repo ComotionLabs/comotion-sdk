@@ -79,15 +79,12 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
                 self.access_token = self.auth.get_access_token()
 
         except jwt.ExpiredSignatureError:
-            print("except ExpiredSignatureError")
             # If the token is expired, refresh it
             self.access_token = self.auth.get_access_token()
         except jwt.DecodeError as e:
-            print("DecodeError")
             # Handle cases for invalid token
             self.access_token = self.auth.get_access_token()
         except KeyError:
-            print("KeyError")
             # Handle cases for tokens with unexpected payload
             self.access_token = self.auth.get_access_token()
 
