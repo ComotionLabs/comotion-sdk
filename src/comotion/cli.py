@@ -485,6 +485,8 @@ def get_load_info(
 # @TODO 1 (SDK)  upload a pandas stream   1. as part of a load 2. without having to create a load  3. deal with pandas streams or modin streams or iterator
 # @TODO 1b (SDK) upload a file object. specify either csv or parquet. must deal with csv.gz
 
+
+#nDone
 # @TODO integration tests integration testing from cli down to api call
 # @TODO improve auth flow when no user or when password expired. currently nondescript
 
