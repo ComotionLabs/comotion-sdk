@@ -30,7 +30,9 @@ class TestIntegrationTests(unittest.TestCase):
             mock_urllib3_request, 
             cli_args,
             expected_result,
-            expected_calls = []):
+            expected_calls = [],
+            expected_auth_call = None,
+            expected_exit_code = 0):
         """
         Utility function that runs integration tests for cli > sdk > lowlevel sdk
         It mocks the lowest level call (urllib3 and requests) so it tests all the layers together/
@@ -45,10 +47,13 @@ class TestIntegrationTests(unittest.TestCase):
         kr.set_password("comotion auth api offline token (https://auth.comotion.us/auth/realms/test1)",'myusername','myrefreshtoken')
 
         #setup requests mock to return an access token of sorts
-        requests_response = mock.MagicMock()
-        requests_response.status_code = 200
-        requests_response.text='{"access_token": "myaccesstoken"}'
-        mock_requests_post.return_value = requests_response
+        if expected_auth_call is None:
+            requests_response = mock.MagicMock()
+            requests_response.status_code = 200
+            requests_response.text='{"access_token": "myaccesstoken"}'
+            mock_requests_post.return_value = requests_response
+        else:
+            mock_requests_post.return_value = expected_auth_call['response']
 
         # Setup the mock to return a fake response
         side_effects = []
@@ -83,7 +88,7 @@ class TestIntegrationTests(unittest.TestCase):
             print("START"+result.output+"END")
             print(result.exception)
             print(result.exc_info)
-            self.assertEqual(result.exit_code, 0)
+            self.assertEqual(result.exit_code, expected_exit_code)
 
 
         # assert that api call happened properly
@@ -98,7 +103,11 @@ class TestIntegrationTests(unittest.TestCase):
         self.assertEqual(mock_urllib3_request.call_count, len(expected_calls))
 
         # assert that auth call happened properly
-        mock_requests_post.assert_called_once_with('https://auth.comotion.us/auth/realms/test1/protocol/openid-connect/token', data={'grant_type': 'refresh_token', 'refresh_token': 'myrefreshtoken', 'client_id': 'comotion_cli'})
+        if expected_auth_call is not None:
+            self.assertEqual(mock_requests_post.call_count, 1)
+            self.assertEqual(mock_requests_post.mock_calls,[expected_auth_call['request']])
+        else: 
+            mock_requests_post.assert_called_once_with('https://auth.comotion.us/auth/realms/test1/protocol/openid-connect/token', data={'grant_type': 'refresh_token', 'refresh_token': 'myrefreshtoken', 'client_id': 'comotion_cli'})
 
         # delaying this assertion allows us to see the actual calls while developnig the tests
         if validation_error is not None:
@@ -107,7 +116,138 @@ class TestIntegrationTests(unittest.TestCase):
         # Check the output
         self.assertEqual(expected_result, result.output)
 
+   ###############################################################################################
+    ############################  AUTH CLI TEST ##################################################
+    ###############################################################################################
 
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_get_access_token(self, mock_requests_post, mock_urllib3_request):
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=['get-access-token'],
+            expected_auth_call=
+                {   # start query call
+                    'request': unittest.mock.call(
+                        'https://auth.comotion.us/auth/realms/test1/protocol/openid-connect/token', 
+                        data={
+                            'grant_type': 'refresh_token', 
+                            'refresh_token': 'myrefreshtoken', 
+                            'client_id': 'comotion_cli'
+                        }
+                    ),                    
+                    'response': mock.MagicMock(
+                        text='{"access_token": "myaccesstoken"}', 
+                        status_code=200
+                    )
+                },
+            expected_result='myaccesstoken\n'
+        )
+
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_get_access_token_error(self, mock_requests_post, mock_urllib3_request):
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=['get-access-token'],
+            expected_auth_call=
+                {   # start query call
+                    'request': unittest.mock.call(
+                        'https://auth.comotion.us/auth/realms/test1/protocol/openid-connect/token', 
+                        data={
+                            'grant_type': 'refresh_token', 
+                            'refresh_token': 'myrefreshtoken', 
+                            'client_id': 'comotion_cli'
+                        }
+                    ),                    
+                    'response': mock.MagicMock(
+                        text='{"error": "invalid_grant", "error_description": "this is my description"}', 
+                        status_code=400,
+                    )
+                },
+            expected_result='Error: Your credentials are not valid. Run `comotion authenticate` to refresh your credentials.\n',
+            expected_exit_code=1
+        )
+    
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_get_access_token_other_error(self, mock_requests_post, mock_urllib3_request):
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=['get-access-token'],
+            expected_auth_call=
+                {   # start query call
+                    'request': unittest.mock.call(
+                        'https://auth.comotion.us/auth/realms/test1/protocol/openid-connect/token', 
+                        data={
+                            'grant_type': 'refresh_token', 
+                            'refresh_token': 'myrefreshtoken', 
+                            'client_id': 'comotion_cli'
+                        }
+                    ),                    
+                    'response': mock.MagicMock(
+                        text='{"error": "not_invalid_grant", "error_description": "this is my description"}', 
+                        status_code=400,
+                    )
+                },
+            expected_result='Error: There was a problem with the request: this is my description (not_invalid_grant)\n',
+            expected_exit_code=1
+        )
+
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_get_access_token_other_error_no_type(self, mock_requests_post, mock_urllib3_request):
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=['get-access-token'],
+            expected_auth_call=
+                {   # start query call
+                    'request': unittest.mock.call(
+                        'https://auth.comotion.us/auth/realms/test1/protocol/openid-connect/token', 
+                        data={
+                            'grant_type': 'refresh_token', 
+                            'refresh_token': 'myrefreshtoken', 
+                            'client_id': 'comotion_cli'
+                        }
+                    ),                    
+                    'response': mock.MagicMock(
+                        text='{"noterror": "invalid_grant", "error_description": "this is my description"}', 
+                        status_code=400,
+                    )
+                },
+            expected_result='Error: unknown system error. This is what the system is returning: {"noterror": "invalid_grant", "error_description": "this is my description"}\n',
+            expected_exit_code=1
+        )
+
+    @mock.patch('urllib3.PoolManager.request')
+    @mock.patch('requests.post')
+    def test_get_access_token_other_error_no_json(self, mock_requests_post, mock_urllib3_request):
+        self._generic_integration_test(
+            mock_requests_post=mock_requests_post,
+            mock_urllib3_request=mock_urllib3_request,
+            cli_args=['get-access-token'],
+            expected_auth_call=
+                {   # start query call
+                    'request': unittest.mock.call(
+                        'https://auth.comotion.us/auth/realms/test1/protocol/openid-connect/token', 
+                        data={
+                            'grant_type': 'refresh_token', 
+                            'refresh_token': 'myrefreshtoken', 
+                            'client_id': 'comotion_cli'
+                        }
+                    ),                    
+                    'response': mock.MagicMock(
+                        text='{slkdfjslkdj', 
+                        status_code=400,
+                    )
+                },
+            expected_result='Error: There was a strange response from the server: \'{slkdfjslkdj\' (Expecting property name enclosed in double quotes)\n',
+            expected_exit_code=1
+        )
 
     ###############################################################################################
     ############################  QUERY CLI TEST ##################################################

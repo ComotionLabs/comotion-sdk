@@ -132,8 +132,18 @@ def get_access_token(config):
     if response.status_code == requests.codes.ok:
         click.echo(json.loads(str(response.text))['access_token'])
     else:
-        click.echo("There is an error with the response:", err=True)
-        click.echo(response.text,err=True)
+        try:
+            json_response = json.loads(str(response.text))
+            if 'error' in json_response:
+                if json_response['error'] == 'invalid_grant':
+                    raise click.ClickException("Your credentials are not valid. Run `comotion authenticate` to refresh your credentials.")
+                else:
+                    raise click.ClickException("There was a problem with the request: "+json_response.get('error_description', "unknown system error. This is what the system is returning: "+response.text)+f" ({json_response['error']})")
+            else:
+                raise click.ClickException("unknown system error. This is what the system is returning: "+response.text)
+        except json.JSONDecodeError as e:
+                raise click.ClickException(f"There was a strange response from the server: '{response.text}' ({e.msg})")
+            
 
 
 @cli.command()

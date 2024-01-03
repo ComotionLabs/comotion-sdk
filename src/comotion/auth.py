@@ -307,7 +307,6 @@ class Auth():
             self.token_endpoint,
             data=payload
         )
-
         if response.status_code == requests.codes.ok:
             return json.loads(str(response.text))['access_token']
         else:
