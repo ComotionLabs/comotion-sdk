@@ -11,6 +11,8 @@ from unittest import mock
 from click.testing import CliRunner
 from comotion import cli  
 import os
+import jwt
+import datetime
 import pydantic_core
 import json
 from keyrings.cryptfile.file import PlaintextKeyring
@@ -23,6 +25,23 @@ class TestIntegrationTests(unittest.TestCase):
 
     ## Set the maximum size of the assertion error message when Unit Test fail
     maxDiff = None
+
+    def __init__(self, methodName):
+        self._generate_mock_access_token()
+        super().__init__(methodName)
+
+    def _generate_mock_access_token(self):
+        # generate the access token with sparse stuff
+        # Define the payload of the JWT
+        payload = {
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=100),
+            # 'iat': datetime.datetime.utcnow(),  # You can add issued at time if needed
+            # Add other data to the payload as needed
+        }
+
+        # Replace 'your-256-bit-secret' with your actual secret key
+        secret_key = 'a-really-secret-key'
+        self.accesstoken = jwt.encode(payload, secret_key, algorithm='HS256')
 
     def _generic_integration_test(
             self, 
@@ -45,12 +64,15 @@ class TestIntegrationTests(unittest.TestCase):
         kr = PlaintextKeyring()
         kr.set_password('comotion auth api latest username (https://auth.comotion.us)','test1','myusername')
         kr.set_password("comotion auth api offline token (https://auth.comotion.us/auth/realms/test1)",'myusername','myrefreshtoken')
+    
+        # Generate JWT
+        token = self.accesstoken
 
         #setup requests mock to return an access token of sorts
         if expected_auth_call is None:
             requests_response = mock.MagicMock()
             requests_response.status_code = 200
-            requests_response.text='{"access_token": "myaccesstoken"}'
+            requests_response.text='{"access_token": "'+token+'"}'
             mock_requests_post.return_value = requests_response
         else:
             mock_requests_post.return_value = expected_auth_call['response']
@@ -94,7 +116,7 @@ class TestIntegrationTests(unittest.TestCase):
         # assert that api call happened properly
         mock_calls=[]
         for expected_call in expected_calls:
-            # mock_urllib3_request.assert_called_once_with(
+            # replace the access token wiht the one we generated ealier
             mock_call=expected_call['request']
             mock_calls.append(mock_call)
         print(mock_urllib3_request.mock_calls)
@@ -272,7 +294,7 @@ class TestIntegrationTests(unittest.TestCase):
                             'Accept': 'application/json', 
                             'Content-Type': 'application/json', 
                             'User-Agent': 'OpenAPI-Generator/1.0.0/python', 
-                            'Authorization': 'Bearer myaccesstoken'
+                            'Authorization': 'Bearer '+self.accesstoken
                         }, 
                         preload_content=False
                     ),                    
@@ -296,24 +318,6 @@ class TestIntegrationTests(unittest.TestCase):
             mock_urllib3_request=mock_urllib3_request,
             cli_args=['dash','stop-query','--query_id','myqueryid'],
             expected_calls=[
-                # {  # get query info run when Query object is initialised
-                #     'request': unittest.mock.call(
-                #         'GET', 
-                #         'https://test1.api.comodash.io/v2/query/myqueryid', 
-                #         fields={},
-                #         timeout=None, 
-                #         headers={
-                #             'Accept': 'application/json',
-                #             'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                #             'Authorization': 'Bearer myaccesstoken'
-                #         }, 
-                #         preload_content=False),
-                #     'response': mock.MagicMock(
-                #         headers={'header1': "2"}, 
-                #         status=200, 
-                #         data=b'{"queryId": "12345"}'
-                #     )
-                # },
                 {   # delete request
                     'request': unittest.mock.call(
                         'DELETE',
@@ -323,7 +327,7 @@ class TestIntegrationTests(unittest.TestCase):
                         headers={
                                 'Accept': 'application/json',
                                 'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                                'Authorization': 'Bearer myaccesstoken'
+                                'Authorization': 'Bearer '+self.accesstoken
                         }, 
                         preload_content=False
                     ),
@@ -357,7 +361,7 @@ class TestIntegrationTests(unittest.TestCase):
                         headers={
                             'Accept': 'application/json',
                             'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                            'Authorization': 'Bearer myaccesstoken'
+                            'Authorization': 'Bearer '+self.accesstoken
                         }, 
                         preload_content=False),
                     'response': mock.MagicMock(
@@ -390,7 +394,7 @@ class TestIntegrationTests(unittest.TestCase):
                         headers={
                             'Accept': 'application/json',
                             'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                            'Authorization': 'Bearer myaccesstoken'
+                            'Authorization': 'Bearer '+self.accesstoken
                         }, 
                         preload_content=False),
                     'response': mock.MagicMock(
@@ -441,7 +445,7 @@ class TestIntegrationTests(unittest.TestCase):
                                 'Accept': 'application/json',
                                  'Content-Type': 'application/json',
                                 'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                                'Authorization': 'Bearer myaccesstoken'
+                                'Authorization': 'Bearer '+self.accesstoken
                             }, 
                             preload_content=False),
                         'response': mock.MagicMock(
@@ -459,7 +463,7 @@ class TestIntegrationTests(unittest.TestCase):
                             headers={
                                 'Accept': 'application/json',
                                 'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                                'Authorization': 'Bearer myaccesstoken'
+                                'Authorization': 'Bearer '+self.accesstoken
                             }, 
                             preload_content=False),
                         'response': mock.MagicMock(
@@ -477,7 +481,7 @@ class TestIntegrationTests(unittest.TestCase):
                             headers={
                                 'Accept': 'application/json',
                                 'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                                'Authorization': 'Bearer myaccesstoken'
+                                'Authorization': 'Bearer '+self.accesstoken
                             }, 
                             preload_content=False),
                         'response': mock.MagicMock(
@@ -495,7 +499,7 @@ class TestIntegrationTests(unittest.TestCase):
                             headers={
                                 'Accept': 'application/json',
                                 'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                                'Authorization': 'Bearer myaccesstoken'
+                                'Authorization': 'Bearer '+self.accesstoken
                             }, 
                             preload_content=False),
                         'response': mock.MagicMock(
@@ -513,7 +517,7 @@ class TestIntegrationTests(unittest.TestCase):
                             headers={
                                 'Accept': 'application/json',
                                 'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                                'Authorization': 'Bearer myaccesstoken'
+                                'Authorization': 'Bearer '+self.accesstoken
                             }, 
                             preload_content=False),
                         'response': download_response
@@ -564,7 +568,7 @@ finalising file...
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
                         'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                        'Authorization': 'Bearer myaccesstoken'
+                        'Authorization': 'Bearer '+self.accesstoken
                     },
                     preload_content=False
                 ),
@@ -606,7 +610,7 @@ finalising file...
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
                         'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                        'Authorization': 'Bearer myaccesstoken'
+                        'Authorization': 'Bearer '+self.accesstoken
                     },
                     preload_content=False
                 ),
@@ -671,7 +675,7 @@ finalising file...
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
                         'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                        'Authorization': 'Bearer myaccesstoken'
+                        'Authorization': 'Bearer '+self.accesstoken
                     },
                     preload_content=False
                 ),
@@ -733,7 +737,7 @@ finalising file...
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
                         'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                        'Authorization': 'Bearer myaccesstoken'
+                        'Authorization': 'Bearer '+self.accesstoken
                     },
                     preload_content=False
                 ),
@@ -774,7 +778,7 @@ finalising file...
                     headers={
                         'Accept': 'application/json',
                         'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                        'Authorization': 'Bearer myaccesstoken'
+                        'Authorization': 'Bearer '+self.accesstoken
                     },
                     preload_content=False
                 ),
@@ -815,7 +819,7 @@ finalising file...
                     headers={
                         'Accept': 'application/json',
                         'User-Agent': 'OpenAPI-Generator/1.0.0/python',
-                        'Authorization': 'Bearer myaccesstoken'
+                        'Authorization': 'Bearer '+self.accesstoken
                     },
                     preload_content=False
                 ),

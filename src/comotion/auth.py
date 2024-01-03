@@ -251,9 +251,6 @@ class Auth():
         self.delegated_endpoint = "%s/auth/realms/%s/account" % (issuer,orgname) # noqa
         self.refresh_token = None
 
-        # retrieve refresh token from cache?
-        self.access_token = None
-
         self.credentials_cache = credentials_cache_class(issuer, orgname)
 
     def _build_auth_url(self, redirect_uri, state, pkce):

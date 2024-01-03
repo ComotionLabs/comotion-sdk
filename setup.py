@@ -30,7 +30,7 @@ if __name__ == "__main__":
         python_requires=">=3.6",
         entry_points={
         'console_scripts': [
-            'comotion = comotion.cli:cli',
+            'comotion = comotion.cli:safe_entry_point',
             ],
         },
         install_requires=[

@@ -15,7 +15,7 @@ try:
     from tqdm import tqdm
 except ImportError:
     pass
-from datetime import datetime
+from datetime import datetime, timedelta
 from comotion import Auth
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel import QueriesApi, LoadsApi
@@ -51,10 +51,56 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
 
         super().__init__(
             host='https://%s.api.comodash.io/v2' % (auth.orgname),
-            access_token=auth.get_access_token()
+            access_token=None
         )
 
         # comodash_api_client_lowlevel.Configuration.set_default(config)
+
+    def _check_and_refresh_token(self):
+        """
+        checks whether the access token is still valid otherwise refreshes it
+        """
+        import jwt
+        # If there's no token, get one
+        if not self.access_token:
+            self.access_token = self.auth.get_access_token()
+            return
+
+        # Decode the token payload without verification (unsafe for actual use, see below)
+        try:
+            payload = jwt.decode(self.access_token, options={"verify_signature": False})
+
+            # Get the current time and expiration time from the token
+            now = datetime.utcnow()
+            exp = datetime.fromtimestamp(payload['exp'])
+
+            # If the token has expired, refresh it
+            if now >= (exp - timedelta(seconds=30)):
+                self.access_token = self.auth.get_access_token()
+
+        except jwt.ExpiredSignatureError:
+            print("except ExpiredSignatureError")
+            # If the token is expired, refresh it
+            self.access_token = self.auth.get_access_token()
+        except jwt.DecodeError as e:
+            print("DecodeError")
+            # Handle cases for invalid token
+            self.access_token = self.auth.get_access_token()
+        except KeyError:
+            print("KeyError")
+            # Handle cases for tokens with unexpected payload
+            self.access_token = self.auth.get_access_token()
+
+    
+    def auth_settings(self):
+        """Gets Auth Settings dict for api client.
+
+        :return: The Auth Settings information dict.
+        """
+        # This overrides the lowlevel configuration object to allow for automatic refresh of access token
+
+        self._check_and_refresh_token()
+        return super().auth_settings()
 
 class Load():
     """

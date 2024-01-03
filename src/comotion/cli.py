@@ -54,6 +54,16 @@ def _validate_orgname(issuer, orgname):
     except requests.exceptions.ConnectionError as e :
         raise click.UsageError("Struggling to connect to the internet!")
 
+def safe_entry_point():
+      """
+      this is the initial entrypoint for the cli and handles all uncaught exceptions
+      """
+      try:
+          cli()
+      except Exception as e:
+          click.echo("Error: "+str(e), err=True)
+          import sys
+          sys.exit(1)
 
 @click.group(name="comotion",context_settings=CONTEXT_SETTINGS, epilog="Check out our docs at https://docs.comotion.us")
 @click.option(
