@@ -6,6 +6,7 @@ from .auth import Auth, KeyringCredentialCache
 from comotion.dash import DashConfig
 from comotion.auth import Auth
 from comotion.dash import Query, Load
+from comotion.auth import UnAuthenticatedException
 import comotion
 
 from pydantic import BaseModel, ValidationError
@@ -53,6 +54,16 @@ def _validate_orgname(issuer, orgname):
     except requests.exceptions.ConnectionError as e :
         raise click.UsageError("Struggling to connect to the internet!")
 
+def safe_entry_point():
+      """
+      this is the initial entrypoint for the cli and handles all uncaught exceptions
+      """
+      try:
+          cli()
+      except Exception as e:
+          click.echo("Error: "+str(e), err=True)
+          import sys
+          sys.exit(1)
 
 @click.group(name="comotion",context_settings=CONTEXT_SETTINGS, epilog="Check out our docs at https://docs.comotion.us")
 @click.option(
@@ -112,28 +123,14 @@ def get_access_token(config):
     Get an access token for the logged in user
     """
 
-    keyring_cache = KeyringCredentialCache(config.issuer, config.orgname)
-
-    refresh_token = keyring_cache.get_refresh_token()
-
-    payload = {
-        "grant_type": "refresh_token",
-        "refresh_token": refresh_token,
-        "client_id": "comotion_cli"
-    }
-
-    token_address = "%s/auth/realms/%s/protocol/openid-connect/token" % (config.issuer,config.orgname) # noqa
-
-    response = requests.post(
-        token_address,
-        data=payload
-    )
-
-    if response.status_code == requests.codes.ok:
-        click.echo(json.loads(str(response.text))['access_token'])
-    else:
-        click.echo("There is an error with the response:", err=True)
-        click.echo(response.text,err=True)
+    try:
+        como_auth = Auth(
+            config.orgname,
+            config.issuer
+        )
+        click.echo(como_auth.get_access_token())
+    except UnAuthenticatedException as e:
+        raise click.ClickException(e)
 
 
 @cli.command()

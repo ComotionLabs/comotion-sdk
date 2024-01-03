@@ -3,7 +3,7 @@ from unittest import mock
 from unittest.mock import Mock, patch, MagicMock,create_autospec, mock_open
 from unittest.mock import call
 from comotion import dash
-from comotion.dash import DashConfig
+from comotion.dash import DashConfig, Auth
 import requests
 import io
 
@@ -655,6 +655,80 @@ class TestDashModuleQueryClass(unittest.TestCase):
         # Test
         mock_query.stop()
         mock_query.query_api_instance.stop_query.assert_called_once_with('123')
+
+import unittest
+from unittest.mock import Mock, patch
+import jwt
+import datetime
+
+class TestDashConfig(unittest.TestCase):
+
+    def setUp(self):
+        # Mock an Auth object with necessary attributes/methods
+        self.mock_auth = Mock(spec=Auth)
+        self.mock_auth.get_access_token.return_value = 'new_token'
+        self.mock_auth.orgname = 'test_org'
+        self.config = DashConfig(auth=self.mock_auth)
+
+    def test_init_with_invalid_auth(self):
+        with self.assertRaises(TypeError):
+            DashConfig(auth="NotAnAuthInstance")
+
+    def test_init_with_valid_auth(self):
+        self.assertEqual(self.config.auth, self.mock_auth)
+
+    @patch('jwt.decode')
+    def test_check_and_refresh_token_no_token(self, mock_jwt_decode):
+        self.config.access_token = None
+        self.config._check_and_refresh_token()
+        self.mock_auth.get_access_token.assert_called_once()
+        # Ensure jwt.decode is not called when there's no initial token
+        mock_jwt_decode.assert_not_called()
+
+    @patch('jwt.decode')
+    def test_check_and_refresh_token_valid_token(self, mock_jwt_decode):
+        self.config.access_token = 'valid_token'
+        mock_jwt_decode.return_value = {'exp': datetime.datetime.utcnow().timestamp() + 100}
+        self.config._check_and_refresh_token()
+        self.mock_auth.get_access_token.assert_not_called()
+        # Check jwt.decode was called with the correct token
+        mock_jwt_decode.assert_called_with('valid_token', options={"verify_signature": False})
+
+    @patch('jwt.decode')
+    def test_check_and_refresh_token_near_expiration(self, mock_jwt_decode):
+        self.config.access_token = 'almost_expired_token'
+        mock_jwt_decode.return_value = {'exp': datetime.datetime.utcnow().timestamp() + 20}
+        self.config._check_and_refresh_token()
+        self.mock_auth.get_access_token.assert_called_once()
+        # Check jwt.decode was called with the correct token
+        mock_jwt_decode.assert_called_with('almost_expired_token', options={"verify_signature": False})
+
+    @patch('jwt.decode')
+    def test_check_and_refresh_token_expired(self, mock_jwt_decode):
+        mock_jwt_decode.side_effect = jwt.ExpiredSignatureError
+        self.config.access_token = 'expired_token'
+        self.config._check_and_refresh_token()
+        self.mock_auth.get_access_token.assert_called_once()
+        # Check jwt.decode was called with the correct token
+        mock_jwt_decode.assert_called_with('expired_token', options={"verify_signature": False})
+
+    @patch('jwt.decode')
+    def test_check_and_refresh_token_decode_error(self, mock_jwt_decode):
+        mock_jwt_decode.side_effect = jwt.DecodeError
+        self.config.access_token = 'bad_token'
+        self.config._check_and_refresh_token()
+        self.mock_auth.get_access_token.assert_called_once()
+        # Check jwt.decode was called with the correct token
+        mock_jwt_decode.assert_called_with('bad_token', options={"verify_signature": False})
+
+    @patch('jwt.decode')
+    def test_check_and_refresh_token_unexpected_payload(self, mock_jwt_decode):
+        mock_jwt_decode.return_value = {}  # No 'exp' field
+        self.config.access_token = 'unexpected_payload_token'
+        self.config._check_and_refresh_token()
+        self.mock_auth.get_access_token.assert_called_once()
+        # Check jwt.decode was called with the correct token
+        mock_jwt_decode.assert_called_with('unexpected_payload_token', options={"verify_signature": False})
 
     
 if __name__ == '__main__':
