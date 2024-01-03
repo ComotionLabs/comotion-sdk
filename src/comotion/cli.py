@@ -6,6 +6,7 @@ from .auth import Auth, KeyringCredentialCache
 from comotion.dash import DashConfig
 from comotion.auth import Auth
 from comotion.dash import Query, Load
+from comotion.auth import UnAuthenticatedException
 import comotion
 
 from pydantic import BaseModel, ValidationError
@@ -112,38 +113,14 @@ def get_access_token(config):
     Get an access token for the logged in user
     """
 
-    keyring_cache = KeyringCredentialCache(config.issuer, config.orgname)
-
-    refresh_token = keyring_cache.get_refresh_token()
-
-    payload = {
-        "grant_type": "refresh_token",
-        "refresh_token": refresh_token,
-        "client_id": "comotion_cli"
-    }
-
-    token_address = "%s/auth/realms/%s/protocol/openid-connect/token" % (config.issuer,config.orgname) # noqa
-
-    response = requests.post(
-        token_address,
-        data=payload
-    )
-
-    if response.status_code == requests.codes.ok:
-        click.echo(json.loads(str(response.text))['access_token'])
-    else:
-        try:
-            json_response = json.loads(str(response.text))
-            if 'error' in json_response:
-                if json_response['error'] == 'invalid_grant':
-                    raise click.ClickException("Your credentials are not valid. Run `comotion authenticate` to refresh your credentials.")
-                else:
-                    raise click.ClickException("There was a problem with the request: "+json_response.get('error_description', "unknown system error. This is what the system is returning: "+response.text)+f" ({json_response['error']})")
-            else:
-                raise click.ClickException("unknown system error. This is what the system is returning: "+response.text)
-        except json.JSONDecodeError as e:
-                raise click.ClickException(f"There was a strange response from the server: '{response.text}' ({e.msg})")
-            
+    try:
+        como_auth = Auth(
+            config.orgname,
+            config.issuer
+        )
+        click.echo(como_auth.get_access_token())
+    except UnAuthenticatedException as e:
+        raise click.ClickException(e)
 
 
 @cli.command()

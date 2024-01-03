@@ -220,6 +220,18 @@ class KeyringCredentialCache(CredentialsCacheInterface):
             token
         )
 
+class AuthException(Exception):
+    """
+    Exception thrown by Auth class
+    """
+    pass
+
+class UnAuthenticatedException(AuthException):
+    """
+    Exception thrown when credentials are not valid.
+    """
+    pass
+
 class Auth():
 
     """
@@ -307,7 +319,18 @@ class Auth():
             self.token_endpoint,
             data=payload
         )
+
         if response.status_code == requests.codes.ok:
             return json.loads(str(response.text))['access_token']
         else:
-            raise Exception("Cannot get new token: " + response.text)
+            try:
+                json_response = json.loads(str(response.text))
+                if 'error' in json_response:
+                    if json_response['error'] == 'invalid_grant':
+                        raise UnAuthenticatedException("Your credentials are not valid. Run `comotion authenticate` to refresh your credentials.")
+                    else:
+                        raise UnAuthenticatedException("There was a problem with the request: "+json_response.get('error_description', "unknown system error. This is what the system is returning: "+response.text)+f" ({json_response['error']})")
+                else:
+                    raise UnAuthenticatedException("unknown system error. This is what the system is returning: "+response.text)
+            except json.JSONDecodeError as e:
+                raise UnAuthenticatedException(f"There was a strange response from the server: '{response.text}' ({e.msg})")   
