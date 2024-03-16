@@ -289,8 +289,6 @@ class ApiClient:
         :param response_types_map: dict of response types.
         :return: ApiResponse
         """
-
-
         response_type = response_types_map.get(str(response_data.status), None)
         if not response_type and isinstance(response_data.status, int) and 100 <= response_data.status <= 599:
             # if not found, look for '1XX', '2XX', etc.

@@ -5,7 +5,7 @@ import os
 from .auth import Auth, KeyringCredentialCache
 from comotion.dash import DashConfig
 from comotion.auth import Auth
-from comotion.dash import Query, Load
+from comotion.dash import Query, Load, Migration
 from comotion.auth import UnAuthenticatedException
 import comotion
 
@@ -473,6 +473,36 @@ def get_load_info(
         for error_message in load_info.error_messages:
             click.echo(f"{error_message.error_type}:{error_message.error_message}", err=True)
 
+@dash.command()
+@click.option(
+    '--clear-out-new-lake', '-c',
+    is_flag=True,
+    default=False
+)
+@click.option('--full-migration', 'migration_type', flag_value='FULL_MIGRATION',
+              default=True)
+@click.option('--flash-schema', 'migration_type', flag_value='FLASH_SCHEMA')
+@click.confirmation_option(prompt='Are you sure you want to execute the migration?')
+@pass_config
+def start_migration(
+    config,
+    clear_out_new_lake,
+    migration_type
+):
+    """ Starts a migration from lake v1 to lake v2. It can only be run once, after which the old lake will be disabled.
+
+    Migrations can take a number of hours to complete. So get a cup of coffee.
+
+    Initialising this class starts the migration on Comotion Dash.  If a migration is already in progress, initialisation will monitor the active load.
+    """    
+    config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+    migration = Migration(
+        config=config,
+        migration_type=migration_type,
+        clear_out_new_lake=clear_out_new_lake
+    )
+
+    
 
 # @TODO 4 (SDK AND CLI) upload to multiple tables for a set file structure /{table_name}/files.  Result must include full output of which passed and which failed.
 # @TODO 3 (SDK AND CLI) create upload this filepath - all the files - and wait until fully processed. Must be able to deal with csv and parquet.

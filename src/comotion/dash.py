@@ -18,7 +18,7 @@ except ImportError:
 from datetime import datetime, timedelta
 from comotion import Auth
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel import QueriesApi, LoadsApi
+from comodash_api_client_lowlevel import QueriesApi, LoadsApi, MigrationsApi
 from comodash_api_client_lowlevel.models.query_text import QueryText
 from urllib3.exceptions import IncompleteRead
 from urllib3.response import HTTPResponse
@@ -612,6 +612,65 @@ def read_and_upload_file_to_dash(
         i = i + 1
 
     return responses
+
+class Migration():
+    """
+    The Migration object starts and tracks a migration from lake v1 to lake v2. It can only be run once, after which the old lake will be disabled.
+
+    Migrations can take a number of hours to complete. So get a cup of coffee.
+
+    Initialising this class starts the migration on Comotion Dash.  If a migration is already in progress, initialisation will monitor the active load.
+
+    There are two types of migraiton, set by `migration_type`:
+     - `FULL_MIGRATION`:  runs a full migration by copying all the data across, updating the insights tables and deactivating data loads to the old lake.
+     - `FLASH_SCHEMA`: copies the schema and one line of data per table to the new lake.  this is useful to dev and test ETL scripts
+
+    There is an option to clear out the new lake on migration, set by the boolean parameters `clear_out_new_lake`. This is useful when testing has taken place, and data needs to be cleared.
+    If `clear_out_new_lake` is set to False, the migration will fail if there is data in the new lake.
+
+    """
+
+    def __init__(
+            self,
+            config: DashConfig,
+            migration_type: str = "FLASH_SCHEMA",
+            clear_out_new_lake: bool = False
+    ):
+        """
+        Parameters
+        ----------
+        config : DashConfig
+            Object of type DashConfig including configuration details
+        migration_type : str
+            whether to run a full migration ("FULL_MIGRATION") or only copy the schema of the lake across to the new lake ("FLASH_SCHEMA")
+        clear_out_new_lake : bool
+            whether to clear out the new lake on migration.
+        """
+        
+        if migration_type not in ['FLASH_SCHEMA','FULL_MIGRATION']:
+            raise ValueError('`migration_type` must be one of FLASH_SCHEMA or FULL_MIGRATION')
+
+        migration_data = {
+            'migration_type': migration_type,
+            'clear_out_new_lake': 'CLEAR_OUT' if clear_out_new_lake else 'DO_NOT_CLEAR_OUT'
+        }
+        if not(isinstance(config, DashConfig)):
+            raise TypeError("config must be of type comotion.dash.DashConfig")
+        
+        with comodash_api_client_lowlevel.ApiClient(config) as api_client:
+            # Create an instance of the API class with provided parameters
+            self.migration_api_instance = MigrationsApi(api_client)
+            migration = comodash_api_client_lowlevel.Migration(**migration_data)
+            try:
+                self.migration_api_instance.start_migration(migration)
+            except comodash_api_client_lowlevel.exceptions.BadRequestException as exp:
+                raise ValueError(json.loads(exp.body)['message'])
+            except comodash_api_client_lowlevel.exceptions.ApiException as e:
+                raise ValueError(json.loads(e.body)['message'])
+    
+    # def status():
+
+
 
 def upload_from_oracle( 
     sql_host: str, 

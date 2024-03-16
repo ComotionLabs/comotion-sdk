@@ -77,6 +77,7 @@ Class | Method | HTTP request | Description
 *LoadsApi* | [**create_load**](comodash_api_client_lowlevel/docs/LoadsApi.md#create_load) | **POST** /load | Create a new load
 *LoadsApi* | [**generate_presigned_url_for_file_upload**](comodash_api_client_lowlevel/docs/LoadsApi.md#generate_presigned_url_for_file_upload) | **POST** /load/{load_id}/file | Generate presigned URL for file upload
 *LoadsApi* | [**get_load**](comodash_api_client_lowlevel/docs/LoadsApi.md#get_load) | **GET** /load/{load_id} | Get load metadata
+*MigrationsApi* | [**start_migration**](comodash_api_client_lowlevel/docs/MigrationsApi.md#start_migration) | **POST** /migration | Run migration from Lake V1 to Lake V2
 *QueriesApi* | [**download_csv**](comodash_api_client_lowlevel/docs/QueriesApi.md#download_csv) | **GET** /query/{query_id}/csv | Download the csv result file of a query
 *QueriesApi* | [**get_query**](comodash_api_client_lowlevel/docs/QueriesApi.md#get_query) | **GET** /query/{query_id} | Get information about a query
 *QueriesApi* | [**get_query_results**](comodash_api_client_lowlevel/docs/QueriesApi.md#get_query_results) | **GET** /query/{query_id}/result | Get paginated results of a query
@@ -95,6 +96,7 @@ Class | Method | HTTP request | Description
  - [LoadId](comodash_api_client_lowlevel/docs/LoadId.md)
  - [LoadMetaData](comodash_api_client_lowlevel/docs/LoadMetaData.md)
  - [LoadMetaDataErrorMessagesInner](comodash_api_client_lowlevel/docs/LoadMetaDataErrorMessagesInner.md)
+ - [Migration](comodash_api_client_lowlevel/docs/Migration.md)
  - [Query](comodash_api_client_lowlevel/docs/Query.md)
  - [QueryId](comodash_api_client_lowlevel/docs/QueryId.md)
  - [QueryResult](comodash_api_client_lowlevel/docs/QueryResult.md)
