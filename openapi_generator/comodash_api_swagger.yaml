@@ -463,6 +463,45 @@ paths:
       security:
         - OAuth2Authorizer:
           - "migration:write"
+    get:
+      summary: Get status of lake migration
+      description: >
+        The migration job converts the lake v1 data to lake v2 data.  It can only be run once, after which the old lake will be disabled.
+
+        Migrations can take a number of hours to complete. So get a cup of coffee.
+
+        Use the /migration GET endpoint to monitor the progress of the migration
+      operationId: getMigration
+      tags:
+        - migrations
+      responses:
+        200:
+          description: "Migration started successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationStatus'
+        400:
+          description: "Invalid request."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: "Internal server error or unhandled exception."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+          - "migration:write"
 
 components:
   parameters:
@@ -513,6 +552,34 @@ components:
           example: CLEAR_OUT
       required:
         - migration_type
+    MigrationStatus:
+      type: object
+      properties:
+        flash_schema_status:
+          description: >
+            Status of the FLASH_SCHEMA process.
+          type: string
+          enum: [Not Run,Started,Completed,Failed]
+          example: Started
+        flash_schema_message:
+          description: >
+            Status message of the FLASH_SCHEMA process.
+          type: string
+          example: Migration job started
+        full_migration_status:
+          description: >
+            Status of the FULL_MIGRATION process.
+          type: string
+          enum: [Not Run,Started,Completed,Failed]
+          example: Started
+        full_migration_message:
+          description: >
+            Status message of the FULL_MIGRATION process.
+          type: string
+          example: Migration job started
+      required:
+        - flash_schema_status,
+        - full_migration_status
     QueryText:
       type: object
       properties:

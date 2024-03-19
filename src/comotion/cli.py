@@ -489,7 +489,28 @@ def start_migration(
     clear_out_new_lake,
     migration_type
 ):
-    """ Starts a migration from lake v1 to lake v2. It can only be run once, after which the old lake will be disabled.
+    """ Starts a migration from lake v1 to lake v2. The Full Migration can only be run once, after which the old lake will be disabled.
+
+    Migrations can take a number of hours to complete. So get a cup of coffee.
+
+    Initialising this class starts the migration on Comotion Dash.  If a migration is already in progress, initialisation will monitor the active load.
+    """    
+    config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+    Migration(
+        config=config
+    ).start(
+        migration_type=migration_type,
+        clear_out_new_lake=clear_out_new_lake
+    )
+    
+    click.echo("Migration started")
+
+@dash.command()
+@pass_config
+def migration_status(
+    config
+):
+    """ Gets migration status for migration lake v1 to lake v2.
 
     Migrations can take a number of hours to complete. So get a cup of coffee.
 
@@ -497,12 +518,20 @@ def start_migration(
     """    
     config = DashConfig(Auth(config.orgname, issuer=config.issuer))
     migration = Migration(
-        config=config,
-        migration_type=migration_type,
-        clear_out_new_lake=clear_out_new_lake
-    )
+        config=config
+    ).status()
 
+
+    click.echo(f"Flash schema process: {migration.to_dict().get('flash_schema_status','Not Run')}")
+    if "flash_schema_message" in migration.to_dict():
+        click.echo(f"Flash schema message: {migration.to_dict().get('flash_schema_message','None')}")
+    click.echo(f"Full migration process: {migration.to_dict().get('full_migration_status','Not Run')}")
+    if "full_migration_message" in migration.to_dict():
+        click.echo(f"Full migration message: {migration.to_dict().get('full_migration_message','None')}")
     
+
+
+
 
 # @TODO 4 (SDK AND CLI) upload to multiple tables for a set file structure /{table_name}/files.  Result must include full output of which passed and which failed.
 # @TODO 3 (SDK AND CLI) create upload this filepath - all the files - and wait until fully processed. Must be able to deal with csv and parquet.
