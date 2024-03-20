@@ -433,9 +433,10 @@ paths:
         202:
           description: "Migration started successfully."
           content:
-            application/json:
+            text/plain:
               schema:
-                $ref: '#/components/schemas/FileUploadResponse'
+                type: string
+                example: Successfully Started Migration
         400:
           description: "Invalid request."
           content:

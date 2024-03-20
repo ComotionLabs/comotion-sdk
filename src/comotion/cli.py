@@ -495,15 +495,16 @@ def start_migration(
 
     Initialising this class starts the migration on Comotion Dash.  If a migration is already in progress, initialisation will monitor the active load.
     """    
-    config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+    dash_config = DashConfig(Auth(config.orgname, issuer=config.issuer))
     Migration(
-        config=config
+        config=dash_config
     ).start(
         migration_type=migration_type,
         clear_out_new_lake=clear_out_new_lake
     )
     
-    click.echo("Migration started")
+    click.echo("Migration started.  Use the following command to check on the status:")
+    click.echo(f"comotion -o{config.orgname} dash migration-status")
 
 @dash.command()
 @pass_config

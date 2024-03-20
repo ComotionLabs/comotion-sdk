@@ -85,7 +85,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **start_migration**
-> FileUploadResponse start_migration(migration)
+> str start_migration(migration)
 
 Run migration from Lake V1 to Lake V2
 
@@ -98,7 +98,6 @@ The migration job converts the lake v1 data to lake v2 data.  It can only be run
 import time
 import os
 import comodash_api_client_lowlevel
-from comodash_api_client_lowlevel.models.file_upload_response import FileUploadResponse
 from comodash_api_client_lowlevel.models.migration import Migration
 from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
@@ -144,7 +143,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**FileUploadResponse**](FileUploadResponse.md)
+**str**
 
 ### Authorization
 
@@ -153,7 +152,7 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
- - **Accept**: application/json
+ - **Accept**: text/plain, application/json
 
 ### HTTP response details
 | Status code | Description | Response headers |

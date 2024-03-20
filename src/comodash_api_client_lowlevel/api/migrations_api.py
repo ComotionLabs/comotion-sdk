@@ -23,7 +23,6 @@ try:
 except ImportError:
     from typing_extensions import Annotated
 
-from comodash_api_client_lowlevel.models.file_upload_response import FileUploadResponse
 from comodash_api_client_lowlevel.models.migration import Migration
 from comodash_api_client_lowlevel.models.migration_status import MigrationStatus
 
@@ -317,7 +316,7 @@ class MigrationsApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> FileUploadResponse:
+    ) -> str:
         """Run migration from Lake V1 to Lake V2
 
         The migration job converts the lake v1 data to lake v2 data.  It can only be run once, after which the old lake will be disabled. Migrations can take a number of hours to complete. So get a cup of coffee. Use the /migration GET endpoint to monitor the progress of the migration 
@@ -355,7 +354,7 @@ class MigrationsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '202': "FileUploadResponse",
+            '202': "str",
             '400': "Error",
             '401': "Error",
             '409': "Error",
@@ -389,7 +388,7 @@ class MigrationsApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ApiResponse[FileUploadResponse]:
+    ) -> ApiResponse[str]:
         """Run migration from Lake V1 to Lake V2
 
         The migration job converts the lake v1 data to lake v2 data.  It can only be run once, after which the old lake will be disabled. Migrations can take a number of hours to complete. So get a cup of coffee. Use the /migration GET endpoint to monitor the progress of the migration 
@@ -427,7 +426,7 @@ class MigrationsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '202': "FileUploadResponse",
+            '202': "str",
             '400': "Error",
             '401': "Error",
             '409': "Error",
@@ -499,7 +498,7 @@ class MigrationsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '202': "FileUploadResponse",
+            '202': "str",
             '400': "Error",
             '401': "Error",
             '409': "Error",
@@ -547,6 +546,7 @@ class MigrationsApi:
         # set the HTTP header `Accept`
         _header_params['Accept'] = self.api_client.select_header_accept(
             [
+                'text/plain', 
                 'application/json'
             ]
         )
