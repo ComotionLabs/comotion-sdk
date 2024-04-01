@@ -560,7 +560,7 @@ components:
           description: >
             Status of the FLASH_SCHEMA process.
           type: string
-          enum: [Not Run,Started,Completed,Failed]
+          enum: [Not Run,Started,Completed,Failed,Rerunnable]
           example: Started
         flash_schema_message:
           description: >
@@ -571,7 +571,7 @@ components:
           description: >
             Status of the FULL_MIGRATION process.
           type: string
-          enum: [Not Run,Started,Completed,Failed]
+          enum: [Not Run,Started,Completed,Failed,Rerunnable]
           example: Started
         full_migration_message:
           description: >
