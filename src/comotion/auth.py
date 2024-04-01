@@ -309,7 +309,7 @@ class Auth():
         payload = {
             "grant_type": "refresh_token",
             "refresh_token": refresh_token,
-            "client_id": "comotion_cli"  # TODO
+            "client_id": "comotion_cli"
         }
 
         response = requests.post(
