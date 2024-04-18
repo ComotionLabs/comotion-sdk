@@ -7,6 +7,8 @@ import time
 from typing import Union, Callable, List, Optional, Dict
 from os.path import join
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import logging
 
 try:
@@ -217,7 +219,7 @@ class Load():
             file_upload_request = FileUploadRequest(file_key=file_key)
 
         return self.load_api_instance.generate_presigned_url_for_file_upload(self.load_id, file_upload_request=file_upload_request)
-        
+    
     def commit(self, check_sum: Dict[str, Union[int, float, str]]):
         """
         Kicks off the commit of the load. A checksum must be provided
@@ -244,6 +246,21 @@ class Load():
         load_commit = comodash_api_client_lowlevel.LoadCommit(check_sum=check_sum)
         return self.load_api_instance.commit_load(self.load_id, load_commit)
 
+    def upload_from_parquet(
+        self,
+        file_path: str
+        ):
+        presigned_url_data = self.generate_presigned_url_for_file_upload().model_dump()['presigned_url']
+        print(presigned_url_data)
+        file_name = os.path.basename(file_path)
+        # Upload parquet file
+        with open(file_path, 'rb') as rb_parquet_file:
+            files = {'file': (file_name, rb_parquet_file)}
+            print(presigned_url_data['url'])
+            print(presigned_url_data['fields'])
+            upload_response = requests.post(presigned_url_data['url'], data=presigned_url_data['fields'], files=files)
+
+        return upload_response
 
 class Query():
     """
