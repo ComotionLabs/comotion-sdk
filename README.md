@@ -77,4 +77,11 @@ java -jar \
 ```
 We have changed from asyncio to urllib3 to ensure simplicity in coding without requiring "await" and "async"
 
-        --api-package comodash_api \
+To generate an html of the api:
+```
+java -jar \
+  ./openapi_generator/openapi-generator-cli.jar generate \
+        -i ./openapi_generator/comodash_api_swagger.yaml\
+        -g html \
+        -o ./html/
+```
