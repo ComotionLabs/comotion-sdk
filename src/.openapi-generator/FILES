@@ -1,6 +1,7 @@
 comodash_api_client_lowlevel/__init__.py
 comodash_api_client_lowlevel/api/__init__.py
 comodash_api_client_lowlevel/api/loads_api.py
+comodash_api_client_lowlevel/api/migrations_api.py
 comodash_api_client_lowlevel/api/queries_api.py
 comodash_api_client_lowlevel/api_client.py
 comodash_api_client_lowlevel/api_response.py
@@ -15,6 +16,9 @@ comodash_api_client_lowlevel/docs/LoadId.md
 comodash_api_client_lowlevel/docs/LoadMetaData.md
 comodash_api_client_lowlevel/docs/LoadMetaDataErrorMessagesInner.md
 comodash_api_client_lowlevel/docs/LoadsApi.md
+comodash_api_client_lowlevel/docs/Migration.md
+comodash_api_client_lowlevel/docs/MigrationStatus.md
+comodash_api_client_lowlevel/docs/MigrationsApi.md
 comodash_api_client_lowlevel/docs/QueriesApi.md
 comodash_api_client_lowlevel/docs/Query.md
 comodash_api_client_lowlevel/docs/QueryId.md
@@ -37,6 +41,8 @@ comodash_api_client_lowlevel/models/load_commit.py
 comodash_api_client_lowlevel/models/load_id.py
 comodash_api_client_lowlevel/models/load_meta_data.py
 comodash_api_client_lowlevel/models/load_meta_data_error_messages_inner.py
+comodash_api_client_lowlevel/models/migration.py
+comodash_api_client_lowlevel/models/migration_status.py
 comodash_api_client_lowlevel/models/query.py
 comodash_api_client_lowlevel/models/query_id.py
 comodash_api_client_lowlevel/models/query_result.py

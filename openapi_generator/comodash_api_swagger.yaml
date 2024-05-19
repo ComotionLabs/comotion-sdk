@@ -411,6 +411,98 @@ paths:
       security:
         - OAuth2Authorizer:
           - "load:write"
+  /migration:
+    post:
+      summary: Run migration from Lake V1 to Lake V2
+      description: >
+        The migration job converts the lake v1 data to lake v2 data.  It can only be run once, after which the old lake will be disabled.
+
+        Migrations can take a number of hours to complete. So get a cup of coffee.
+
+        Use the /migration GET endpoint to monitor the progress of the migration
+      operationId: startMigration
+      tags:
+        - migrations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Migration'
+      responses:
+        202:
+          description: "Migration started successfully."
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Successfully Started Migration
+        400:
+          description: "Invalid request."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        409:
+          description: Migration cannot be started.  There may already be a migration running.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: "Internal server error or unhandled exception."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+          - "migration:write"
+    get:
+      summary: Get status of lake migration
+      description: >
+        The migration job converts the lake v1 data to lake v2 data.  It can only be run once, after which the old lake will be disabled.
+
+        Migrations can take a number of hours to complete. So get a cup of coffee.
+
+        Use the /migration GET endpoint to monitor the progress of the migration
+      operationId: getMigration
+      tags:
+        - migrations
+      responses:
+        200:
+          description: "Migration started successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationStatus'
+        400:
+          description: "Invalid request."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: "Internal server error or unhandled exception."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+          - "migration:write"
 
 components:
   parameters:
@@ -437,6 +529,58 @@ components:
         message:
           type: string
           example: An Error Message
+    Migration:
+      type: object
+      properties:
+        migration_type:
+          description: >
+            whether to run a full migration (FULL_MIGRATION) or only copy the schema of the lake across to the new lake (FLASH_SCHEMA)
+          type: string
+          enum: [FULL_MIGRATION,FLASH_SCHEMA]
+          example: FULL_MIGRATION
+        clear_out_new_lake:
+          type: string
+          description: >
+            whether to clear out the new lake on migration. This is useful when testing has taken place, and data needs to be cleared.
+            If this is set to DO_NOT_CLEAR_OUT, the migration will fail if there is data in the new lake.
+
+            * CLEAR_OUT: Clear out the new lake
+            * DO_NOT_CLEAR_OUT: Fail if there is already data in the new lake
+
+            defaults to DO_NOT_CLEAR_OUT
+          default: DO_NOT_CLEAR_OUT
+          enum: [CLEAR_OUT, DO_NOT_CLEAR_OUT]
+          example: CLEAR_OUT
+      required:
+        - migration_type
+    MigrationStatus:
+      type: object
+      properties:
+        flash_schema_status:
+          description: >
+            Status of the FLASH_SCHEMA process.
+          type: string
+          enum: [Not Run,Started,Completed,Failed,Rerunnable]
+          example: Started
+        flash_schema_message:
+          description: >
+            Status message of the FLASH_SCHEMA process.
+          type: string
+          example: Migration job started
+        full_migration_status:
+          description: >
+            Status of the FULL_MIGRATION process.
+          type: string
+          enum: [Not Run,Started,Completed,Failed,Rerunnable]
+          example: Started
+        full_migration_message:
+          description: >
+            Status message of the FULL_MIGRATION process.
+          type: string
+          example: Migration job started
+      required:
+        - flash_schema_status,
+        - full_migration_status
     QueryText:
       type: object
       properties:
