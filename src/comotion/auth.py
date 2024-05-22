@@ -9,6 +9,8 @@ import requests
 import webbrowser
 import jwt
 
+from abc import ABC, abstractmethod
+
 from urllib.parse import urlparse, parse_qs, urlencode
 import uuid
 
@@ -42,7 +44,7 @@ class OIDCredirectHandler(BaseHTTPRequestHandler):
         if 'error_description' in parsed_qs:
             self.errorDescription = parsed_qs['error_description']
         if 'state' in parsed_qs:
-            self.errorDescription = parsed_qs['state']
+            self.state = parsed_qs['state']
 
     def _process_code(self):
         payload = {
@@ -234,17 +236,61 @@ class UnAuthenticatedException(AuthException):
 
 class Auth():
 
+    #entity types
+    USER='user'
+    APPLICATION='application'
+
     """
-    Class that authenticates the user, caches credentials
+    Class that authenticates the user or application, caches credentials.
+
+    Attributes:
+        USER (str): Constant for user entity type.
+        APPLICATION (str): Constant for application entity type.
+
+    Args:
+        orgname (str): The name of the organization.
+        issuer (str): The issuer URL for authentication. Defaults to 'https://auth.comotion.us'.
+        credentials_cache_class (class): The class used for credential caching. Defaults to KeyringCredentialCache.
+        entity_type (str): The type of entity being authenticated (Auth.USER or Auth.APPLICATION). Defaults to Auth.USER.
+        application_client_id (str, optional): The client ID for the application on auth.comotion.us. When entity_type is Auth.USER, defaults to `comotion_cli`
+        application_client_secret (str, optional): The client secret for the application on auth.comotion.us. Only valid when entity_type is Auth.APPLICATION.
     """
 
     def __init__(self,
                  orgname,
                  issuer='https://auth.comotion.us',
-                 credentials_cache_class=KeyringCredentialCache):
+                 credentials_cache_class=None,
+                 entity_type=None,
+                 application_client_id=None,
+                 application_client_secret=None
+                 ):
+        
+        
+        if credentials_cache_class is None:
+            credentials_cache_class = KeyringCredentialCache
+        
+
+        if entity_type is None or entity_type==Auth.USER:
+            entity_type = Auth.USER
+            if application_client_secret is not None:
+                raise ValueError("when entity_type is Auth.Application, application_client_id and application_client_secret must not be provided")
+            if application_client_id is None:
+                self.application_client_id = "comotion_cli" # default to comotion_cli if Auth.Application
+
+        elif entity_type==Auth.APPLICATION:
+            if application_client_id is None or application_client_secret is None:
+                raise ValueError("when entity_type is Auth.Application, application_client_id and application_client_secret must be provided")
+            self.application_client_id = application_client_id
+            self.application_client_secret = application_client_secret
+
+        else:
+            raise ValueError("entity_type must be either Auth.USER or Auth.APPLICATION")
+
+        
 
         self.issuer = issuer
         self.orgname = orgname
+        self.entity_type = entity_type
         self.auth_endpoint = "%s/auth/realms/%s/protocol/openid-connect/auth" % (issuer,orgname) # noqa
         self.token_endpoint = "%s/auth/realms/%s/protocol/openid-connect/token" % (issuer,orgname) # noqa
         self.logout_endpoint = "%s/auth/realms/%s/protocol/openid-connect/logout" % (issuer,orgname) # noqa
@@ -266,8 +312,13 @@ class Auth():
 
         query_params = "?" + urlencode(query_params)
         return self.auth_endpoint + query_params
-
+    
     def authenticate(self):
+        """
+        used by the CLI to run a user authentication process using the auth code flow with auth.comotion.us
+
+        Note that the handle_request function (part of the OIDCServer class) saves the key to an appropriate key manager
+        """
         import logging
 
         logging.captureWarnings(True)
@@ -301,33 +352,57 @@ class Auth():
         finally:
             server.socket.close()
 
-
+    
     def get_access_token(self):
+        """
+        Retrieve an access token from the auth provider.
 
-        refresh_token = self.credentials_cache.get_refresh_token()
+        This method interacts with the authentication provider to retrieve an
+        access token. The access token is not cached and must be retrieved
+        each time this method is called. The method handles both user and
+        application entity types, using the appropriate authentication mechanism
+        for each.
 
-        payload = {
-            "grant_type": "refresh_token",
-            "refresh_token": refresh_token,
-            "client_id": "comotion_cli"
-        }
+        Returns:
+            str: The access token retrieved from the auth provider.
 
-        response = requests.post(
-            self.token_endpoint,
-            data=payload
-        )
+        Raises:
+            UnAuthenticatedException: If there is an error retrieving the access token
+                                      from the auth provider.
+        """
+        try: 
+            if self.entity_type == Auth.USER:
+                refresh_token = self.credentials_cache.get_refresh_token()
+                payload = {
+                    "grant_type": "refresh_token",
+                    "refresh_token": refresh_token,
+                    "client_id": self.application_client_id
+                }
+            else:
+                payload = {
+                    "grant_type": "client_credentials",
+                    "client_id": self.application_client_id,
+                    "client_secret": self.application_client_secret  #where do we get this? Provider not cache.  get from cache
+                    #make it credentials provider.  starts with just getting it from python.  
+                }
 
-        if response.status_code == requests.codes.ok:
-            return json.loads(str(response.text))['access_token']
-        else:
-            try:
+            response = requests.post(
+                self.token_endpoint,
+                data=payload
+            )
+
+            if response.status_code == requests.codes.ok:
+                return json.loads(str(response.text))['access_token']
+            else:
                 json_response = json.loads(str(response.text))
                 if 'error' in json_response:
                     if json_response['error'] == 'invalid_grant':
                         raise UnAuthenticatedException("Your credentials are not valid. Run `comotion authenticate` to refresh your credentials.")
                     else:
-                        raise UnAuthenticatedException("There was a problem with the request: "+json_response.get('error_description', "unknown system error. This is what the system is returning: "+response.text)+f" ({json_response['error']})")
+                        raise UnAuthenticatedException("There was a problem with the request: " + json_response.get('error_description', "unknown system error. This is what the system is returning: " + response.text) + f" ({json_response['error']})")
                 else:
-                    raise UnAuthenticatedException("unknown system error. This is what the system is returning: "+response.text)
-            except json.JSONDecodeError as e:
-                raise UnAuthenticatedException(f"There was a strange response from the server: '{response.text}' ({e.msg})")   
+                    raise UnAuthenticatedException("unknown system error. This is what the system is returning: " + response.text)
+        except json.JSONDecodeError as e:
+            raise UnAuthenticatedException(f"There was a strange response from the server: '{response.text}' ({e.msg})")
+        except requests.RequestException as e:
+            raise UnAuthenticatedException(f"Request failed: {e}")

@@ -167,6 +167,8 @@ class TestIntegrationTests(unittest.TestCase):
             expected_result='myaccesstoken\n'
         )
 
+    
+
     @mock.patch('urllib3.PoolManager.request')
     @mock.patch('requests.post')
     def test_get_access_token_error(self, mock_requests_post, mock_urllib3_request):
