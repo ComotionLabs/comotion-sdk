@@ -233,16 +233,63 @@
 <span id="comotion-auth-module"></span><h1 id="comotion-auth--page-root">comotion.auth module<a class="headerlink" href="#comotion-auth--page-root" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="comotion.auth.Auth">
-<em class="property">class </em><code class="sig-prename descclassname">comotion.auth.</code><code class="sig-name descname">Auth</code><span class="sig-paren">(</span><em class="sig-param">orgname</em>, <em class="sig-param">issuer='https://auth.comotion.us'</em>, <em class="sig-param">credentials_cache_class=&lt;class 'comotion.auth.KeyringCredentialCache'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/auth.html#Auth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.Auth" title="Permalink to this definition">¶</a></dt>
-<dd><p>Class that authenticates the user, caches credentials</p>
+<em class="property">class </em><code class="sig-prename descclassname">comotion.auth.</code><code class="sig-name descname">Auth</code><span class="sig-paren">(</span><em class="sig-param">orgname</em>, <em class="sig-param">issuer='https://auth.comotion.us'</em>, <em class="sig-param">credentials_cache_class=None</em>, <em class="sig-param">entity_type=None</em>, <em class="sig-param">application_client_id=None</em>, <em class="sig-param">application_client_secret=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/auth.html#Auth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.Auth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class that authenticates the user or application, caches credentials.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>orgname</strong> (<em>str</em>) – The name of the organization.</p></li>
+<li><p><strong>issuer</strong> (<em>str</em>) – The issuer URL for authentication. Defaults to ‘<a class="reference external" href="https://auth.comotion.us">https://auth.comotion.us</a>’.</p></li>
+<li><p><strong>credentials_cache_class</strong> (<em>class</em>) – The class used for credential caching. Defaults to KeyringCredentialCache.</p></li>
+<li><p><strong>entity_type</strong> (<em>str</em>) – The type of entity being authenticated (Auth.USER or Auth.APPLICATION). Defaults to Auth.USER.</p></li>
+<li><p><strong>application_client_id</strong> (<em>str</em><em>, </em><em>optional</em>) – The client ID for the application on auth.comotion.us. When entity_type is Auth.USER, defaults to <cite>comotion_cli</cite></p></li>
+<li><p><strong>application_client_secret</strong> (<em>str</em><em>, </em><em>optional</em>) – The client secret for the application on auth.comotion.us. Only valid when entity_type is Auth.APPLICATION.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="comotion.auth.Auth.APPLICATION">
+<code class="sig-name descname">APPLICATION</code><em class="property"> = 'application'</em><a class="headerlink" href="#comotion.auth.Auth.APPLICATION" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constant for application entity type.</p>
+</dd></dl>
+<dl class="attribute">
+<dt id="comotion.auth.Auth.USER">
+<code class="sig-name descname">USER</code><em class="property"> = 'user'</em><a class="headerlink" href="#comotion.auth.Auth.USER" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constant for user entity type.</p>
+</dd></dl>
 <dl class="method">
 <dt id="comotion.auth.Auth.authenticate">
 <code class="sig-name descname">authenticate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/auth.html#Auth.authenticate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.Auth.authenticate" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>used by the CLI to run a user authentication process using the auth code flow with auth.comotion.us</p>
+<p>Note that the handle_request function (part of the OIDCServer class) saves the key to an appropriate key manager</p>
+</dd></dl>
 <dl class="method">
 <dt id="comotion.auth.Auth.get_access_token">
 <code class="sig-name descname">get_access_token</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/auth.html#Auth.get_access_token"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.Auth.get_access_token" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Retrieve an access token from the auth provider.</p>
+<p>This method interacts with the authentication provider to retrieve an
+access token. The access token is not cached and must be retrieved
+each time this method is called. The method handles both user and
+application entity types, using the appropriate authentication mechanism
+for each.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The access token retrieved from the auth provider.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#comotion.auth.UnAuthenticatedException" title="comotion.auth.UnAuthenticatedException"><strong>UnAuthenticatedException</strong></a> – If there is an error retrieving the access token
+    from the auth provider.</p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
+<dl class="exception">
+<dt id="comotion.auth.AuthException">
+<em class="property">exception </em><code class="sig-prename descclassname">comotion.auth.</code><code class="sig-name descname">AuthException</code><a class="reference internal" href="_modules/comotion/auth.html#AuthException"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.AuthException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception thrown by Auth class</p>
 </dd></dl>
 <dl class="class">
 <dt id="comotion.auth.CredentialsCacheInterface">
@@ -328,6 +375,11 @@ str: preferred_username</p>
 <dt id="comotion.auth.PKCE.get_code_verifier">
 <code class="sig-name descname">get_code_verifier</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/auth.html#PKCE.get_code_verifier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.PKCE.get_code_verifier" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+</dd></dl>
+<dl class="exception">
+<dt id="comotion.auth.UnAuthenticatedException">
+<em class="property">exception </em><code class="sig-prename descclassname">comotion.auth.</code><code class="sig-name descname">UnAuthenticatedException</code><a class="reference internal" href="_modules/comotion/auth.html#UnAuthenticatedException"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.UnAuthenticatedException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception thrown when credentials are not valid.</p>
 </dd></dl>
 
 

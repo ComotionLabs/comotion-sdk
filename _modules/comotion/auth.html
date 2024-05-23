@@ -240,6 +240,8 @@
 <span class="kn">import</span> <span class="nn">webbrowser</span>
 <span class="kn">import</span> <span class="nn">jwt</span>
 
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
 <span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span><span class="p">,</span> <span class="n">parse_qs</span><span class="p">,</span> <span class="n">urlencode</span>
 <span class="kn">import</span> <span class="nn">uuid</span>
 
@@ -273,7 +275,7 @@
         <span class="k">if</span> <span class="s1">'error_description'</span> <span class="ow">in</span> <span class="n">parsed_qs</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">errorDescription</span> <span class="o">=</span> <span class="n">parsed_qs</span><span class="p">[</span><span class="s1">'error_description'</span><span class="p">]</span>
         <span class="k">if</span> <span class="s1">'state'</span> <span class="ow">in</span> <span class="n">parsed_qs</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">errorDescription</span> <span class="o">=</span> <span class="n">parsed_qs</span><span class="p">[</span><span class="s1">'state'</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">parsed_qs</span><span class="p">[</span><span class="s1">'state'</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">_process_code</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
@@ -451,27 +453,80 @@
             <span class="n">token</span>
         <span class="p">)</span></div></div>
 
-<div class="viewcode-block" id="Auth"><a class="viewcode-back" href="../../comotion.auth.html#comotion.auth.Auth">[docs]</a><span class="k">class</span> <span class="nc">Auth</span><span class="p">():</span>
-
+<div class="viewcode-block" id="AuthException"><a class="viewcode-back" href="../../comotion.auth.html#comotion.auth.AuthException">[docs]</a><span class="k">class</span> <span class="nc">AuthException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
     <span class="sd">"""</span>
-<span class="sd">    Class that authenticates the user, caches credentials</span>
+<span class="sd">    Exception thrown by Auth class</span>
+<span class="sd">    """</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="UnAuthenticatedException"><a class="viewcode-back" href="../../comotion.auth.html#comotion.auth.UnAuthenticatedException">[docs]</a><span class="k">class</span> <span class="nc">UnAuthenticatedException</span><span class="p">(</span><span class="n">AuthException</span><span class="p">):</span>
+    <span class="sd">"""</span>
+<span class="sd">    Exception thrown when credentials are not valid.</span>
+<span class="sd">    """</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Auth"><a class="viewcode-back" href="../../comotion.auth.html#comotion.auth.Auth">[docs]</a><span class="k">class</span> <span class="nc">Auth</span><span class="p">():</span>
+    <span class="sd">"""</span>
+<span class="sd">    Class that authenticates the user or application, caches credentials.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        orgname (str): The name of the organization.</span>
+<span class="sd">        issuer (str): The issuer URL for authentication. Defaults to 'https://auth.comotion.us'.</span>
+<span class="sd">        credentials_cache_class (class): The class used for credential caching. Defaults to KeyringCredentialCache.</span>
+<span class="sd">        entity_type (str): The type of entity being authenticated (Auth.USER or Auth.APPLICATION). Defaults to Auth.USER.</span>
+<span class="sd">        application_client_id (str, optional): The client ID for the application on auth.comotion.us. When entity_type is Auth.USER, defaults to `comotion_cli`</span>
+<span class="sd">        application_client_secret (str, optional): The client secret for the application on auth.comotion.us. Only valid when entity_type is Auth.APPLICATION.</span>
+<span class="sd">    """</span>
+
+    <span class="n">USER</span><span class="o">=</span><span class="s1">'user'</span>
+    <span class="sd">"""</span>
+<span class="sd">    Constant for user entity type.</span>
+<span class="sd">    """</span>
+    <span class="n">APPLICATION</span><span class="o">=</span><span class="s1">'application'</span>
+    <span class="sd">"""</span>
+<span class="sd">    Constant for application entity type.</span>
 <span class="sd">    """</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">orgname</span><span class="p">,</span>
                  <span class="n">issuer</span><span class="o">=</span><span class="s1">'https://auth.comotion.us'</span><span class="p">,</span>
-                 <span class="n">credentials_cache_class</span><span class="o">=</span><span class="n">KeyringCredentialCache</span><span class="p">):</span>
+                 <span class="n">credentials_cache_class</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">entity_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">application_client_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">application_client_secret</span><span class="o">=</span><span class="kc">None</span>
+                 <span class="p">):</span>
+        
+        
+        <span class="k">if</span> <span class="n">credentials_cache_class</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">credentials_cache_class</span> <span class="o">=</span> <span class="n">KeyringCredentialCache</span>
+        
+
+        <span class="k">if</span> <span class="n">entity_type</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">entity_type</span><span class="o">==</span><span class="n">Auth</span><span class="o">.</span><span class="n">USER</span><span class="p">:</span>
+            <span class="n">entity_type</span> <span class="o">=</span> <span class="n">Auth</span><span class="o">.</span><span class="n">USER</span>
+            <span class="k">if</span> <span class="n">application_client_secret</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"when entity_type is Auth.Application, application_client_id and application_client_secret must not be provided"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">application_client_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">application_client_id</span> <span class="o">=</span> <span class="s2">"comotion_cli"</span> <span class="c1"># default to comotion_cli if Auth.Application</span>
+
+        <span class="k">elif</span> <span class="n">entity_type</span><span class="o">==</span><span class="n">Auth</span><span class="o">.</span><span class="n">APPLICATION</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">application_client_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">application_client_secret</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"when entity_type is Auth.Application, application_client_id and application_client_secret must be provided"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">application_client_id</span> <span class="o">=</span> <span class="n">application_client_id</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">application_client_secret</span> <span class="o">=</span> <span class="n">application_client_secret</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"entity_type must be either Auth.USER or Auth.APPLICATION"</span><span class="p">)</span>
+
+        
 
         <span class="bp">self</span><span class="o">.</span><span class="n">issuer</span> <span class="o">=</span> <span class="n">issuer</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">orgname</span> <span class="o">=</span> <span class="n">orgname</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">entity_type</span> <span class="o">=</span> <span class="n">entity_type</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">auth_endpoint</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%s</span><span class="s2">/auth/realms/</span><span class="si">%s</span><span class="s2">/protocol/openid-connect/auth"</span> <span class="o">%</span> <span class="p">(</span><span class="n">issuer</span><span class="p">,</span><span class="n">orgname</span><span class="p">)</span> <span class="c1"># noqa</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">token_endpoint</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%s</span><span class="s2">/auth/realms/</span><span class="si">%s</span><span class="s2">/protocol/openid-connect/token"</span> <span class="o">%</span> <span class="p">(</span><span class="n">issuer</span><span class="p">,</span><span class="n">orgname</span><span class="p">)</span> <span class="c1"># noqa</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logout_endpoint</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%s</span><span class="s2">/auth/realms/</span><span class="si">%s</span><span class="s2">/protocol/openid-connect/logout"</span> <span class="o">%</span> <span class="p">(</span><span class="n">issuer</span><span class="p">,</span><span class="n">orgname</span><span class="p">)</span> <span class="c1"># noqa</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">delegated_endpoint</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%s</span><span class="s2">/auth/realms/</span><span class="si">%s</span><span class="s2">/account"</span> <span class="o">%</span> <span class="p">(</span><span class="n">issuer</span><span class="p">,</span><span class="n">orgname</span><span class="p">)</span> <span class="c1"># noqa</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh_token</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="c1"># retrieve refresh token from cache?</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">access_token</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">credentials_cache</span> <span class="o">=</span> <span class="n">credentials_cache_class</span><span class="p">(</span><span class="n">issuer</span><span class="p">,</span> <span class="n">orgname</span><span class="p">)</span>
 
@@ -488,8 +543,13 @@
 
         <span class="n">query_params</span> <span class="o">=</span> <span class="s2">"?"</span> <span class="o">+</span> <span class="n">urlencode</span><span class="p">(</span><span class="n">query_params</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">auth_endpoint</span> <span class="o">+</span> <span class="n">query_params</span>
-
+    
 <div class="viewcode-block" id="Auth.authenticate"><a class="viewcode-back" href="../../comotion.auth.html#comotion.auth.Auth.authenticate">[docs]</a>    <span class="k">def</span> <span class="nf">authenticate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        used by the CLI to run a user authentication process using the auth code flow with auth.comotion.us</span>
+
+<span class="sd">        Note that the handle_request function (part of the OIDCServer class) saves the key to an appropriate key manager</span>
+<span class="sd">        """</span>
         <span class="kn">import</span> <span class="nn">logging</span>
 
         <span class="n">logging</span><span class="o">.</span><span class="n">captureWarnings</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
@@ -523,26 +583,59 @@
         <span class="k">finally</span><span class="p">:</span>
             <span class="n">server</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
-
+    
 <div class="viewcode-block" id="Auth.get_access_token"><a class="viewcode-back" href="../../comotion.auth.html#comotion.auth.Auth.get_access_token">[docs]</a>    <span class="k">def</span> <span class="nf">get_access_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Retrieve an access token from the auth provider.</span>
 
-        <span class="n">refresh_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">credentials_cache</span><span class="o">.</span><span class="n">get_refresh_token</span><span class="p">()</span>
+<span class="sd">        This method interacts with the authentication provider to retrieve an</span>
+<span class="sd">        access token. The access token is not cached and must be retrieved</span>
+<span class="sd">        each time this method is called. The method handles both user and</span>
+<span class="sd">        application entity types, using the appropriate authentication mechanism</span>
+<span class="sd">        for each.</span>
 
-        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">"grant_type"</span><span class="p">:</span> <span class="s2">"refresh_token"</span><span class="p">,</span>
-            <span class="s2">"refresh_token"</span><span class="p">:</span> <span class="n">refresh_token</span><span class="p">,</span>
-            <span class="s2">"client_id"</span><span class="p">:</span> <span class="s2">"comotion_cli"</span>  <span class="c1"># TODO</span>
-        <span class="p">}</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The access token retrieved from the auth provider.</span>
 
-        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">token_endpoint</span><span class="p">,</span>
-            <span class="n">data</span><span class="o">=</span><span class="n">payload</span>
-        <span class="p">)</span>
+<span class="sd">        Raises:</span>
+<span class="sd">            UnAuthenticatedException: If there is an error retrieving the access token</span>
+<span class="sd">                                      from the auth provider.</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span> 
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_type</span> <span class="o">==</span> <span class="n">Auth</span><span class="o">.</span><span class="n">USER</span><span class="p">:</span>
+                <span class="n">refresh_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">credentials_cache</span><span class="o">.</span><span class="n">get_refresh_token</span><span class="p">()</span>
+                <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">"grant_type"</span><span class="p">:</span> <span class="s2">"refresh_token"</span><span class="p">,</span>
+                    <span class="s2">"refresh_token"</span><span class="p">:</span> <span class="n">refresh_token</span><span class="p">,</span>
+                    <span class="s2">"client_id"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">application_client_id</span>
+                <span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">"grant_type"</span><span class="p">:</span> <span class="s2">"client_credentials"</span><span class="p">,</span>
+                    <span class="s2">"client_id"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">application_client_id</span><span class="p">,</span>
+                    <span class="s2">"client_secret"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">application_client_secret</span>
+                <span class="p">}</span>
 
-        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="n">requests</span><span class="o">.</span><span class="n">codes</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">))[</span><span class="s1">'access_token'</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">"Cannot get new token: "</span> <span class="o">+</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span></div></div>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">token_endpoint</span><span class="p">,</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">payload</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="n">requests</span><span class="o">.</span><span class="n">codes</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">))[</span><span class="s1">'access_token'</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">json_response</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">))</span>
+                <span class="k">if</span> <span class="s1">'error'</span> <span class="ow">in</span> <span class="n">json_response</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">json_response</span><span class="p">[</span><span class="s1">'error'</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'invalid_grant'</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">UnAuthenticatedException</span><span class="p">(</span><span class="s2">"Your credentials are not valid. Run `comotion authenticate` to refresh your credentials."</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">UnAuthenticatedException</span><span class="p">(</span><span class="s2">"There was a problem with the request: "</span> <span class="o">+</span> <span class="n">json_response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'error_description'</span><span class="p">,</span> <span class="s2">"unknown system error. This is what the system is returning: "</span> <span class="o">+</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">" (</span><span class="si">{json_response['error']}</span><span class="s2">)"</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">UnAuthenticatedException</span><span class="p">(</span><span class="s2">"unknown system error. This is what the system is returning: "</span> <span class="o">+</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UnAuthenticatedException</span><span class="p">(</span><span class="sa">f</span><span class="s2">"There was a strange response from the server: '</span><span class="si">{response.text}</span><span class="s2">' (</span><span class="si">{e.msg}</span><span class="s2">)"</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">RequestException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UnAuthenticatedException</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Request failed: </span><span class="si">{e}</span><span class="s2">"</span><span class="p">)</span></div></div>
 </pre></div>
 
           </article>

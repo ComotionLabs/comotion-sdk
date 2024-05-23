@@ -9,7 +9,7 @@ Getting Started with Comotion Python SDK
 This documentation helps you get set up on and use the python Comotion SDK.  This documentation includes this getting started page, and full documentation on the sdk functions:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    comotion.dash
    comotion.auth
@@ -224,7 +224,7 @@ Running a query
 
 You can then use the query object in the :doc:`./comotion.dash` to create  a query and download the results.  Here is an example code snippet.  You do not need to authenticate in your code - the Auth class takes care of that.
 
-::
+.. code-block::
 
    from comotion.dash import DashConfig
    from comotion.auth import Auth
@@ -244,3 +244,47 @@ You can then use the query object in the :doc:`./comotion.dash` to create  a que
          for chunk in response.stream(524288):
             file.write(chunk)
 
+
+Authentication Using Client Secret
+**********************************
+
+We have introduced an additional method of authenticating to the Comotion API using a client secret.  This allows applications to consume the API without a user.
+
+.. admonition::  User vs Application Authentication
+      
+      If your users are logging into an application which needs to consume data from Dash, a better approach is to integrate that app with our single signon functionality.
+      
+      That application can then use an access token generated for that user to consume the dash API.  This means better security as Dash will be aware of the user, and obey things like Service Client data siloing.
+      
+      This section deals with the scenario where the application itself is acting as the user, which is useful for various data extraction and loading scenarios.
+
+In order to use this functionality, the dash team will need to create a new `client`, and supply a client_id and secret key that will be used to authenticate.  Get in touch with dash@comotion.co.za.
+
+Once that is done, your application can authenticate using the secret key using the `application_secret_id` and `application_client_secret` parameters, as shown in the example below.
+
+.. code-block:: python
+
+   from comotion.dash import DashConfig
+   from comotion.auth import Auth
+   from comotion.dash import Query
+
+   ## Authenticate as an application
+   auth = Auth(
+        entity_type=Auth.APPLICATION,
+        application_client_id="test",
+        application_client_secret="2shjkdfbjsdhfg2893847",  
+        #best to pass to your application from an apprioriate secrets manager or environment variable
+        orgname="myorgname"
+   )
+   config = DashConfig(auth)
+
+   # this step creates the query object and kicks off the query
+   query = Query(query_text="select 1", config=config)
+
+   # this step blocks until the query is complete and provides the query metadata
+   final_query_info = query.wait_to_complete()
+
+   with open("myfile.csv", "wb") as file:
+      with query.get_csv_for_streaming() as response:
+         for chunk in response.stream(524288):
+            file.write(chunk)
