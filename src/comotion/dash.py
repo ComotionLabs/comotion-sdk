@@ -123,21 +123,19 @@ class Load():
         """
         Parameters
         ----------
+
         config : DashConfig
-            Object of type DashConfig including configuration details
+            Object of type DashConfig including configuration details.
         load_type : str
-            Load Type, initially only APPEND_ONLY supported.  APPEND_ONLY means that data is appended to the lake table.
+            Load Type, initially only APPEND_ONLY supported. APPEND_ONLY means that data is appended to the lake table.
         table_name : str
-            Name of lake table to be created and / or uploaded to
+            Name of lake table to be created and / or uploaded to.
         load_as_service_client_id : str, optional
             If provided, the upload is performed as if run by the service_client specified.
         partitions : list[str], optional
-            Only applies if table does not already exist, and is created.  The created table will have these partitions.
-            This must be a list of iceberg compatible partitions.
-            Note that any load can only allow for up to 100 partitions, otherwise it will error out.
-            If the table already exists, then this is ignored.
-        load_id : str
-            In the case where you want to work with an existing load on dash, supply this parameter, and no other parameter (other than config) will be required
+            Only applies if table does not already exist and is created. The created table will have these partitions. This must be a list of iceberg compatible partitions. Note that any load can only allow for up to 100 partitions, otherwise it will error out. If the table already exists, then this is ignored.
+        load_id : str, optional
+            In the case where you want to work with an existing load on dash, supply this parameter, and no other parameter (other than config) will be required.
         """
         load_data = locals()
         if not(isinstance(config, DashConfig)):
@@ -156,14 +154,14 @@ class Load():
                             raise TypeError("if load_id is supplied, then only the config parameter and no others should be supplied.")
             else:
                 # Enter a context with an instance of the API client
-                    del load_data['config']
-                    del load_data['self']
-                    del load_data['load_id']
-                    load = comodash_api_client_lowlevel.Load(**load_data)
+                del load_data['config']
+                del load_data['self']
+                del load_data['load_id']
+                load = comodash_api_client_lowlevel.Load(**load_data)
 
-                    # Create a new load
-                    load_id_model = self.load_api_instance.create_load(load)
-                    self.load_id = load_id_model.load_id
+                # Create a new load
+                load_id_model = self.load_api_instance.create_load(load)
+                self.load_id = load_id_model.load_id
 
     def get_load_info(self) -> LoadInfo:
         """Gets the state of the load
@@ -185,31 +183,30 @@ class Load():
 
     def generate_presigned_url_for_file_upload(self, file_key: str = None) -> FileUploadResponse:
         """
-        Generates presigned urls and sts credentials for a new file upload
+        Generates presigned URLs and STS credentials for a new file upload.
 
         Parameters
         ----------
-        file_key : str
-            Optional custom key for the file. This will ensure idempontence. 
-            If multiple files are uploaded to the same load with the same file_key, 
-            only the last one will be loaded. Must be lowercase, can include underscores
+        file_key : str, optional
+            Optional custom key for the file. This will ensure idempotence.
+            If multiple files are uploaded to the same load with the same file_key,
+            only the last one will be loaded. Must be lowercase and can include underscores.
 
         Returns
         -------
         FileUploadResponse
-            Model containing all the relevant credentials to be able to upload a file to s3 as part of the load.  This includes the following:
-            l
-            presigned_url :
-                Presigned URL data for S3 file upload. The file can be posted to this endpoint using any AWS s3 compatible toolset. 
-                Temporary credentials are included in the url, so no other credentials are required.
-            sts_credentials :
-                Alternatively to the presigned_url, these Temporary AWS STS credentials 
-                that can be used to upload the file to the location specified by `path` and `bucket`.
-                This is required for various advanced toolsets, including AWS Wrangler
-            path :
-                Path of the file in the S3 bucket. See description of `sts_credentials`.
-            bucket :
-                Name of the S3 bucket. See description of `sts_credentials`.
+            Model containing all the relevant credentials to be able to upload a file to S3 as part of the load. This includes the following attributes:
+
+            - presigned_url : str
+                Presigned URL data for S3 file upload. The file can be posted to this endpoint using any AWS S3 compatible toolset.
+                Temporary credentials are included in the URL, so no other credentials are required.
+            - sts_credentials : dict
+                Alternatively to the presigned_url, these Temporary AWS STS credentials can be used to upload the file to the location specified by `path` and `bucket`.
+                This is required for various advanced toolsets, including AWS Wrangler.
+            - path : str
+                Path of the file in the S3 bucket. See the description of `sts_credentials`.
+            - bucket : str
+                Name of the S3 bucket. See the description of `sts_credentials`.
 
         """
         file_upload_request = FileUploadRequest()
