@@ -235,18 +235,9 @@ class UnAuthenticatedException(AuthException):
     pass
 
 class Auth():
-
-    #entity types
-    USER='user'
-    APPLICATION='application'
-
     """
     Class that authenticates the user or application, caches credentials.
-
-    Attributes:
-        USER (str): Constant for user entity type.
-        APPLICATION (str): Constant for application entity type.
-
+    
     Args:
         orgname (str): The name of the organization.
         issuer (str): The issuer URL for authentication. Defaults to 'https://auth.comotion.us'.
@@ -254,6 +245,15 @@ class Auth():
         entity_type (str): The type of entity being authenticated (Auth.USER or Auth.APPLICATION). Defaults to Auth.USER.
         application_client_id (str, optional): The client ID for the application on auth.comotion.us. When entity_type is Auth.USER, defaults to `comotion_cli`
         application_client_secret (str, optional): The client secret for the application on auth.comotion.us. Only valid when entity_type is Auth.APPLICATION.
+    """
+
+    USER='user'
+    """
+    Constant for user entity type.
+    """
+    APPLICATION='application'
+    """
+    Constant for application entity type.
     """
 
     def __init__(self,
