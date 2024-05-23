@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 comotion-sdk = {file = ".", editable = true}
 keyring = "*"
-sphinx = "*"
 
 [dev-packages]
 pytest = "*"

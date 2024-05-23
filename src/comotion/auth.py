@@ -237,7 +237,7 @@ class UnAuthenticatedException(AuthException):
 class Auth():
     """
     Class that authenticates the user or application, caches credentials.
-    
+
     Args:
         orgname (str): The name of the organization.
         issuer (str): The issuer URL for authentication. Defaults to 'https://auth.comotion.us'.
@@ -382,8 +382,7 @@ class Auth():
                 payload = {
                     "grant_type": "client_credentials",
                     "client_id": self.application_client_id,
-                    "client_secret": self.application_client_secret  #where do we get this? Provider not cache.  get from cache
-                    #make it credentials provider.  starts with just getting it from python.  
+                    "client_secret": self.application_client_secret
                 }
 
             response = requests.post(
