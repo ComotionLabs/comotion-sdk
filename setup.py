@@ -27,7 +27,7 @@ if __name__ == "__main__":
         ],
         package_dir={"": "src"},
         packages=setuptools.find_packages(where="src"),
-        python_requires=">=3.6",
+        python_requires=">=3.8",
         entry_points={
         'console_scripts': [
             'comotion = comotion.cli:safe_entry_point',
