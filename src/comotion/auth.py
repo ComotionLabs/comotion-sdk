@@ -326,8 +326,7 @@ class Auth():
         try:
             state = str(uuid.uuid4())
             pkce = PKCE.generate_pkce()
-            # Create a web server and define the handler to manage the
-            # incoming request
+            # Create a web server and define the handler to manage the incoming request
             server = OIDCServer(
                 self,
                 pkce
