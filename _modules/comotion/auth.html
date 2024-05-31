@@ -557,8 +557,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">state</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
             <span class="n">pkce</span> <span class="o">=</span> <span class="n">PKCE</span><span class="o">.</span><span class="n">generate_pkce</span><span class="p">()</span>
-            <span class="c1"># Create a web server and define the handler to manage the</span>
-            <span class="c1"># incoming request</span>
+            <span class="c1"># Create a web server and define the handler to manage the incoming request</span>
             <span class="n">server</span> <span class="o">=</span> <span class="n">OIDCServer</span><span class="p">(</span>
                 <span class="bp">self</span><span class="p">,</span>
                 <span class="n">pkce</span>
