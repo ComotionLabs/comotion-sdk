@@ -283,8 +283,30 @@ Once that is done, your application can authenticate using the secret key using 
 
    # this step blocks until the query is complete and provides the query metadata
    final_query_info = query.wait_to_complete()
+   
+   if final_query_info.status.state == 'FAILED':
+      # deal with failure scenario
+      raise Exception(f'Error while retrieving Dash data: Query failed; {final_query_info.status.state_change_reason}')
+   
+   elif final_query_info.status.state == 'CANCELLED':
+      # deal with cancelled scenario
+      raise Exception(f'Error while retrieving Dash data: Query cancelled; {final_query_info.status.state_change_reason}')
+      
+   else:
+      # deal with success scenario
+      with open("myfile.csv", "wb") as file:
+         with query.get_csv_for_streaming() as response:
+            for chunk in response.stream(524288):
+               file.write(chunk)
 
-   with open("myfile.csv", "wb") as file:
-      with query.get_csv_for_streaming() as response:
-         for chunk in response.stream(524288):
-            file.write(chunk)
+
+To process the output data further instead of writing to a csv file, load the data into a dataframe:
+
+.. code-block:: python
+   
+      response = query.get_csv_for_streaming()
+      data = io.StringIO(response.data.decode('utf-8'))
+      df = pd.read_csv(data)
+      # further processing...
+
+
