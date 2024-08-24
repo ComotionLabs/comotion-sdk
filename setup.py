@@ -1,5 +1,12 @@
 import setuptools
 
+def parse_requirements():
+    import toml
+    with open('Pipfile', 'r') as f:
+        pipfile = toml.load(f)
+    mylist = list(pipfile['packages'].keys())
+    return mylist
+
 if __name__ == "__main__":
 
     with open("README.md", "r", encoding="utf-8") as fh:
@@ -33,22 +40,5 @@ if __name__ == "__main__":
             'comotion = comotion.cli:safe_entry_point',
             ],
         },
-        install_requires=[
-            'requests>=2.25.0',
-            'pandas>=1.2.0',
-            'click>=8.0.3',
-            'keyring>=23.2.1',
-            'pyjwt',
-            'urllib3>=1.25.3',
-            'sqlalchemy>=1.4.36',
-            'tqdm>=4.64.0',
-            'aiohttp',
-            'python-dateutil',
-            'pydantic>2',
-            'awswrangler>=3.4.2'
-        ],
-        tests_require=[
-            'mock',
-            'pytest'
-        ]
+        install_requires=parse_requirements(),
     )

@@ -1,7 +1,5 @@
 name: Publish Python 🐍 distributions 📦 to PyPI and TestPyPI
 
-#thank you https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
-
 on:
   push:
     branches:
@@ -9,6 +7,7 @@ on:
   release:
     types:
      - published
+     - prereleased
 
 jobs:
   build-n-publish-docs:
@@ -17,13 +16,16 @@ jobs:
     if: startsWith(github.ref, 'refs/tags')
     steps:
     - uses: actions/checkout@v4
-    # Standard drop-in approach that should work for most people.
-    - uses: ammaraskar/sphinx-action@master
+    - name: Install pipenv
+      run: pip install pipenv
+    - name: Install dependencies with pipenv
+      run: pipenv install --dev
+    - name: Build documentation
+      uses: ammaraskar/sphinx-action@master
       with:
         pre-build-command: "apt-get update --allow-releaseinfo-change -y && apt-get install -y git"
         docs-folder: "docs/"
     # Publish built docs to gh-pages branch.
-    # ===============================
     - name: Commit documentation changes
       run: |
         git clone https://github.com/ComotionLabs/comotion-sdk.git --branch gh-pages --single-branch gh-pages
@@ -42,41 +44,95 @@ jobs:
         branch: gh-pages
         directory: gh-pages
         github_token: ${{ secrets.GITHUB_TOKEN }}
-    # ===============================
 
-  build-n-publish-pip:
-    name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
+  build:
+    name: Build distribution 📦
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Set up Python 3.8
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v5
         with:
           python-version: 3.8
-      - name: Install pypa/build
-        run: >-
-          python -m
-          pip install
-          build
-          --user
+
+      - name: Install pipenv
+        run: pip install pipenv
+
+      - name: Install dependencies with pipenv
+        run: pipenv install --dev
+
       - name: Build a binary wheel and a source tarball
-        run: >-
-          python -m
-          build
-          --sdist
-          --wheel
-          --outdir dist/
-          .
-      - name: Publish distribution 📦 to Test PyPI
-        uses: pypa/gh-action-pypi-publish@master
+        run: |
+          pipenv run python -m build --sdist --wheel --outdir dist/
+      
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v3
         with:
-          password: ${{ secrets.PYPI_TEST_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
-          skip_existing: true
+          name: python-package-distributions
+          path: dist/
+
+  publish-to-pypi:
+    name: publish Python 🐍 distributions 📦 to PyPI and TestPyPI
+    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi release
+      url: https://pypi.org/p/comotion-sdk
+    permissions:
+      id-token: write # IMPORTANT: mandatory for trusted publishing
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v3
+        with:
+          name: python-package-distributions
+          path: dist/
       - name: Publish distribution 📦 to PyPI
-        if: startsWith(github.ref, 'refs/tags')
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          password: ${{ secrets.PYPI_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: >-
+      Sign the Python 🐍 distribution 📦 with Sigstore
+      and upload them to GitHub Release
+    needs:
+    - publish-to-pypi
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+      id-token: write  # IMPORTANT: mandatory for sigstore
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Sign the dists with Sigstore
+      uses: sigstore/gh-action-sigstore-python@v2.1.1
+      with:
+        inputs: >-
+          ./dist/*.tar.gz
+          ./dist/*.whl
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: >-
+        gh release create
+        '${{ github.ref_name }}'
+        --repo '${{ github.repository }}'
+        --notes ""
+    - name: Upload artifact signatures to GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      # Upload to GitHub Release using the `gh` CLI.
+      # `dist/` contains the built packages, and the
+      # sigstore-produced signatures and certificates.
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' dist/**
+        --repo '${{ github.repository }}'
