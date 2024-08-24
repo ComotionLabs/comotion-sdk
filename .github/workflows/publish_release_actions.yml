@@ -16,6 +16,10 @@ jobs:
     if: startsWith(github.ref, 'refs/tags')
     steps:
     - uses: actions/checkout@v4
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.8
     - name: Install pipenv
       run: pip install pipenv
     - name: Install dependencies with pipenv
