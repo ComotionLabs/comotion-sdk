@@ -15,6 +15,8 @@ In order to set up a local environment, pull this repo and install.
 
 `pipenv` is used to manage dependencies on this project. in order to use it, ensure that pipenv is installed.
 
+The deployment depends on the pipfile, so ensure that is complete.
+
 ```
 pip install --upgrade pip
 pip install pipenv
