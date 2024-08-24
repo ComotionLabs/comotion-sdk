@@ -4,11 +4,9 @@ on:
   push:
     branches:
       - main
-  release:
-    types:
-     - published
-     - prereleased
-
+    tags:
+      - v**
+      
 jobs:
   build-n-publish-docs:
     name: Build and publish docs to gh-pages branch
