@@ -13,7 +13,7 @@ jobs:
   build-n-publish-docs:
     name: Build and publish docs to gh-pages branch
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags')
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.8
@@ -125,7 +125,7 @@ jobs:
 
   publish-to-pypi:
     name: publish Python 🐍 distributions 📦 to PyPI and TestPyPI
-    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
+    if: startsWith(github.ref, 'refs/tags/v')  # only publish to PyPI on tag pushes
     needs:
       - github-release
     runs-on: ubuntu-latest
