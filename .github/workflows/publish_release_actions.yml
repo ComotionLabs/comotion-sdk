@@ -69,13 +69,14 @@ jobs:
     - name: Create GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: >-
+      run: |
         # Check if the tag indicates a pre-release version (e.g., starts with rc, alpha, beta, or dev)
-        if [[ "${{ github.ref_name }}" =~ ^(rc|alpha|beta|dev) ]]; then
-          gh release create '${{ github.ref_name }}' --repo '${{ github.repository }}' --generate-notes --prerelease;
+        if [[ "${GITHUB_REF_NAME}" =~ ^(rc|alpha|beta|dev) ]]; then
+          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --generate-notes --prerelease
         else
-          gh release create '${{ github.ref_name }}' --repo '${{ github.repository }}' --generate-notes;
+          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --generate-notes
         fi
+      shell: bash
 
     - name: Upload artifact signatures to GitHub Release
       env:
