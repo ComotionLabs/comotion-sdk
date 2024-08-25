@@ -14,7 +14,7 @@ sqlalchemy = ">=1.4.36"
 tqdm = ">=4.64.0"
 aiohttp = "*"
 pydantic = ">2"
-awswrangler = ">=3.4.2"
+awswrangler = {extras = ["all"], version = ">=3.4.2"}
 
 [dev-packages]
 comotion-sdk = {file = ".", editable = true}

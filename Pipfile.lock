@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "b061858fb83e2c0d9848198a0fa609fceb4d4b5a1f16e3139b5efd2df5fe4de3"
+            "sha256": "0141a277e86ceec4528c35fb00965b1d3568a50f0a0c5304e7cfd187ff5a7a60"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -155,11 +155,13 @@
             "version": "==24.2.0"
         },
         "awswrangler": {
+            "extras": [
+                "all"
+            ],
             "hashes": [
                 "sha256:93b42a7dedc34da16236e63f6454ccc06b89a95186e216eaf25d19e1667b665a",
                 "sha256:af7d8dad0500f23657ad68b7b8adaa579e7b9679e3b4e4af9b6cde2166484095"
             ],
-            "index": "pypi",
             "markers": "python_version >= '3.8' and python_version < '4.0'",
             "version": "==3.9.1"
         },
@@ -1199,11 +1201,13 @@
             "version": "==24.2.0"
         },
         "awswrangler": {
+            "extras": [
+                "all"
+            ],
             "hashes": [
                 "sha256:93b42a7dedc34da16236e63f6454ccc06b89a95186e216eaf25d19e1667b665a",
                 "sha256:af7d8dad0500f23657ad68b7b8adaa579e7b9679e3b4e4af9b6cde2166484095"
             ],
-            "index": "pypi",
             "markers": "python_version >= '3.8' and python_version < '4.0'",
             "version": "==3.9.1"
         },
@@ -1444,7 +1448,8 @@
         },
         "comotion-sdk": {
             "editable": true,
-            "file": "."
+            "file": ".",
+            "markers": "python_version >= '3.8'"
         },
         "css-html-js-minify": {
             "hashes": [
