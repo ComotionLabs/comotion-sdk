@@ -71,7 +71,7 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
         # Check if the tag indicates a pre-release version (e.g., starts with rc, alpha, beta, or dev)
-        if [[ "${GITHUB_REF_NAME}" =~ ^(rc|alpha|beta|dev) ]]; then
+        if [[ "${GITHUB_REF_NAME}" =~ (rc|alpha|beta|dev) ]]; then
           gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --generate-notes --prerelease
         else
           gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --generate-notes
