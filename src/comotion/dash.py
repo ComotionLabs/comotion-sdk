@@ -440,6 +440,7 @@ class Dash_Easy_Upload():
         input_file,
         dash_table: str,
         checksums: Dict[str, Union[int, float, str]],
+        modify_lambda: Callable = None,
         load_type: str = None,
         load_as_service_client_id: str = None,
         partitions: Optional[List[str]] = None,
@@ -463,6 +464,8 @@ class Dash_Easy_Upload():
         # Reading CSV in chunks, converting each to Parquet, and uploading
         upload_responses, commit_response = [], []
         for chunk in pd.read_csv(input_file, chunksize=chunksize):
+            if modify_lambda is not None:
+                modify_lambda(chunk)
             # Convert the chunk to a Parquet format in-memory buffer
             parquet_buffer = io.BytesIO()
             table = pa.Table.from_pandas(chunk)
