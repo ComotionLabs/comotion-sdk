@@ -7,7 +7,11 @@ import time
 from typing import Union, Callable, List, Optional, Dict
 from os.path import join
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import logging
+import boto3
+import awswrangler as wr
 
 try:
     import cx_Oracle
@@ -426,6 +430,66 @@ class Query():
         """ Stop the query"""
         return self.query_api_instance.stop_query(self.query_id)
 
+class Dash_Easy_Upload():
+    def __init__(self) -> None:
+        pass
+
+    def v2_upload_csv(
+        self,
+        config: str,
+        input_file,
+        dash_table: str,
+        load_type: str = None,
+        load_as_service_client_id: str = None,
+        partitions: Optional[List[str]] = None,
+        load_id: str = None,
+        chunksize: int = 30000  # Default chunksize to process CSV in chunks
+    ):
+        print(f"Uploading csv file: {input_file}")
+        config = DashConfig(Auth(config.orgname, issuer=config.issuer))
+        load = Load(config=config,
+                    load_type=load_type,
+                    table_name=dash_table,
+                    load_as_service_client_id=load_as_service_client_id,
+                    partitions=partitions,
+                    load_id=load_id
+                    )
+
+        # Check if the file is a CSV
+        if not input_file.lower().endswith('.csv'):
+            raise ValueError("The file must be a CSV file with a .csv extension")
+
+        # Reading CSV in chunks, converting each to Parquet, and uploading
+        for chunk in pd.read_csv(input_file, chunksize=chunksize):
+            # Convert the chunk to a Parquet format in-memory buffer
+            parquet_buffer = io.BytesIO()
+            table = pa.Table.from_pandas(chunk)
+
+            pq.write_table(table, parquet_buffer)
+            parquet_buffer.seek(0)  # Reset buffer position to the start
+            
+            file_upload_info = load.generate_presigned_url_for_file_upload()
+
+            # Create a session with AWS credentials from the presigned URL
+            my_session = boto3.Session(
+                aws_access_key_id=file_upload_info.sts_credentials['AccessKeyId'],
+                aws_secret_access_key=file_upload_info.sts_credentials['SecretAccessKey'],
+                aws_session_token=file_upload_info.sts_credentials['SessionToken']
+            )
+            s3_client = my_session.client('s3')
+            bucket = file_upload_info.bucket
+            key = file_upload_info.path.replace('.csv', '')  # Base key without extension
+
+            # Upload the Parquet buffer as a chunk to S3
+            print(f"Uploading chunk to S3: {key}")
+            s3_client.upload_fileobj(
+                Fileobj=parquet_buffer,
+                Bucket=bucket,
+                Key=key
+            )
+            
+        print("All chunks uploaded successfully")
+
 
 def upload_csv_to_dash(
     dash_orgname: str, # noqa
@@ -567,6 +631,14 @@ def read_and_upload_file_to_dash(
     List
         List of http responses
     """
+    data_model_version = 'v1'
+    try:
+        config = DashConfig(Auth(orgname=dash_orgname))
+        # Get migration status
+        migration = Migration(config)
+
+
+
     file_reader = pd.read_csv(
         file,
         chunksize=chunksize,
