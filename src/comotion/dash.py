@@ -5,7 +5,7 @@ import requests
 import csv
 import time
 from typing import Union, Callable, List, Optional, Dict
-from os.path import join
+from os.path import join, basename
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -445,7 +445,8 @@ class Dash_Easy_Upload():
         load_as_service_client_id: str = None,
         partitions: Optional[List[str]] = None,
         load_id: str = None,
-        chunksize: int = 30000  # Default chunksize to process CSV in chunks
+        chunksize: int = 30000,  # Default chunksize to process CSV in chunks,
+        path_to_output_for_dryrun: str = None
     ):
         print(f"Uploading csv file: {input_file}")
         config = DashConfig(Auth(config.orgname, issuer=config.issuer))
@@ -463,40 +464,49 @@ class Dash_Easy_Upload():
 
         # Reading CSV in chunks, converting each to Parquet, and uploading
         upload_responses, commit_response = [], []
-        for chunk in pd.read_csv(input_file, chunksize=chunksize):
+        for chunk in pd.read_csv(input_file, chunksize=chunksize, dtype=object):
             if modify_lambda is not None:
                 modify_lambda(chunk)
-            # Convert the chunk to a Parquet format in-memory buffer
-            parquet_buffer = io.BytesIO()
             table = pa.Table.from_pandas(chunk)
 
-            pq.write_table(table, parquet_buffer)
-            parquet_buffer.seek(0)  # Reset buffer position to the start
-            
             file_upload_info = load.generate_presigned_url_for_file_upload()
+            if path_to_output_for_dryrun is None: 
+                with open(
+                    join(
+                        path_to_output_for_dryrun,
+                        basename(file_upload_info.path.replace('.csv', '.parquet'))
+                    ),
+                    'wb'
+                ) as f:
+                    pq.write_table(table,f)
+            else:
+                parquet_buffer = io.BytesIO()
+                pq.write_table(table, parquet_buffer)
+                parquet_buffer.seek(0)  # Reset buffer position to the start
 
-            # Create a session with AWS credentials from the presigned URL
-            my_session = boto3.Session(
-                aws_access_key_id=file_upload_info.sts_credentials['AccessKeyId'],
-                aws_secret_access_key=file_upload_info.sts_credentials['SecretAccessKey'],
-                aws_session_token=file_upload_info.sts_credentials['SessionToken']
-            )
-            s3_client = my_session.client('s3')
-            bucket = file_upload_info.bucket
-            key = file_upload_info.path.replace('.csv', '')  # Base key without extension
+                # Create a session with AWS credentials from the presigned URL
+                my_session = boto3.Session(
+                    aws_access_key_id=file_upload_info.sts_credentials['AccessKeyId'],
+                    aws_secret_access_key=file_upload_info.sts_credentials['SecretAccessKey'],
+                    aws_session_token=file_upload_info.sts_credentials['SessionToken']
+                )
+                s3_client = my_session.client('s3')
+                bucket = file_upload_info.bucket
+                key = file_upload_info.path.replace('.csv', '.parquet')  # Base key without extension
 
-            # Upload the Parquet buffer as a chunk to S3
-            print(f"Uploading chunk to S3: {key}")
-            upload_response = s3_client.upload_fileobj(
-                Fileobj=parquet_buffer,
-                Bucket=bucket,
-                Key=key
-            )
-            upload_responses.append(upload_response)
+                # Upload the Parquet buffer as a chunk to S3
+                print(f"Uploading chunk to S3: {key}")
+                upload_response = s3_client.upload_fileobj(
+                    Fileobj=parquet_buffer,
+                    Bucket=bucket,
+                    Key=key
+                )
+                upload_responses.append(upload_response)
             
         print("All chunks uploaded successfully")
 
-        commit_response = load.commit(check_sum = checksums)
+        if path_to_output_for_dryrun is not None:
+            commit_response = load.commit(check_sum = checksums)
 
         return load, upload_responses, commit_response
 
@@ -709,7 +719,8 @@ def read_and_upload_file_to_dash(
             partitions=partitions,
             chunksize=chunksize,
             checksums=checksums,
-            load_id=load_id
+            load_id=load_id,
+            path_to_output_for_dryrun=path_to_output_for_dryrun
         )
 
         return responses
