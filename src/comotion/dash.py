@@ -439,6 +439,7 @@ class Dash_Easy_Upload():
         config: str,
         input_file,
         dash_table: str,
+        checksums: Dict[str, Union[int, float, str]],
         load_type: str = None,
         load_as_service_client_id: str = None,
         partitions: Optional[List[str]] = None,
@@ -460,6 +461,7 @@ class Dash_Easy_Upload():
             raise ValueError("The file must be a CSV file with a .csv extension")
 
         # Reading CSV in chunks, converting each to Parquet, and uploading
+        upload_responses, commit_response = [], []
         for chunk in pd.read_csv(input_file, chunksize=chunksize):
             # Convert the chunk to a Parquet format in-memory buffer
             parquet_buffer = io.BytesIO()
@@ -482,14 +484,18 @@ class Dash_Easy_Upload():
 
             # Upload the Parquet buffer as a chunk to S3
             print(f"Uploading chunk to S3: {key}")
-            s3_client.upload_fileobj(
+            upload_response = s3_client.upload_fileobj(
                 Fileobj=parquet_buffer,
                 Bucket=bucket,
                 Key=key
             )
+            upload_responses.append(upload_response)
             
         print("All chunks uploaded successfully")
 
+        commit_response = load.commit(check_sum = checksums)
+
+        return load, upload_responses, commit_response
 
 def upload_csv_to_dash(
     dash_orgname: str, # noqa
@@ -580,7 +586,8 @@ def read_and_upload_file_to_dash(
     chunksize: int = 30000,
     modify_lambda: Callable = None,
     path_to_output_for_dryrun: str = None,
-    service_client_id: str = '0'
+    service_client_id: str = '0',
+    partitions: Optional[List[str]] = None
 ):
     """Reads a file and uploads to dash.
 
@@ -631,56 +638,72 @@ def read_and_upload_file_to_dash(
     List
         List of http responses
     """
-    data_model_version = 'v1'
     try:
         config = DashConfig(Auth(orgname=dash_orgname))
         # Get migration status
         migration = Migration(config)
-
-
-
-    file_reader = pd.read_csv(
-        file,
-        chunksize=chunksize,
-        encoding=encoding,
-        dtype=str  # Set all columns to strings.  Dash will still infer the type, but this makes sure it doesnt mess with the contents of the csv before upload
-    )
-
-    i = 1
-    responses = []
-    for file_df in file_reader:
-
-        if modify_lambda is not None:
-            modify_lambda(file_df)
-
-
-        csv_stream = create_gzipped_csv_stream_from_df(file_df)
-
-        if path_to_output_for_dryrun is None:
-
-            response = upload_csv_to_dash(
-                dash_orgname=dash_orgname,
-                dash_api_key=dash_api_key,
-                dash_table=dash_table,
-                csv_gz_stream=csv_stream,
-                service_client_id=service_client_id
-            )
-
-            responses.append(response.text)
-
+        if migration.status().full_migration_status == 'Complete':
+            data_model_version = 'v2'
         else:
-            with open(
-                join(
-                    path_to_output_for_dryrun,
-                    dash_table + "." + str(i) + ".csv.gz"
-                ),
-                "wb"
-            ) as f:
-                f.write(csv_stream.getvalue())
+            data_model_version = 'v1'
+    except: 
+        data_model_version = 'v1'
 
-        i = i + 1
 
-    return responses
+    if data_model_version == 'v1':
+        file_reader = pd.read_csv(
+            file,
+            chunksize=chunksize,
+            encoding=encoding,
+            dtype=str  # Set all columns to strings.  Dash will still infer the type, but this makes sure it doesnt mess with the contents of the csv before upload
+        )
+
+        i = 1
+        responses = []
+        for file_df in file_reader:
+
+            if modify_lambda is not None:
+                modify_lambda(file_df)
+
+
+            csv_stream = create_gzipped_csv_stream_from_df(file_df)
+
+            if path_to_output_for_dryrun is None:
+
+                response = upload_csv_to_dash(
+                    dash_orgname=dash_orgname,
+                    dash_api_key=dash_api_key,
+                    dash_table=dash_table,
+                    csv_gz_stream=csv_stream,
+                    service_client_id=service_client_id
+                )
+
+                responses.append(response.text)
+
+            else:
+                with open(
+                    join(
+                        path_to_output_for_dryrun,
+                        dash_table + "." + str(i) + ".csv.gz"
+                    ),
+                    "wb"
+                ) as f:
+                    f.write(csv_stream.getvalue())
+
+            i = i + 1
+
+        return responses
+    elif data_model_version == 'v2':
+        responses = Dash_Easy_Upload().v2_upload_csv(
+            config=config,
+            input_file=file,
+            dash_table=dash_table,
+            load_type='APPEND_ONLY',
+            load_as_service_client_id=service_client_id,
+            partitions=partitions,
+            chunksize=chunksize
+        )
+        return responses
 
 class Migration():
     """
