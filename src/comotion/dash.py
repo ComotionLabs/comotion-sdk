@@ -587,7 +587,10 @@ def read_and_upload_file_to_dash(
     modify_lambda: Callable = None,
     path_to_output_for_dryrun: str = None,
     service_client_id: str = '0',
-    partitions: Optional[List[str]] = None
+    partitions: Optional[List[str]] = None,
+    checksums: Optional[Dict[str, Union[int, float, str]]] = None,
+    load_type: str = 'APPEND_ONLY',
+    load_id: str = None
 ):
     """Reads a file and uploads to dash.
 
@@ -698,11 +701,14 @@ def read_and_upload_file_to_dash(
             config=config,
             input_file=file,
             dash_table=dash_table,
-            load_type='APPEND_ONLY',
+            load_type=load_type,
             load_as_service_client_id=service_client_id,
             partitions=partitions,
-            chunksize=chunksize
+            chunksize=chunksize,
+            checksums=checksums,
+            load_id=load_id
         )
+
         return responses
 
 class Migration():
