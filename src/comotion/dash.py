@@ -594,16 +594,17 @@ def read_and_upload_file_to_dash(
     file: Union[str, io.FileIO],
     dash_table: str,
     dash_orgname: str,
-    dash_api_key: str,
+    dash_api_key: str = None,
+    checksums: Optional[Dict[str, Union[int, float, str]]] = None,
     encoding: str = 'utf-8',
     chunksize: int = 30000,
     modify_lambda: Callable = None,
     path_to_output_for_dryrun: str = None,
     service_client_id: str = '0',
     partitions: Optional[List[str]] = None,
-    checksums: Optional[Dict[str, Union[int, float, str]]] = None,
     load_type: str = 'APPEND_ONLY',
-    load_id: str = None
+    load_id: str = None,
+    data_model_version: str = None
 ):
     """Reads a file and uploads to dash.
 
@@ -654,19 +655,26 @@ def read_and_upload_file_to_dash(
     List
         List of http responses
     """
-    try:
-        config = DashConfig(Auth(orgname=dash_orgname))
-        # Get migration status
-        migration = Migration(config)
-        if migration.status().full_migration_status == 'Complete':
-            data_model_version = 'v2'
-        else:
+    
+    if not data_model_version or data_model_version not in ['v1', 'v2']:
+        print("Determining Data Model Version")
+        try:
+            config = DashConfig(Auth(orgname=dash_orgname))
+            # Get migration status
+            migration = Migration(config)
+            if migration.status().full_migration_status == 'Complete': # What about for new clients who start on v2 lake?  Will status be complete?
+                data_model_version = 'v2'
+            else:
+                data_model_version = 'v1'
+        except: 
             data_model_version = 'v1'
-    except: 
-        data_model_version = 'v1'
 
+    print(f"Uploading to data model {data_model_version}")
 
     if data_model_version == 'v1':
+        if dash_api_key is None:
+            raise ValueError("API Key needs to be specified for v1 lake upload.")
+
         file_reader = pd.read_csv(
             file,
             chunksize=chunksize,
@@ -710,6 +718,8 @@ def read_and_upload_file_to_dash(
 
         return responses
     elif data_model_version == 'v2':
+        if checksums is None:
+            raise ValueError("At least 1 checksum must be specified for a v2 lake upload.")
         responses = Dash_Easy_Upload().v2_upload_csv(
             config=config,
             input_file=file,
