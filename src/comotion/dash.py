@@ -509,6 +509,110 @@ class Dash_Easy_Upload():
 
         return load
 
+    def v1_upload_csv(
+        self,
+        file: Union[str, io.FileIO],
+        dash_table: str,
+        dash_orgname: str,
+        dash_api_key: str,
+        encoding: str = 'utf-8',
+        chunksize: int = 30000,
+        modify_lambda: Callable = None,
+        path_to_output_for_dryrun: str = None,
+        service_client_id: str = '0'
+    ):
+        """Reads a file and uploads to dash.
+
+        This function will:
+        - Read a csv file
+        - Break it up into multiple csv's
+        - each with a maximum number of lines defined by chunksize
+        - upload them to dash
+
+        Parameters
+        ----------
+        file : Union[str, io.FileIO]
+            Either a path to the file to be uploaded,
+            or a FileIO stream representing the file to be uploaded
+            Should be an unencrypted, uncompressed CSV file
+        dash_table: str
+            name of Dash table to upload the file to
+        dash_orgname: str
+            orgname of your Dash instance
+        dash_api_key: str
+            valid api key for Dash API
+        encoding: str
+            the encoding of the source file.  defaults to utf-8.
+        chunksize: int
+            (optional)
+            the maximum number of lines to be included in each file.
+            Note that this should be low enough that the zipped file is less
+            than Dash maximum gzipped file size. Defaults to 30000.
+        modify_lambda:
+            (optional)
+            a callable that recieves the pandas dataframe read from the
+            csv.  Gives the opportunity to modify - such as adding a timestamp
+            column.
+            Is not required.
+        path_to_output_for_dryrun: str
+            (optional)
+            if specified, no upload will be made to dash, but files
+            will be saved to the location specified. This is useful for
+            testing.
+            multiple files will be created: [table_name].[i].csv.gz where i
+            represents multiple file parts
+        service_client_id: str
+            (optional)
+            if specified, specifies the service client for the upload. See the dash documentation for an explanation of service client.
+
+        Returns
+        -------
+        List
+            List of http responses
+        """
+        file_reader = pd.read_csv(
+            file,
+            chunksize=chunksize,
+            encoding=encoding,
+            dtype=str  # Set all columns to strings.  Dash will still infer the type, but this makes sure it doesnt mess with the contents of the csv before upload
+        )
+
+        i = 1
+        responses = []
+        for file_df in file_reader:
+
+            if modify_lambda is not None:
+                modify_lambda(file_df)
+
+
+            csv_stream = create_gzipped_csv_stream_from_df(file_df)
+
+            if path_to_output_for_dryrun is None:
+
+                response = upload_csv_to_dash(
+                    dash_orgname=dash_orgname,
+                    dash_api_key=dash_api_key,
+                    dash_table=dash_table,
+                    csv_gz_stream=csv_stream,
+                    service_client_id=service_client_id
+                )
+
+                responses.append(response.text)
+
+            else:
+                with open(
+                    join(
+                        path_to_output_for_dryrun,
+                        dash_table + "." + str(i) + ".csv.gz"
+                    ),
+                    "wb"
+                ) as f:
+                    f.write(csv_stream.getvalue())
+
+            i = i + 1
+
+        return responses
+
 def upload_csv_to_dash(
     dash_orgname: str, # noqa
     dash_api_key: str,
@@ -675,48 +779,17 @@ def read_and_upload_file_to_dash(
         if dash_api_key is None:
             raise ValueError("API Key needs to be specified for v1 lake upload.")
 
-        file_reader = pd.read_csv(
-            file,
-            chunksize=chunksize,
-            encoding=encoding,
-            dtype=str  # Set all columns to strings.  Dash will still infer the type, but this makes sure it doesnt mess with the contents of the csv before upload
+        responses = Dash_Easy_Upload().v1_upload_csv(
+            file = file,
+            dash_table = dash_table,
+            dash_orgname= dash_orgname,
+            dash_api_key: str,
+            encoding: str = 'utf-8',
+            chunksize: int = 30000,
+            modify_lambda: Callable = None,
+            path_to_output_for_dryrun: str = None,
+            service_client_id: str = '0'
         )
-
-        i = 1
-        responses = []
-        for file_df in file_reader:
-
-            if modify_lambda is not None:
-                modify_lambda(file_df)
-
-
-            csv_stream = create_gzipped_csv_stream_from_df(file_df)
-
-            if path_to_output_for_dryrun is None:
-
-                response = upload_csv_to_dash(
-                    dash_orgname=dash_orgname,
-                    dash_api_key=dash_api_key,
-                    dash_table=dash_table,
-                    csv_gz_stream=csv_stream,
-                    service_client_id=service_client_id
-                )
-
-                responses.append(response.text)
-
-            else:
-                with open(
-                    join(
-                        path_to_output_for_dryrun,
-                        dash_table + "." + str(i) + ".csv.gz"
-                    ),
-                    "wb"
-                ) as f:
-                    f.write(csv_stream.getvalue())
-
-            i = i + 1
-
-        return responses
     elif data_model_version == 'v2':
         if checksums is None:
             raise ValueError("At least 1 checksum must be specified for a v2 lake upload.")
