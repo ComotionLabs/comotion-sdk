@@ -25,6 +25,9 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
+      - name: Install toml
+        run: pip install toml
+
       - name: Install dependencies with pipenv
         run: pipenv install --dev --deploy
 
