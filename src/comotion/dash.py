@@ -668,6 +668,8 @@ def read_and_upload_file_to_dash(
                 data_model_version = 'v1'
         except: 
             data_model_version = 'v1'
+    elif data_model_version == 'v2':
+        config = DashConfig(Auth(orgname=dash_orgname))
 
     print(f"Uploading to data model {data_model_version}")
 
