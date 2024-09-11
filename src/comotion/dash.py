@@ -444,7 +444,6 @@ class Dash_Easy_Upload():
         load_type: str = None,
         load_as_service_client_id: str = None,
         partitions: Optional[List[str]] = None,
-        load_id: str = None,
         chunksize: int = 30000,  # Default chunksize to process CSV in chunks,
         path_to_output_for_dryrun: str = None
     ):
@@ -453,8 +452,7 @@ class Dash_Easy_Upload():
                     load_type=load_type,
                     table_name=dash_table,
                     load_as_service_client_id=load_as_service_client_id,
-                    partitions=partitions,
-                    load_id=load_id
+                    partitions=partitions
                     )
 
         # Check if the file is a CSV
@@ -462,18 +460,18 @@ class Dash_Easy_Upload():
             raise ValueError("The file must be a CSV file with a .csv extension")
 
         # Reading CSV in chunks, converting each to Parquet, and uploading
-        upload_responses, commit_response = [], []
         for chunk in pd.read_csv(input_file, chunksize=chunksize, dtype=object):
             if modify_lambda is not None:
                 modify_lambda(chunk)
             table = pa.Table.from_pandas(chunk)
 
             file_upload_info = load.generate_presigned_url_for_file_upload()
-            if path_to_output_for_dryrun is None: 
+            s3_file_name = basename(file_upload_info.path.replace('.csv', '.parquet'))
+            if path_to_output_for_dryrun is not None: 
                 with open(
                     join(
                         path_to_output_for_dryrun,
-                        basename(file_upload_info.path.replace('.csv', '.parquet'))
+                        s3_file_name
                     ),
                     'wb'
                 ) as f:
@@ -481,33 +479,35 @@ class Dash_Easy_Upload():
             else:
                 parquet_buffer = io.BytesIO()
                 pq.write_table(table, parquet_buffer)
-                parquet_buffer.seek(0)  # Reset buffer position to the start
-
+                parquet_buffer.seek(0)
+                
                 # Create a session with AWS credentials from the presigned URL
                 my_session = boto3.Session(
                     aws_access_key_id=file_upload_info.sts_credentials['AccessKeyId'],
                     aws_secret_access_key=file_upload_info.sts_credentials['SecretAccessKey'],
                     aws_session_token=file_upload_info.sts_credentials['SessionToken']
                 )
-                s3_client = my_session.client('s3')
                 bucket = file_upload_info.bucket
                 key = file_upload_info.path.replace('.csv', '.parquet')  # Base key without extension
 
                 # Upload the Parquet buffer as a chunk to S3
-                print(f"Uploading chunk to S3: {key}")
-                upload_response = s3_client.upload_fileobj(
-                    Fileobj=parquet_buffer,
-                    Bucket=bucket,
-                    Key=key
+                print(f"Uploading chunk to S3: {s3_file_name}")
+                wr.s3.upload(
+                    local_file=parquet_buffer, 
+                    path=f"s3://{bucket}/{key}", 
+                    boto3_session=my_session,
+                    use_threads=True
                 )
-                upload_responses.append(upload_response)
+                print("Completed")
             
-        print("All chunks uploaded successfully")
+            print("All chunks uploaded successfully")
 
-        if path_to_output_for_dryrun is not None:
-            commit_response = load.commit(check_sum = checksums)
+            print(load.get_load_info())
+            print("Initiating Commit.  Run Load.get_load_info() on load object returned to monitor the status.")
+            load.commit(check_sum = checksums)
+            print(load.get_load_info())
 
-        return load, upload_responses, commit_response
+        return load
 
 def upload_csv_to_dash(
     dash_orgname: str, # noqa
@@ -602,7 +602,6 @@ def read_and_upload_file_to_dash(
     service_client_id: str = '0',
     partitions: Optional[List[str]] = None,
     load_type: str = 'APPEND_ONLY',
-    load_id: str = None,
     data_model_version: str = None
 ):
     """Reads a file and uploads to dash.
@@ -730,7 +729,6 @@ def read_and_upload_file_to_dash(
             partitions=partitions,
             chunksize=chunksize,
             checksums=checksums,
-            load_id=load_id,
             path_to_output_for_dryrun=path_to_output_for_dryrun
         )
 
