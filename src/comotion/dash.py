@@ -472,12 +472,11 @@ class Dash_v2_Easy_Upload():
     ):
         print(load.get_load_info())
         print("Initiating Commit.  Run Load.get_load_info() on load object returned to monitor the status.")
-        if not checksums:
+        if checksums is None:
             print(f"No custom checksums were provided.  Checking that rows uploaded = {self.rows_uploaded}")
             checksums = {'count(*)': self.rows_uploaded}
 
         load.commit(check_sum = checksums)
-        self.commit_initiated = True
         print(load.get_load_info())
         
     def v2_upload_df(
