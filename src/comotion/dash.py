@@ -449,7 +449,6 @@ class Dash_Easy_Upload():
         path_to_output_for_dryrun: str = None
     ):
         print(f"Uploading csv file: {input_file}")
-        config = DashConfig(Auth(config.orgname, issuer=config.issuer))
         load = Load(config=config,
                     load_type=load_type,
                     table_name=dash_table,
