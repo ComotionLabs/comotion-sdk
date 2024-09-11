@@ -456,17 +456,26 @@ class Query():
         return self.query_api_instance.stop_query(self.query_id)
 
 class Dash_v2_Easy_Upload():
+    def __init__(self) -> None:
+        self.rows_uploaded = 0
 
     def create_dashconfig(self, org_name) -> DashConfig:
         return DashConfig(Auth(org_name))
     
+    def track_upload(self, df: pd.DataFrame):
+        self.rows_uploaded += df.shape[0]
+
     def v2_commit_load(
         self,
         load: Load,
-        checksums: dict
+        checksums: dict = None
     ):
         print(load.get_load_info())
         print("Initiating Commit.  Run Load.get_load_info() on load object returned to monitor the status.")
+        if not checksums:
+            print(f"No custom checksums were provided.  Checking that rows uploaded = {self.rows_uploaded}")
+            checksums = {'count(*)': self.rows_uploaded}
+
         load.commit(check_sum = checksums)
         self.commit_initiated = True
         print(load.get_load_info())
@@ -480,7 +489,7 @@ class Dash_v2_Easy_Upload():
         commit_after_upload: bool = False,
         checksums: Dict[str, Union[int, float, str]] = None,
         modify_lambda: Callable = None,
-        load_type: str = None,
+        load_type: str = 'APPEND_ONLY',
         load_as_service_client_id: str = None,
         partitions: Optional[List[str]] = None,
         path_to_output_for_dryrun: str = None
@@ -518,6 +527,7 @@ class Dash_v2_Easy_Upload():
                 file = parquet_buffer,
                 file_upload_response=file_upload_response
             )
+            self.track_upload(df)
             if commit_after_upload:
                 self.v2_commit_load(
                     load=load,
@@ -535,7 +545,7 @@ class Dash_v2_Easy_Upload():
         commit_after_upload: bool = False,
         checksums: Dict[str, Union[int, float, str]] = None,
         modify_lambda: Callable = None,
-        load_type: str = None,
+        load_type: str = 'APPEND_ONLY',
         load_as_service_client_id: str = None,
         partitions: Optional[List[str]] = None,
         chunksize: int = 30000,  # Default chunksize to process CSV in chunks,
@@ -552,20 +562,20 @@ class Dash_v2_Easy_Upload():
 
         for uploader in upload_files:
             if isfile(uploader):
-                # Check if the file is a CSV
-                if not uploader.lower().endswith('.csv'):
-                    raise ValueError("The file must be a CSV file with a .csv extension")
-                else:
-                    print(f"Uploading csv file: {uploader}")
+                print(f"Uploading csv file: {uploader}")
 
                 # Reading CSV in chunks, converting each to Parquet, and uploading
-                for chunk in pd.read_csv(uploader, chunksize=chunksize, dtype=object):
-                    self.v2_upload_df(
-                        df=chunk,
-                        load=load,
-                        modify_lambda=modify_lambda,
-                        path_to_output_for_dryrun=path_to_output_for_dryrun
-                    )
+                
+                try:
+                    for chunk in pd.read_csv(uploader, chunksize=chunksize, dtype=object):
+                        self.v2_upload_df(
+                            df=chunk,
+                            load=load,
+                            modify_lambda=modify_lambda,
+                            path_to_output_for_dryrun=path_to_output_for_dryrun
+                        )
+                except Exception as e:
+                    raise ValueError(f"Issue with uploading chunk: {e}")
                     
                 print("All chunks uploaded successfully")
             elif isdir(uploader):
@@ -872,8 +882,9 @@ def read_and_upload_file_to_dash(
         )
 
     elif data_model_version == 'v2':
-        if checksums is None:
-            raise ValueError("At least 1 checksum must be specified for a v2 lake upload.")
+        if checksums is None and commit_after_upload:
+            raise Warning("This load will be committed but no checksums were specified.  Only the row count will be checked.")
+        
         responses = Dash_v2_Easy_Upload().v2_upload_csv(
             upload_files=file,
             load=load,
