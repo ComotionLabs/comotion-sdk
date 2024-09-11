@@ -783,9 +783,9 @@ def read_and_upload_file_to_dash(
             file = file,
             dash_table = dash_table,
             dash_orgname= dash_orgname,
-            dash_api_key: str,
-            encoding: str = 'utf-8',
-            chunksize: int = 30000,
+            dash_api_key = dash_api_key,
+            encoding = encoding,
+            chunksize =,
             modify_lambda: Callable = None,
             path_to_output_for_dryrun: str = None,
             service_client_id: str = '0'
