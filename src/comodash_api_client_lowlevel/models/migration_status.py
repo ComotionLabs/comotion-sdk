@@ -42,15 +42,15 @@ class MigrationStatus(BaseModel):
         if value is None:
             return value
 
-        if value not in ('Not Run', 'Started', 'Completed', 'Failed', 'Rerunnable'):
-            raise ValueError("must be one of enum values ('Not Run', 'Started', 'Completed', 'Failed', 'Rerunnable')")
+        if value not in ('Not Run', 'Started', 'Completed', 'Failed', 'Rerunnable', 'Cleaning Up'):
+            raise ValueError("must be one of enum values ('Not Run', 'Started', 'Completed', 'Failed', 'Rerunnable', 'Cleaning Up')")
         return value
 
     @field_validator('full_migration_status')
     def full_migration_status_validate_enum(cls, value):
         """Validates the enum"""
-        if value not in ('Not Run', 'Started', 'Completed', 'Failed', 'Rerunnable'):
-            raise ValueError("must be one of enum values ('Not Run', 'Started', 'Completed', 'Failed', 'Rerunnable')")
+        if value not in ('Not Run', 'Started', 'Completed', 'Complete', 'Failed', 'Rerunnable', 'Cleaning Up'):
+            raise ValueError("must be one of enum values ('Not Run', 'Started', 'Completed', 'Complete', 'Failed', 'Rerunnable', 'Cleaning Up')")
         return value
 
     model_config = {
