@@ -502,6 +502,7 @@ class Dash_v2_Easy_Upload():
         if modify_lambda is not None:
             modify_lambda(df)
 
+        df.columns = [column.lower() for column in df.columns]
         table = pa.Table.from_pandas(df)
 
         parquet_buffer = io.BytesIO()
@@ -509,7 +510,7 @@ class Dash_v2_Easy_Upload():
         parquet_buffer.seek(0)
 
         file_upload_response = load.generate_presigned_url_for_file_upload()
-        s3_file_name = basename(file_upload_response.path)
+        s3_file_name = basename(file_upload_response.path) + '.parquet' # Add parquet extension
 
         if path_to_output_for_dryrun is not None: 
             table = pa.Table.from_pandas(df)
@@ -520,7 +521,7 @@ class Dash_v2_Easy_Upload():
                 ),
                 'wb'
             ) as f:
-                pq.write_table(table,f)
+                pq.write_table(table,f) 
         else:
             load.upload_file(
                 file = parquet_buffer,
