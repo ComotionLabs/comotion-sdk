@@ -459,8 +459,19 @@ class Dash_v2_Easy_Upload():
     def __init__(self) -> None:
         self.rows_uploaded = 0
 
-    def create_dashconfig(self, org_name) -> DashConfig:
-        return DashConfig(Auth(org_name))
+    def create_dashconfig(self, 
+                          org_name, 
+                          application_config: Optional[Dict[str,str]] = None) -> DashConfig:
+        if not application_config:
+            dashconfig = DashConfig(Auth(org_name))
+        else:
+            if 'client_id' not in application_config or 'secret' not in application_config:
+                    raise ValueError("Please provide these keys in the application_config: ['client_id', 'secret']")
+            dashconfig = DashConfig(Auth(entity_type=Auth.APPLICATION,
+                                        application_client_id=application_config['client_id'],
+                                        application_client_secret=application_config['secret'],
+                                        orgname=org_name))
+        return dashconfig
     
     def track_upload(self, df: pd.DataFrame):
         self.rows_uploaded += df.shape[0]
@@ -486,6 +497,7 @@ class Dash_v2_Easy_Upload():
         dash_orgname: str = None,
         dash_table: str = None,
         commit_after_upload: bool = False,
+        application_config: Optional[Dict[str,str]] = None,
         checksums: Dict[str, Union[int, float, str]] = None,
         modify_lambda: Callable = None,
         load_type: str = 'APPEND_ONLY',
@@ -495,7 +507,7 @@ class Dash_v2_Easy_Upload():
     ):
         if load is None:
             print("Creating new load")
-            config = self.create_dashconfig(org_name=dash_orgname)
+            config = self.create_dashconfig(org_name=dash_orgname, application_config=application_config)
             load = Load(config,table_name=dash_table, load_type=load_type,load_as_service_client_id=load_as_service_client_id,partitions=partitions)
             print(f"Load ID: {load.load_id}")
 
@@ -543,6 +555,7 @@ class Dash_v2_Easy_Upload():
         dash_orgname: str = None,
         dash_table: str = None,
         commit_after_upload: bool = False,
+        application_config: Optional[Dict[str,str]] = None,
         checksums: Dict[str, Union[int, float, str]] = None,
         modify_lambda: Callable = None,
         load_type: str = 'APPEND_ONLY',
@@ -556,7 +569,7 @@ class Dash_v2_Easy_Upload():
 
         if load is None:
             print("Creating new load")
-            config = self.create_dashconfig(org_name=dash_orgname)
+            config = self.create_dashconfig(org_name=dash_orgname, application_config=application_config)
             load = Load(config,table_name=dash_table, load_type=load_type,load_as_service_client_id=load_as_service_client_id,partitions=partitions)
             print(f"Load ID: {load.load_id}")
 
@@ -860,7 +873,6 @@ def read_and_upload_file_to_dash(
                     config = DashConfig(Auth(entity_type=Auth.APPLICATION,
                                             application_client_id=application_config['client_id'],
                                             application_client_secret=application_config['secret'],
-                                            #best to pass to your application from an apprioriate secrets manager or environment variable
                                             orgname=dash_orgname))
 
             # Get migration status
