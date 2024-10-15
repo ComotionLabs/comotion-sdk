@@ -854,15 +854,18 @@ def read_and_upload_file_to_dash(
             if not application_config:
                 config = DashConfig(Auth(orgname=dash_orgname))
             else:
-                config = DashConfig(Auth(entity_type=Auth.APPLICATION,
-                                        application_client_id=application_config['client_id'],
-                                        application_client_secret=application_config['secret'],
-                                        #best to pass to your application from an apprioriate secrets manager or environment variable
-                                        orgname=dash_orgname))
+                if 'client_id' not in application_config or 'secret' not in application_config:
+                    raise ValueError("Please provide these keys in the application_config: ['client_id', 'secret']")
+                else:
+                    config = DashConfig(Auth(entity_type=Auth.APPLICATION,
+                                            application_client_id=application_config['client_id'],
+                                            application_client_secret=application_config['secret'],
+                                            #best to pass to your application from an apprioriate secrets manager or environment variable
+                                            orgname=dash_orgname))
 
             # Get migration status
             migration = Migration(config)
-            print(migration.status().full_migration_status)
+            print('Migration Status: ' + str(migration.status().full_migration_status))
             if migration.status().full_migration_status == 'Completed': # What about for new clients who start on v2 lake?  Will status be complete?
                 data_model_version = 'v2'
             else:
