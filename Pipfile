@@ -16,6 +16,7 @@ aiohttp = "*"
 pydantic = ">2"
 awswrangler = {extras = ["all"], version = ">=3.4.2"}
 comotion-sdk = {file = ".", editable = true}
+python-dotenv = "*"
 
 [dev-packages]
 comotion-sdk = {file = ".", editable = true}
