@@ -786,6 +786,7 @@ def read_and_upload_file_to_dash(
     dash_orgname: str,
     load: Load = None,
     dash_api_key: str = None,
+    application_config: Optional[Dict[str,str]] = None,
     commit_after_upload: bool = True,
     checksums: Optional[Dict[str, Union[int, float, str]]] = None,
     encoding: str = 'utf-8',
@@ -850,15 +851,24 @@ def read_and_upload_file_to_dash(
     if not data_model_version or data_model_version not in ['v1', 'v2']:
         print("Determining Data Model Version")
         try:
-            config = DashConfig(Auth(orgname=dash_orgname))
+            if not application_config:
+                config = DashConfig(Auth(orgname=dash_orgname))
+            else:
+                config = DashConfig(Auth(entity_type=Auth.APPLICATION,
+                                        application_client_id=application_config['client_id'],
+                                        application_client_secret=application_config['secret'],
+                                        #best to pass to your application from an apprioriate secrets manager or environment variable
+                                        orgname=dash_orgname))
+
             # Get migration status
             migration = Migration(config)
             print(migration.status().full_migration_status)
-            if migration.status().full_migration_status == 'Complete': # What about for new clients who start on v2 lake?  Will status be complete?
+            if migration.status().full_migration_status == 'Completed': # What about for new clients who start on v2 lake?  Will status be complete?
                 data_model_version = 'v2'
             else:
                 data_model_version = 'v1'
-        except: 
+        except Exception as e: 
+            print(f'Error determining data model version: {e}')
             data_model_version = 'v1'
     elif data_model_version == 'v2':
         config = DashConfig(Auth(orgname=dash_orgname))
