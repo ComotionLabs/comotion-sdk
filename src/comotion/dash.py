@@ -595,7 +595,6 @@ class Dash_v2_Easy_Upload():
 
         return load
     
-
 class Dash_v1_Easy_Upload():
     def v1_upload_csv(
             self,
@@ -787,7 +786,7 @@ def read_and_upload_file_to_dash(
     dash_orgname: str,
     load: Load = None,
     dash_api_key: str = None,
-    commit_after_upload: bool = False,
+    commit_after_upload: bool = True,
     checksums: Optional[Dict[str, Union[int, float, str]]] = None,
     encoding: str = 'utf-8',
     chunksize: int = 30000,
@@ -854,6 +853,7 @@ def read_and_upload_file_to_dash(
             config = DashConfig(Auth(orgname=dash_orgname))
             # Get migration status
             migration = Migration(config)
+            print(migration.status().full_migration_status)
             if migration.status().full_migration_status == 'Complete': # What about for new clients who start on v2 lake?  Will status be complete?
                 data_model_version = 'v2'
             else:
@@ -883,7 +883,7 @@ def read_and_upload_file_to_dash(
 
     elif data_model_version == 'v2':
         if checksums is None and commit_after_upload:
-            raise Warning("This load will be committed but no checksums were specified.  Only the row count will be checked.")
+            print("This load will be committed but no checksums were specified.  Only the row count will be checked.")
         
         responses = Dash_v2_Easy_Upload().v2_upload_csv(
             upload_files=file,
