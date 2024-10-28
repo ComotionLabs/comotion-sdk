@@ -123,7 +123,9 @@ class Load():
             table_name: str = None,
             load_as_service_client_id: str = None,
             partitions: Optional[List[str]] = None,
-            load_id: str = None
+            load_id: str = None,
+            track_rows_uploaded: bool = False,
+            path_to_output_for_dryrun: str = None
     ):
         """
         Parameters
@@ -141,6 +143,9 @@ class Load():
             Only applies if table does not already exist and is created. The created table will have these partitions. This must be a list of iceberg compatible partitions. Note that any load can only allow for up to 100 partitions, otherwise it will error out. If the table already exists, then this is ignored.
         load_id : str, optional
             In the case where you want to work with an existing load on dash, supply this parameter, and no other parameter (other than config) will be required.
+        track_rows_uploaded: bool, optional
+            A boolean specifying if the number of rows uploaded with the current Load instance.  This can be used to automatically create a checksum on commit (see Load.commit), however is not recommended for 
+            large files as this may increase the duration of upload significantly.
         """
         load_data = locals()
         if not(isinstance(config, DashConfig)):
@@ -162,11 +167,18 @@ class Load():
                 del load_data['config']
                 del load_data['self']
                 del load_data['load_id']
+                del load_data['track_rows_uploaded']
+                del load_data['path_to_output_for_dryrun']
+
                 load = comodash_api_client_lowlevel.Load(**load_data)
 
                 # Create a new load
                 load_id_model = self.load_api_instance.create_load(load)
                 self.load_id = load_id_model.load_id
+
+            self.track_rows_uploaded = track_rows_uploaded
+            self.rows_uploaded = 0
+            self.path_to_output_for_dryrun = path_to_output_for_dryrun
 
     def get_load_info(self) -> LoadInfo:
         """Gets the state of the load
@@ -235,6 +247,9 @@ class Load():
             The key (path) under which the file will be stored in the S3 bucket. If not provided, it will be generated.
         file_upload_response : FileUploadResponse, optional
             An instance of FileUploadResponse containing the presigned URL and AWS credentials. If not provided, it will be generated.
+        track_rows_uploaded: bool, optional
+            A boolean indicating if the number of rows uploaded with the current Load instance should be tracked.  This can be used to automatically create a 
+            checksum on commit (see Load.commit), however is not recommended for large files as this may increase the duration of upload significantly.
 
         Raises:
         ------
@@ -271,16 +286,33 @@ class Load():
             # Upload the Parquet buffer as a chunk to S3
             print(f"Uploading to S3: {s3_file_name}")
             
-            wr.s3.upload(
-                local_file=file, 
-                path=f"s3://{bucket}/{key}", 
-                boto3_session=my_session,
-                use_threads=True
-            )
-            print("Completed")
+            if not self.path_to_output_for_dryrun:
+                upload_reponse = wr.s3.upload(
+                    local_file=file, 
+                    path=f"s3://{bucket}/{key}", 
+                    boto3_session=my_session,
+                    use_threads=True
+                )
+            else:
+                local_path = join(self.path_to_output_for_dryrun, f"{key}.parquet")
+                df = pd.read_parquet(file)
+                table = pa.Table.from_pandas(df)
+                pq.write_table(table, local_path)
+                print(f"File written locally to: {local_path}")
 
-    
-    def commit(self, check_sum: Dict[str, Union[int, float, str]]):
+            if self.track_rows_uploaded:
+                # Count the rows in the Parquet file
+                df = pd.read_parquet(file)
+                rows_uploaded = df.shape[0]
+                self.rows_uploaded += rows_uploaded
+                print(f"Successfully uploaded {key}: {rows_uploaded} rows")
+                print(f"Total rows uploaded for load {self.load_id}: {self.rows_uploaded}")
+            else:
+                print(f"Upload completed: {key}")
+
+            return upload_reponse
+            
+    def commit(self, check_sum: Optional[Dict[str, Union[int, float, str]]] = None):
         """
         Kicks off the commit of the load. A checksum must be provided
         which is checked on the server side to ensure that the data provided
@@ -303,9 +335,16 @@ class Load():
                     "sum(my_value)": 123.3
                 }
         """
+        if not check_sum:
+            check_sum = {}
+            if not self.track_rows_uploaded:
+                raise KeyError("check_sum must be provided for this load as track_rows_uploaded was specified as False.")
+
+        if self.track_rows_uploaded:
+            check_sum["count(*)"] = self.rows_uploaded
+            
         load_commit = comodash_api_client_lowlevel.LoadCommit(check_sum=check_sum)
         return self.load_api_instance.commit_load(self.load_id, load_commit)
-
 
 class Query():
     """
@@ -491,42 +530,42 @@ class Query():
         """ Stop the query"""
         return self.query_api_instance.stop_query(self.query_id)
 
-class Dash_v2_Easy_Upload():
-    def __init__(self) -> None:
-        self.rows_uploaded = 0
+class DashBulkUploader():
+    """Class to handle multiple loads with utility functions by leveraging the Load class."""
+    def __init__(self, 
+                 auth_token: Auth) -> None:
 
-    def create_dashconfig(self, 
-                          org_name, 
-                          application_config: Optional[Dict[str,str]] = None) -> DashConfig:
-        if not application_config:
-            dashconfig = DashConfig(Auth(org_name))
-        else:
-            if 'client_id' not in application_config or 'secret' not in application_config:
-                    raise ValueError("Please provide these keys in the application_config: ['client_id', 'secret']")
-            dashconfig = DashConfig(Auth(entity_type=Auth.APPLICATION,
-                                        application_client_id=application_config['client_id'],
-                                        application_client_secret=application_config['secret'],
-                                        orgname=org_name))
-        return dashconfig
+        self.auth_token = auth_token
+        self.upload_config = {}
+        self.responses = {}
+
+    def refresh_dash_config(self):
+        return DashConfig(self.auth_token)
     
-    def track_upload(self, df: pd.DataFrame):
-        self.rows_uploaded += df.shape[0]
-
-    def v2_commit_load(
+    def add_upload(
         self,
-        load: Load,
-        checksums: dict = None
+        table_name: str,
+        data_sources: Union[List[str, pd.DataFrame], str, pd.DataFrame],
+        check_sum: Optional[Dict[str, Union[int, float, str]]] = None,
+        modify_lambda: Callable = None,
+        load_type: str = 'APPEND_ONLY',
+        load_as_service_client_id: str = None,
+        partitions: Optional[List[str]] = None,
+        path_to_output_for_dryrun: str = None,
+        load_id: str = None
     ):
-        print(load.get_load_info())
-        print("Initiating Commit.  Run Load.get_load_info() on load object returned to monitor the status.")
-        if checksums is None:
-            print(f"No custom checksums were provided.  Checking that rows uploaded = {self.rows_uploaded}")
-            checksums = {'count(*)': self.rows_uploaded}
+        if table_name not in self.upload_config:
+            self.upload_config[table_name] = {
+                'load_class': Load(config = self.refresh_dash_config(),
+                                   load_type = load_type,
+                                   table_name = table_name,
+                                   load_as_service_client_id=load_as_service_client_id,
+                                   partitions=partitions,
+                                   load_id = load_id)
+            }
 
-        load.commit(check_sum = checksums)
-        print(load.get_load_info())
         
-    def v2_upload_df(
+    def upload_df(
         self,
         df: pd.DataFrame,
         load: Load = None,
@@ -584,7 +623,7 @@ class Dash_v2_Easy_Upload():
 
         return load
     
-    def v2_upload_csv(
+    def upload_csv(
         self,
         upload_files,
         load: Load = None,
@@ -644,7 +683,6 @@ class Dash_v2_Easy_Upload():
 
         return load
     
-class Dash_v1_Easy_Upload():
     def v1_upload_csv(
             self,
             file: Union[str, io.FileIO],
