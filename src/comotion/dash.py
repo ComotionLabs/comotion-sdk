@@ -220,28 +220,38 @@ class Load():
 
         return self.load_api_instance.generate_presigned_url_for_file_upload(self.load_id, file_upload_request=file_upload_request)
         
-    def upload_file(self, file: Union[str, io.FileIO], file_upload_response: FileUploadResponse):
-        s3_file_name = basename(file_upload_response.path)
+    def upload_file(self, 
+                    file: Union[str, io.FileIO], 
+                    file_key: str = None,
+                    file_upload_response: FileUploadResponse = None):
         
-        # Create a session with AWS credentials from the presigned URL
-        my_session = boto3.Session(
-            aws_access_key_id=file_upload_response.sts_credentials['AccessKeyId'],
-            aws_secret_access_key=file_upload_response.sts_credentials['SecretAccessKey'],
-            aws_session_token=file_upload_response.sts_credentials['SessionToken']
-        )
-        bucket = file_upload_response.bucket
-        key = file_upload_response.path 
+        if not file_upload_response:
+            file_upload_response = self.generate_presigned_url_for_file_upload(file_key = file_key)
 
-        # Upload the Parquet buffer as a chunk to S3
-        print(f"Uploading to S3: {s3_file_name}")
-        
-        wr.s3.upload(
-            local_file=file, 
-            path=f"s3://{bucket}/{key}", 
-            boto3_session=my_session,
-            use_threads=True
-        )
-        print("Completed")
+        if not isinstance(file_upload_response, FileUploadResponse):
+            raise ValueError("file_upload_response should be a valid instance of FileUploadResponse.") # TODO Improve error message?
+        else:
+            s3_file_name = basename(file_upload_response.path)
+            
+            # Create a session with AWS credentials from the presigned URL
+            my_session = boto3.Session(
+                aws_access_key_id=file_upload_response.sts_credentials['AccessKeyId'],
+                aws_secret_access_key=file_upload_response.sts_credentials['SecretAccessKey'],
+                aws_session_token=file_upload_response.sts_credentials['SessionToken']
+            )
+            bucket = file_upload_response.bucket
+            key = file_upload_response.path 
+
+            # Upload the Parquet buffer as a chunk to S3
+            print(f"Uploading to S3: {s3_file_name}")
+            
+            wr.s3.upload(
+                local_file=file, 
+                path=f"s3://{bucket}/{key}", 
+                boto3_session=my_session,
+                use_threads=True
+            )
+            print("Completed")
 
     
     def commit(self, check_sum: Dict[str, Union[int, float, str]]):
