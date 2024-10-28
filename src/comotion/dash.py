@@ -551,18 +551,57 @@ class DashBulkUploader():
         load_type: str = 'APPEND_ONLY',
         load_as_service_client_id: str = None,
         partitions: Optional[List[str]] = None,
+        load_id: str = None,
+        track_rows_uploaded: bool = False, # Need validation if checksum is not provided, this should be True, or check_sum should be provided
         path_to_output_for_dryrun: str = None,
-        load_id: str = None
+        load_action: str = 'APPEND'
     ):
-        if table_name not in self.upload_config:
+        if not check_sum and not track_rows_uploaded:
+            raise KeyError("Invalid arguments: Either provide a check_sum value or set track_rows_uploaded to True.")
+        
+        load_config = self.upload_config.get([table_name], {})
+        load_class = load_config.get('load_class', {'load_id': None})
+        load_id = load_class.load_id
+
+        if not load_id:
+            print(f"Creating new load for lake table: {table_name}")
             self.upload_config[table_name] = {
                 'load_class': Load(config = self.refresh_dash_config(),
                                    load_type = load_type,
                                    table_name = table_name,
                                    load_as_service_client_id=load_as_service_client_id,
                                    partitions=partitions,
-                                   load_id = load_id)
+                                   load_id = load_id,
+                                   track_rows_uploaded = track_rows_uploaded,
+                                   path_to_output_for_dryrun = path_to_output_for_dryrun),
+                'data_sources': [data_sources], # Can be a list of lists, paths (strings) and dataframes
+                'modify_lambda': modify_lambda, # Should enforce only one modify_lambda per lake table (i.e. load). Agree?
             }
+            load_id = self.upload_config[table_name]['load_class'].load_id
+            print(f"Load ID: {load_id}")
+        elif load_action == 'APPEND':
+            print(f"Adding datasources to existing load: {load_id}")
+
+            if self.upload_config[table_name]['modify_lambda'].__code__.co_code != modify_lambda.__code__.co_code:
+                raise ValueError("Can't specify more than one modify_lambda for the same load.\nAmend modify_lambda or select load_action 'OVERWRITE']")
+
+            self.upload_config[table_name]['data_sources'] += data_sources 
+        elif load_action == 'OVERWRITE':
+            print(f"Overwriting load for table: {table_name}")
+            self.upload_config[table_name] = {
+                'load_class': Load(config = self.refresh_dash_config(),
+                                   load_type = load_type,
+                                   table_name = table_name,
+                                   load_as_service_client_id=load_as_service_client_id,
+                                   partitions=partitions,
+                                   load_id = load_id,
+                                   track_rows_uploaded = track_rows_uploaded,
+                                   path_to_output_for_dryrun = path_to_output_for_dryrun),
+                'data_sources': [data_sources], # Can be a list of lists, paths (strings) and dataframes
+                'modify_lambda': modify_lambda, # Should enforce only one modify_lambda per lake table (i.e. load). Agree?
+            }
+            load_id = self.upload_config[table_name]['load_class'].load_id
+            print(f"New Load ID: {load_id}")
 
         
     def upload_df(
