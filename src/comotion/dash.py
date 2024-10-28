@@ -224,12 +224,38 @@ class Load():
                     file: Union[str, io.FileIO], 
                     file_key: str = None,
                     file_upload_response: FileUploadResponse = None):
-        
+        """
+        Uploads a file to an S3 bucket using a presigned URL.
+
+        Parameters:
+        ----------
+        file : Union[str, io.FileIO]
+            The file to be uploaded. This can be a file path (str) or a file object (io.FileIO).
+        file_key : str, optional
+            The key (path) under which the file will be stored in the S3 bucket. If not provided, it will be generated.
+        file_upload_response : FileUploadResponse, optional
+            An instance of FileUploadResponse containing the presigned URL and AWS credentials. If not provided, it will be generated.
+
+        Raises:
+        ------
+        ValueError
+            If `file_upload_response` is not a valid instance of FileUploadResponse.
+
+        Returns:
+        -------
+        None
+
+        Example:
+        -------
+        >>> load = Load(dashconfig)
+        >>> load.upload_file('path/to/file.parquet', file_key='file.parquet')
+        """
+
         if not file_upload_response:
-            file_upload_response = self.generate_presigned_url_for_file_upload(file_key = file_key)
+            file_upload_response = self.generate_presigned_url_for_file_upload(file_key=file_key)
 
         if not isinstance(file_upload_response, FileUploadResponse):
-            raise ValueError("file_upload_response should be a valid instance of FileUploadResponse.") # TODO Improve error message?
+            raise ValueError("file_upload_response should be a valid instance of FileUploadResponse.")
         else:
             s3_file_name = basename(file_upload_response.path)
             
