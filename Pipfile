@@ -15,6 +15,7 @@ tqdm = ">=4.64.0"
 aiohttp = "*"
 pydantic = ">2"
 awswrangler = {extras = ["all"], version = ">=3.4.2"}
+exceptiongroup = "*"
 
 [dev-packages]
 comotion-sdk = {file = ".", editable = true}
