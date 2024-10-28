@@ -717,7 +717,7 @@ finalising file...
 
         current_directory = os.getcwd()
         self.assertEqual(
-            unittest.mock.call(f"{current_directory}/input_file.parquet", 'rb'),
+            unittest.mock.call(os.path.join(current_directory, "input_file.parquet"), 'rb'),
             click_open_file.mock_calls[0]
         )
 
