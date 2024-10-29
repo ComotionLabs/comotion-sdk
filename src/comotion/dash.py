@@ -537,10 +537,8 @@ class DashBulkUploader():
 
         self.auth_token = auth_token
         self.upload_config = {}
-        self.responses_ = {
-            'UploadResponse': [],
-            'CommitResponse': []
-        }
+        self.upload_responses = {}
+        self.commit_responses = {}
 
     def refresh_dash_config(self):
         return DashConfig(self.auth_token)
@@ -548,8 +546,8 @@ class DashBulkUploader():
     def add_upload(
         self,
         table_name: str,
-        data_sources: Union[List[str, pd.DataFrame, tuple], str, pd.DataFrame],
-        check_sum: Optional[Dict[str, Union[int, float, str]]] = None,
+        data_sources: Union[List[str, pd.DataFrame], str, pd.DataFrame],
+        check_sum: Optional[Dict[str, Union[int, float, str]]] = None, 
         modify_lambda: Callable = None,
         load_type: str = 'APPEND_ONLY',
         load_as_service_client_id: str = None,
@@ -568,15 +566,15 @@ class DashBulkUploader():
             print(f"Creating new load for lake table: {table_name}")
             self.upload_config[table_name] = {
                 'load': Load(config = self.refresh_dash_config(),
-                                    load_type = load_type,
-                                    table_name = table_name,
-                                    load_as_service_client_id=load_as_service_client_id,
-                                    partitions=partitions,
-                                    load_id = load_id,
-                                    track_rows_uploaded = track_rows_uploaded,
-                                    path_to_output_for_dryrun = path_to_output_for_dryrun),
-                'data_sources': [data_sources], # Can be a list of lists, paths (strings) and dataframes
-                'modify_lambda': modify_lambda, # Should enforce only one modify_lambda per lake table (i.e. load). Agree?
+                            load_type = load_type,
+                            table_name = table_name,
+                            load_as_service_client_id=load_as_service_client_id,
+                            partitions=partitions,
+                            load_id = load_id,
+                            track_rows_uploaded = track_rows_uploaded,
+                            path_to_output_for_dryrun = path_to_output_for_dryrun),
+                'data_sources': [data_sources], 
+                'modify_lambda': modify_lambda, # Should enforce only one modify_lambda and check_sum per lake table (i.e. load). Agree?
                 'check_sum': check_sum
             }
             load_id = self.upload_config[table_name]['load'].load_id
@@ -597,71 +595,79 @@ class DashBulkUploader():
             print(f"Overwriting load for table: {table_name}")
             self.upload_config[table_name] = {
                 'load': Load(config = self.refresh_dash_config(),
-                                    load_type = load_type,
-                                    table_name = table_name,
-                                    load_as_service_client_id=load_as_service_client_id,
-                                    partitions=partitions,
-                                    load_id = load_id,
-                                    track_rows_uploaded = track_rows_uploaded,
-                                    path_to_output_for_dryrun = path_to_output_for_dryrun),
-                'data_sources': [data_sources], # Can be a list of lists, paths (strings) and dataframes
-                'modify_lambda': modify_lambda, # Should enforce only one modify_lambda per lake table (i.e. load). Agree?
+                            load_type = load_type,
+                            table_name = table_name,
+                            load_as_service_client_id=load_as_service_client_id,
+                            partitions=partitions,
+                            load_id = load_id,
+                            track_rows_uploaded = track_rows_uploaded,
+                            path_to_output_for_dryrun = path_to_output_for_dryrun),
+                'data_sources': [data_sources], 
+                'modify_lambda': modify_lambda,
                 'check_sum': check_sum
             }
             load_id = self.upload_config[table_name]['load'].load_id
             print(f"New Load ID: {load_id}")
 
-
+    def remove_upload(
+        self,
+        table_name
+    ):
+        del self.upload_config[table_name]
+    
     def execute_uploads(
             self,
             lake_tables: List[str, pd.DataFrame, tuple]
-    ):
-        upload_config = self.upload_config[table_name]
-        load = upload_config['load']
-        data_sources = upload_config['data_sources']
-        modify_lambda = upload_config['modify_lambda']
-        check_sum = upload_config['check_sum']
-
+    ) -> None:
         for table_name in lake_tables:
-            for data_source in data_sources:
-                if isinstance(data, tuple):
-                    # Assume datasource, file_key is provided in tuple
-                    data = data_source[0]
-                    file_key = data_source[1]
-                else:
-                    data = data_source 
-                
+            print(f"Uploading datasources to lake table: {table_name}")
+            upload_config = self.upload_config[table_name]
+            load = upload_config['load']
+            data_sources = upload_config['data_sources']
+            modify_lambda = upload_config['modify_lambda']
+            check_sum = upload_config['check_sum']
+
+            for data in data_sources:
+                print(f"Datasource: {str(data)}")
                 if isinstance(data, pd.DataFrame):
-                    self.upload_df(
+                    print("Uploading from DataFrame")
+                    upload_response = self.upload_df(
                         df = data,
                         load = load,
-                        file_key = file_key,
                         modify_lambda = modify_lambda
                     )
-
                 elif isinstance(data, str):
                     if data.endswith('.csv'):
-                        self.upload_csv(
+                        print("Uploading from csv")
+                        upload_response = self.upload_csv(
                             upload_file = data,
                             load = load,
-                            file_key = file_key,
                             modify_lambda = modify_lambda)
                     elif data.endswith('.parquet'):
-                        self.upload_parquet(
+                        print("Uploading from parquet")
+                        upload_response = self.upload_parquet(
                             file = data,
                             load = load,
-                            file_key = file_key,
                             modify_lambda = modify_lambda
                         )
                     else:
-                        raise ValueError(f'File Type currently not supported for upload (only csv and parquet): {data}')
+                        raise ValueError(f'File Type currently not supported for upload: {data}')
                     
                 else:
                     raise ValueError(f'Data source not recognized.  Only DataFrame, csv and parquet are currently supported.')
-                    
-                
-        
-        
+                print(str(upload_response))
+                self.upload_responses[table_name] = self.upload_responses.get(table_name, []).append(upload_response)
+                # End of uploads 
+
+            print(f"Uploads completed.  Committing load with the following checksums: {check_sum}")
+            commit_response = load.commit(check_sum = check_sum)
+            print(str(commit_response))
+            self.commit_responses[table_name] = commit_response
+
+    def execute_all_uploads(self) -> None:
+        lake_tables = [table_name for table_name in self.upload_config.keys()]
+        self.execute_uploads(lake_tables = lake_tables)
+
     def upload_df(
         self,
         df: pd.DataFrame,
