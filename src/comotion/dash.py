@@ -576,7 +576,7 @@ class DashBulkUploader():
         if table_name.lower() != table_name:
             raise ValueError('Only lowercase characters allowed for table_name.')
         
-        if table_name in self.upload_config:
+        if table_name in self.uploads:
             raise ValueError(f'A load has been created for the lake table already: {table_name}.  Call DashBulkUploader().remove_load({table_name}) if you want to re-start this load.')
 
         if not check_sum and not track_rows_uploaded:
@@ -674,14 +674,14 @@ class DashBulkUploader():
         file_key
     ):
         print(f"Removing {file_key} from load for {table_name}")
-        del self.upload_config[table_name]['data_sources'][file_key]
+        del self.uploads[table_name]['data_sources'][file_key]
 
     def remove_load(
         self,
         table_name
     ):
         print(f"Removing {table_name} from uploads")
-        del self.upload_config[table_name]
+        del self.uploads[table_name]
     
     def execute_uploads(
             self,
@@ -742,7 +742,7 @@ class DashBulkUploader():
                     self.uploads[table_name]['load_status'] = updated_load_status
 
     def execute_all_uploads(self) -> dict:
-        lake_tables = [table_name for table_name in self.upload_config.keys()]
+        lake_tables = [table_name for table_name in self.uploads.keys()]
         self.execute_uploads(lake_tables = lake_tables)
 
     def get_load_info(self, max_workers = 5):
@@ -1134,7 +1134,7 @@ def read_and_upload_file_to_dash(
             file_key = file_key,
             chunksize = chunksize
         )
-        
+
         print("Uploader")
         uploader.execute_uploads(lake_tables = [dash_table], on_fail = 'END', max_workers = 1) # Only need 1 workers as there is only 1 file.
         
