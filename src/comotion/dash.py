@@ -591,6 +591,7 @@ class DashBulkUploader():
         ]
 
     def refresh_dash_config(self):
+        """Return a new DashConfig object with the auth_token provided to DashBulkUploader."""
         return DashConfig(self.auth_token)
     
     def add_load(
@@ -604,11 +605,49 @@ class DashBulkUploader():
         track_rows_uploaded: bool = False,
         path_to_output_for_dryrun: str = None
     ) -> None:
+        """
+        Creates a new load for a specified lake table. This function initializes the load
+        process, ensuring that the table name is in lowercase and that a checksum or row tracking
+        is provided for data integrity. Created loads can be fetched using the DashBulkUploader().uploads class variable.
+
+        Parameters
+        ----------
+        table_name : str
+            The name of the lake table. Must be in lowercase.
+        check_sum : Optional[Dict[str, Union[int, float, str]]]
+            Checksum data for the files to be committed. The checksum should be a dictionary
+            with Presto/Trino expressions as keys and their expected results as values.
+        modify_lambda : Callable, optional
+            A lambda function to modify the data before loading.
+        load_type : str, default 'APPEND_ONLY'
+            The type of load operation. Default is 'APPEND_ONLY'.
+        load_as_service_client_id : str, optional
+            The service client ID to use for the load. 
+            If service_client is not a field in the source data added to the load, this must be provided or the load will fail on commit.
+        partitions : Optional[List[str]], optional
+            List of partitions for the load to improve query efficieny from the Dash lake.
+        track_rows_uploaded : bool, default False
+            Whether to track the number of rows uploaded for the load.
+        path_to_output_for_dryrun : str, optional
+            If specified, no upload will be made to dash, but files
+            will be saved to the location specified. This is useful for testing.
+
+        Raises
+        ------
+        ValueError
+            If the table name contains uppercase characters or if a load has already been created for the table.
+        KeyError
+            If neither `check_sum` nor `track_rows_uploaded` is provided.
+
+        Returns
+        -------
+        None
+        """
         if table_name.lower() != table_name:
             raise ValueError('Only lowercase characters allowed for table_name.')
         
         if table_name in self.uploads:
-            raise ValueError(f'A load has been created for the lake table already: {table_name}.  Call DashBulkUploader().remove_load({table_name}) if you want to re-start this load.')
+            raise ValueError(f'A load has been created for the lake table already: {table_name}. Call DashBulkUploader().remove_load({table_name}) if you want to re-start this load.')
 
         if not check_sum and not track_rows_uploaded:
             raise KeyError("Invalid arguments: Either provide a check_sum value or set track_rows_uploaded to True.")
@@ -618,22 +657,23 @@ class DashBulkUploader():
 
         print(f"Creating new load for lake table: {table_name}")
         load = Load(
-            config = self.refresh_dash_config(),
-            load_type = load_type,
-            table_name = table_name,
-            load_as_service_client_id = load_as_service_client_id,
-            partitions = partitions,
-            track_rows_uploaded = track_rows_uploaded,
-            path_to_output_for_dryrun = path_to_output_for_dryrun
+            config=self.refresh_dash_config(),
+            load_type=load_type,
+            table_name=table_name,
+            load_as_service_client_id=load_as_service_client_id,
+            partitions=partitions,
+            track_rows_uploaded=track_rows_uploaded,
+            path_to_output_for_dryrun=path_to_output_for_dryrun
         )
         print(f"Load ID: {load.load_id}")
         self.uploads[table_name] = {
-                'load': load,
-                'data_sources': {}, 
-                'modify_lambda': modify_lambda, # Should enforce only one modify_lambda and check_sum per lake table (i.e. load). Agree?
-                'check_sum': check_sum,
-                'load_status': load.get_load_info().load_status
-            }
+            'load': load,
+            'data_sources': {}, 
+            'modify_lambda': modify_lambda,
+            'check_sum': check_sum,
+            'load_status': load.get_load_info().load_status
+        }
+
         
     def create_file_key(self, length = 10) -> str:
     # Ensure length is reasonable
