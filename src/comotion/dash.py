@@ -4,7 +4,7 @@ import json
 import requests
 import csv
 import time
-from typing import Union, Callable, List, Optional, Dict
+from typing import Union, Callable, List, Optional, Dict, Any
 from os.path import join, basename, isdir, isfile, splitext
 from os import listdir
 import pandas as pd
@@ -1283,62 +1283,75 @@ def read_and_upload_file_to_dash(
     entity_type: str = Auth.USER,
     application_client_id: str = None,
     application_client_secret: str = None
-):
-    """Reads a file and uploads to dash.
+) -> Union[List[Any], DashBulkUploader]:
+    """
+    Reads a file and uploads it to Dash.
 
     This function will:
-    - Read a csv file
-    - Break it up into multiple csv's
-    - each with a maximum number of lines defined by chunksize
-    - upload them to dash
+    - Read a CSV file
+    - Break it up into multiple CSVs, each with a maximum number of lines defined by `chunksize`
+    - Upload them to Dash
 
     Parameters
     ----------
     file : Union[str, io.FileIO]
-        Either a path to the file to be uploaded,
-        or a FileIO stream representing the file to be uploaded
-        Should be an unencrypted, uncompressed CSV file
-    dash_table: str
-        name of Dash table to upload the file to
-    dash_orgname: str
-        orgname of your Dash instance
-    dash_api_key: str
-        valid api key for Dash API
-    encoding: str
-        the encoding of the source file.  defaults to utf-8.
-    chunksize: int
-        (optional)
-        the maximum number of lines to be included in each file.
-        Note that this should be low enough that the zipped file is less
-        than Dash maximum gzipped file size. Defaults to 30000.
-    modify_lambda:
-        (optional)
-        a callable that recieves the pandas dataframe read from the
-        csv.  Gives the opportunity to modify - such as adding a timestamp
-        column.
-        Is not required.
-    path_to_output_for_dryrun: str
-        (optional)
-        if specified, no upload will be made to dash, but files
-        will be saved to the location specified. This is useful for
-        testing.
-        multiple files will be created: [table_name].[i].csv.gz where i
-        represents multiple file parts
-    service_client_id: str
-        (optional)
-        if specified, specifies the service client for the upload. See the dash documentation for an explanation of service client.
+        Either a path to the file to be uploaded, or a FileIO stream representing the file to be uploaded.
+        Should be an unencrypted, uncompressed CSV file.
+    dash_table : str
+        Name of the Dash table to upload the file to.
+    dash_orgname : str
+        Orgname of your Dash instance.
+    file_key : str, optional
+        A unique key for the file being uploaded. If not provided, a key will be generated.
+    dash_api_key : str, optional
+        Valid API key for Dash API. Required for v1 data model uploads.
+    check_sum : Optional[Dict[str, Union[int, float, str]]], optional
+        Checksum data for the files to be committed. The checksum should be a dictionary
+        with Presto/Trino expressions as keys and their expected results as values.
+    encoding : str, default 'utf-8'
+        The encoding of the source file.
+    chunksize : int, default 30000
+        The maximum number of lines to be included in each file. Note that this should be low enough
+        that the zipped file is less than Dash's maximum gzipped file size.
+    modify_lambda : Callable, optional
+        A callable that receives the pandas DataFrame read from the CSV. Provides the opportunity to modify
+        the DataFrame, such as adding a timestamp column.
+    path_to_output_for_dryrun : str, optional
+        If specified, no upload will be made to Dash, but files will be saved to the location specified.
+        This is useful for testing. Multiple files will be created (1 per chunk)
+    service_client_id : str, optional
+        If specified, specifies the service client for the upload. See the Dash documentation for an explanation
+        of the service client.
+    partitions : Optional[List[str]], optional
+        List of partitions for the load.
+    load_type : str, default 'APPEND_ONLY'
+        The type of load operation. Default is 'APPEND_ONLY'.
+    data_model_version : str, optional
+        The data model version to use for the upload. If not specified, the function will determine the version.
+    entity_type : str, default Auth.USER
+        The entity type for authentication.
+    application_client_id : str, optional
+        The application client ID for authentication.
+    application_client_secret : str, optional
+        The application client secret for authentication.
 
     Returns
     -------
-    List
-        List of http responses
+    Union[List[Any], DashBulkUploader]
+        For v1 data model uploads, returns a list of HTTP responses.
+        For v2 data model uploads, returns the DashBulkUploader instance.
+
+    Raises
+    ------
+    ValueError
+        If the API key is not specified for v1 lake upload or if the file type cannot be determined.
     """
     auth_token = Auth(orgname=dash_orgname,
-                      entity_type = entity_type,
+                      entity_type=entity_type,
                       application_client_id=application_client_id,
                       application_client_secret=application_client_secret)
     
-    uploader = DashBulkUploader(auth_token = auth_token)
+    uploader = DashBulkUploader(auth_token=auth_token)
     if not data_model_version or data_model_version not in ['v1', 'v2']:
         print("Determining Data Model Version")
         try:
@@ -1347,7 +1360,7 @@ def read_and_upload_file_to_dash(
             # Get migration status
             migration = Migration(config)
             print('Migration Status: ' + str(migration.status().full_migration_status))
-            if migration.status().full_migration_status == 'Completed': # What about for new clients who start on v2 lake?  Will status be complete?
+            if migration.status().full_migration_status == 'Completed':
                 data_model_version = 'v2'
             else:
                 data_model_version = 'v1'
@@ -1364,15 +1377,15 @@ def read_and_upload_file_to_dash(
             raise ValueError("API Key needs to be specified for v1 lake upload.")
 
         responses = uploader.v1_upload_csv(
-            file = file,
-            dash_table = dash_table,
-            dash_orgname= dash_orgname,
-            dash_api_key = dash_api_key,
-            encoding = encoding,
-            chunksize = chunksize,
-            modify_lambda = modify_lambda,
-            path_to_output_for_dryrun = path_to_output_for_dryrun,
-            service_client_id = service_client_id
+            file=file,
+            dash_table=dash_table,
+            dash_orgname=dash_orgname,
+            dash_api_key=dash_api_key,
+            encoding=encoding,
+            chunksize=chunksize,
+            modify_lambda=modify_lambda,
+            path_to_output_for_dryrun=path_to_output_for_dryrun,
+            service_client_id=service_client_id
         )
         return responses
     
@@ -1380,29 +1393,30 @@ def read_and_upload_file_to_dash(
         track_rows_uploaded = not check_sum
             
         uploader.add_load(
-            table_name = dash_table,
-            check_sum = check_sum, 
-            modify_lambda = modify_lambda,
-            load_type = load_type,
-            load_as_service_client_id = service_client_id,
-            partitions = partitions,
-            track_rows_uploaded = track_rows_uploaded,
-            path_to_output_for_dryrun = path_to_output_for_dryrun
+            table_name=dash_table,
+            check_sum=check_sum, 
+            modify_lambda=modify_lambda,
+            load_type=load_type,
+            load_as_service_client_id=service_client_id,
+            partitions=partitions,
+            track_rows_uploaded=track_rows_uploaded,
+            path_to_output_for_dryrun=path_to_output_for_dryrun
         )
         
         uploader.add_data_to_load(
-            table_name = dash_table,
-            data = file,
-            file_key = file_key,
-            chunksize = chunksize
+            table_name=dash_table,
+            data=file,
+            file_key=file_key,
+            chunksize=chunksize
         )
 
         print("Uploader")
-        uploader.execute_upload(table_name = dash_table, max_workers = 1) # Only need 1 workers as there is only 1 file.
+        uploader.execute_upload(table_name=dash_table, max_workers=1)  # Only need 1 worker as there is only 1 file.
         
-        print(f"Upload completed and commit initiated")
+        print("Upload completed and commit initiated")
 
         return uploader
+
 
 class Migration():
     """
