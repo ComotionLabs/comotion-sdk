@@ -28,6 +28,7 @@ from comodash_api_client_lowlevel import QueriesApi, LoadsApi, MigrationsApi
 from comodash_api_client_lowlevel.models.query_text import QueryText
 from urllib3.exceptions import IncompleteRead
 from urllib3.response import HTTPResponse
+from comodash_api_client_lowlevel import Load
 from comodash_api_client_lowlevel.models.query import Query as QueryInfo
 from comodash_api_client_lowlevel.models.load import Load as LoadInfo
 from comodash_api_client_lowlevel.models.file_upload_request import FileUploadRequest
@@ -39,7 +40,7 @@ from comodash_api_client_lowlevel.rest import ApiException
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import random 
 import string
-from inspect import signature
+from inspect import signature, Parameter
 
 class DashConfig(comodash_api_client_lowlevel.Configuration):
     """
@@ -173,7 +174,8 @@ class Load():
             will be saved to the location specified. This is useful for testing.
         """
         load_data = locals()
-        
+        lowerlevel_load_sig = signature(comodash_api_client_lowlevel.Load)
+        lowerlevel_load_keys = [key for key in lowerlevel_load_sig.parameters.keys()]
         if not(isinstance(config, DashConfig)):
             raise TypeError("config must be of type comotion.dash.DashConfig")
         
@@ -190,13 +192,6 @@ class Load():
                             raise TypeError("if load_id is supplied, then only the config parameter and no others should be supplied.")
             else:
                 # Enter a context with an instance of the API client
-                load_data = {
-                    key: value for key, value in load_data.items() if key in lowerlevel_load_keys
-                }
-
-                lowerlevel_load_sig = signature(comodash_api_client_lowlevel.Load)
-                lowerlevel_load_keys = [key for key in lowerlevel_load_sig.parameters.keys()]
-
                 lowerlevel_load_kwargs = {
                         key: value
                         for key, value in load_data.items()
@@ -1059,11 +1054,11 @@ class DashBulkUploader():
         
         try:
             i = 1
-            file_key_to_use = file_key + f"_{i}"
             chunk_futures = []
             with ThreadPoolExecutor(max_workers=max_workers) as chunk_ex:  # Using threads for concurrent chunk uploads
 
                 for chunk in func_to_use(file, chunksize=chunksize, dtype=object, **pd_read_kwargs):
+                    file_key_to_use = file_key + f"_{i}"
                     future = chunk_ex.submit(self.upload_df,
                                             df=chunk,
                                             load=load,
