@@ -753,8 +753,6 @@ class DashBulkUploader():
 
         if source_type == 'dir':
             print(f"Unpacking data sources in directory: {data}")
-            if file_key:
-                print("File key can't be specified for a directory. Add individual files with the appropriate file key if this is required.")
 
             data_files = [join(data, file_name) for file_name in listdir(data)]
             for file in data_files:
@@ -772,7 +770,7 @@ class DashBulkUploader():
         else:
             
             if source_type == 'file' and validate_file_extensions:
-                file_extension = splitext(file)[1]
+                file_extension = splitext(data)[1]
                 if file_extension not in self.accepted_file_extensions:
                     print(f"The file extension {file_extension} is not currently supported and so file was not added: {data}.")
                     valid_file = False
@@ -871,7 +869,7 @@ class DashBulkUploader():
 
                 for f in as_completed(upload_futures):
                     try:
-                        print(f.result())
+                        f.result()
                     except Exception as e:
                         print(f"Error uploading data source: {e}.")
                     # End of uploads 
@@ -1405,7 +1403,6 @@ def read_and_upload_file_to_dash(
             chunksize=chunksize
         )
 
-        print("Uploader")
         uploader.execute_upload(table_name=dash_table, max_workers=1)  # Only need 1 worker as there is only 1 file.
         
         print("Upload completed and commit initiated")
