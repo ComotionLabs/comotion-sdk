@@ -341,7 +341,7 @@ class Load():
                 table = pa.Table.from_pandas(df)
                 pq.write_table(table, local_path)
                 print(f"File written locally to: {local_path}")
-                upload_reponse = 'COMPLETE' # Arbitrary reponse as file write has no return
+                upload_reponse = 'DRYRUN_COMPLETE' # Arbitrary reponse as file write has no return
 
             if self.track_rows_uploaded:
                 # Count the rows in the Parquet file
@@ -674,8 +674,8 @@ class DashBulkUploader():
             'load_status': load.get_load_info().load_status
         }
 
-        
     def create_file_key(self, length = 10) -> str:
+        """Used to create a random, valid file key with specified length."""
     # Ensure length is reasonable
         if length < 2:
             raise ValueError("Length must be at least 2")
@@ -699,11 +699,46 @@ class DashBulkUploader():
         chunksize: int = None,
         source_type: str = None,
         validate_file_extensions: str = False
-    ):  
+    ) -> None:
+        """
+        Adds data to an existing load for a specified lake table. This function supports adding data
+        from various sources including dataframes, directories, and files, with optional validation
+        of file extensions.
+
+        Parameters
+        ----------
+        table_name : str
+            The name of the lake table to which data will be added.  A load should already be added for this table_name.
+        data : Union[str, pd.DataFrame]
+            The data to be added. Can be a path to a file or directory, or a pandas DataFrame.
+        file_key : str, optional
+            A unique key for the file being added. If not provided, a key will be generated.  This is ignored if a directory is provided as data.
+        chunksize : int, optional
+            The size of data chunks to be uploaded. If not provided, the default chunksize is used.
+        source_type : str, optional
+            The type of data source. Can be 'df' for DataFrame, 'dir' for directory, or 'file' for file.
+            If not specified, the function will attempt to infer the source type.
+            If a directory is provided, loop through the paths in the directory from listdir() and add valid files as datasources for the lake table.
+        validate_file_extensions : bool, default False
+            Whether to validate file extensions against accepted types.  See the accepted_file_extensions class variable.
+
+        Raises
+        ------
+        ValueError
+            If no existing load is found for the specified table, if the table name is not lowercase,
+            or if the source type cannot be identified.
+        KeyError
+            If neither `check_sum` nor `track_rows_uploaded` is provided.
+
+        Returns
+        -------
+        None
+        """
         upload = self.uploads.get(table_name)
-        
+        valid_file = True
+
         if not upload:
-            raise ValueError(f"No existing load for lake table: {table_name}. First run DashBulkUploader().add_load() with the table_name specified before adding data to the load.")
+            raise ValueError(f"No existing load for lake table: {table_name}. First run add_load with the table_name specified before adding data to the load.")
         
         if not chunksize:
             chunksize = self.default_chunksize
@@ -714,80 +749,110 @@ class DashBulkUploader():
         if not source_type:
             if isinstance(data, pd.DataFrame):
                 source_type = 'df'
-            if isdir(data):
+            elif isdir(data):
                 source_type = 'dir'
-            if isfile(data):
+            elif isfile(data):
                 source_type = 'file'
             else:
-                raise ValueError("Source type could not be identified.  Please fix datasource or specify the source_type as ['df', 'dir', 'file']")
+                raise ValueError("Source type could not be identified. Please fix datasource or specify the source_type as ['df', 'dir', 'file']")
 
         if source_type == 'dir':
             print(f"Unpacking data sources in directory: {data}")
             if file_key:
-                print("WARNING: File key can't be specified for a directory. Add individual files with the appropriate file key if this is required.")
+                print("File key can't be specified for a directory. Add individual files with the appropriate file key if this is required.")
 
             data_files = [join(data, file_name) for file_name in listdir(data)]
             for file in data_files:
                 if not isfile(join(data, file)):
                     print(f"The following path in the directory provided is not a file and so will not be added as a datasource: {file}")
-                elif validate_file_extensions:
-                    file_extension = splitext(file)[1]
-                    if file_extension not in self.accepted_file_extensions:
-                        print(f"The following file extension is not supported and so file will not be added as a datasource.  Accepted extensions currently are: {self.accepted_file_extensions}")
                 else:
                     self.add_data_to_load(
-                        table_name = table_name, 
-                        data = file,
-                        file_key = None, # File keys can't be applied to directories - individual files should be specified if this is required
-                        chunksize = chunksize,
-                        source_type = 'file',
-                        validate_file_extensions=False # Already validated for directory
+                        table_name=table_name, 
+                        data=file,
+                        file_key=None,  # File keys can't be applied to directories - individual files should be specified if this is required
+                        chunksize=chunksize,
+                        source_type='file',
+                        validate_file_extensions=validate_file_extensions
                     )
         else:
-            data_source = {
-                            'data': data,
-                            'chunksize': chunksize,
-                            'source_type': source_type
-                          }
+            
+            if source_type == 'file' and validate_file_extensions:
+                file_extension = splitext(file)[1]
+                if file_extension not in self.accepted_file_extensions:
+                    print(f"The file extension {file_extension} is not currently supported and so file was not added: {data}.")
+                    valid_file = False
+            
+            if valid_file:
+                data_source = {
+                    'data': data,
+                    'chunksize': chunksize,
+                    'source_type': source_type
+                }
 
-            upload['data_sources'][file_key] = data_source
-            self.uploads[table_name] = upload
+                upload['data_sources'][file_key] = data_source
+                self.uploads[table_name] = upload
 
     def remove_data_from_load(
         self,
         table_name,
         file_key
     ):
+        """
+            Deletes data source with specified file key for table_name from uploads class variable.
+        """
         print(f"Removing {file_key} from load for {table_name}")
-        del self.uploads[table_name]['data_sources'][file_key]
+        self.uploads[table_name]['data_sources'].pop(file_key)
 
     def remove_load(
         self,
         table_name
     ):
+        """
+            Deletes load for specified table_name from uploads class variable.
+        """
         print(f"Removing {table_name} from uploads")
-        del self.uploads[table_name]
+        self.uploads.pop(table_name)
     
     def execute_upload(
-            self,
-            table_name: str,
-            max_workers: int = 5
-        ) -> None:
+        self,
+        table_name: str,
+        max_workers: int = 5
+    ) -> None:
+        """
+        Executes the upload process for a specified lake table. This function uses multi-threading
+        to upload data sources concurrently and commits the load upon completion.
+
+        Parameters
+        ----------
+        table_name : str
+            The name of the lake table to which data will be uploaded.
+        max_workers : int, default 5
+            The maximum number of threads to use for concurrent uploads.
+
+        Raises
+        ------
+        ValueError
+            If no existing load is found for the specified table.
+
+        Returns
+        -------
+        None
+        """
         pending_load_statuses = ['OPEN']        
 
         upload = self.uploads[table_name]
         load_status = upload['load_status']
 
-        if load_status in pending_load_statuses: # Only perform upload on pending loads
+        if load_status in pending_load_statuses:  # Only perform upload on pending loads
             load = upload['load']
             data_sources = upload['data_sources']
             modify_lambda = upload['modify_lambda']
             check_sum = upload['check_sum']
             print(f"Uploading datasources to lake table: {table_name}")
 
-            upload_executors = []
+            upload_futures = []
 
-            with ThreadPoolExecutor(max_workers = max_workers) as upload_executor: # Use multi-threading to speed up uploads
+            with ThreadPoolExecutor(max_workers=max_workers) as upload_executor:  # Use multi-threading to speed up uploads
                 for file_key, data_source in data_sources.items():
                     data = data_source['data']
                     chunksize = data_source['chunksize']
@@ -796,70 +861,122 @@ class DashBulkUploader():
                     print(f"Uploading data source with file key: {file_key}")
                     if source_type == 'df':
                         print("Uploading from DataFrame")
-                        future = upload_executor.submit(self.upload_df, df = data, 
-                                                                        load = load, 
-                                                                        file_key = file_key, 
-                                                                        modify_lambda = modify_lambda
-                                                )
-                                                
+                        future = upload_executor.submit(self.upload_df, df=data, 
+                                                        load=load, 
+                                                        file_key=file_key, 
+                                                        modify_lambda=modify_lambda)
                     elif source_type == 'file':
-                        future = upload_executor.submit(self.upload_file, file = data,
-                                                                          load = load,
-                                                                          file_key = file_key,
-                                                                          modify_lambda = modify_lambda,
-                                                                          chunksize = chunksize
-                                                )
+                        future = upload_executor.submit(self.upload_file, file=data,
+                                                        load=load,
+                                                        file_key=file_key,
+                                                        modify_lambda=modify_lambda,
+                                                        chunksize=chunksize)
                     
-                    upload_executors.append(future)
+                    upload_futures.append(future)
 
-                for ex in as_completed(upload_executors):
+                for f in as_completed(upload_futures):
                     try:
-                        print(ex.result())
+                        print(f.result())
                     except Exception as e:
-                        print(f"Error with data source: {e}.  ")
+                        print(f"Error uploading data source: {e}.")
                     # End of uploads 
 
             # Commit load
-            print(f"Uploads completed.  Committing load with the following checksums: {check_sum}")
-            load.commit(check_sum = check_sum)
+            print(f"Uploads completed. Committing load with the following checksums: {check_sum}")
+            load.commit(check_sum=check_sum)
             updated_load_status = load.get_load_info()
-            print(str(load_status))
             self.uploads[table_name]['load_status'] = updated_load_status
 
     def execute_multiple_uploads(
         self,
-        table_names: str,
+        table_names: List[str],
         max_workers: int = 5
     ):
+        """
+            Uses execute_upload function for each table_name in the table_names list provided.
+        """
         for table_name in table_names:
-            self.execute_upload(
-                table_name = table_name,
-                max_workers = max_workers
-            )
+            try:
+                self.execute_upload(
+                    table_name = table_name,
+                    max_workers = max_workers
+                )
+            except Exception as e:
+                print(f"Error executing upload to lake table {table_name}: {e}")
 
-    def execute_all_uploads(self) -> dict:
+    def execute_all_uploads(self):
+        """
+            Uses execute_upload function for all loads created with the DashBulkUploader.
+        """
         table_names = [table_name for table_name in self.uploads.keys()]
         self.execute_multiple_uploads(table_names = table_names)
 
-    def get_load_info(self, max_workers = 5):
+    def get_load_info(self, max_workers: int = 5):
+        """
+        Retrieves the load information for all loads created. This function uses multi-threading
+        to concurrently fetch the load status for each table.  This also updates the load_status for each 
+        table_name in the uploads class variable.
+
+        Parameters
+        ----------
+        max_workers : int, default 5
+            The maximum number of threads to use for concurrent status retrieval.
+
+        Returns
+        -------
+        load_info : dict
+            A dictionary containing the load information for each table, with table names as keys
+            and their respective load statuses as values.
+
+        Raises
+        ------
+        Exception
+            If an error occurs while retrieving the load information for any table, it is caught
+            and printed, but the function continues to retrieve the remaining load statuses.
+        """
         with ThreadPoolExecutor(max_workers=max_workers) as status_executor:
             load_info = {table_name: status_executor.submit(upload['load'].get_load_info) for table_name, upload in self.uploads.items()}
-            for table_name, ex in zip(load_info.keys(), as_completed(load_info.values())):
+            for table_name, future in zip(load_info.keys(), as_completed(load_info.values())):
                 try:
-                    load_info[table_name] = ex.result()
-                    self.uploads[table_name]['load_status'] = ex.result()
+                    load_info[table_name] = future.result()
+                    self.uploads[table_name]['load_status'] = future.result()
                 except Exception as e:
                     print(f"Error getting load {self.uploads[table_name]['load'].load_id}: {e}")
         
         return load_info
-        
+     
     def upload_df(
         self,
         df: pd.DataFrame,
         load: Load,
         file_key: str = None,
         modify_lambda: Callable = None
-    ):         
+    ):
+        """
+        Uploads a pandas DataFrame to the specified load. This function optionally modifies the DataFrame
+        using a provided lambda function, generates a file key if not provided, and uploads the data.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The DataFrame to be uploaded.
+        load : Load
+            The load object to which the DataFrame will be uploaded.
+        file_key : str, optional
+            A unique key for the file being uploaded. If not provided, a key will be generated.
+        modify_lambda : Callable, optional
+            A lambda function to modify the DataFrame before uploading.
+
+        Returns
+        -------
+        Any
+            The response from the load upload API call.
+
+        Raises
+        ------
+        ValueError
+            If the DataFrame is empty or if the upload fails.
+        """
         if modify_lambda:
             modify_lambda(df)
 
@@ -869,12 +986,12 @@ class DashBulkUploader():
         df.columns = [re.sub(r'\s+', '_', column.lower()) for column in df.columns]
 
         response = load.upload(
-            data = df,
-            file_key = file_key
+            data=df,
+            file_key=file_key
         )
 
         return response
-    
+
     def upload_file(
         self,
         file: Union[str, io.BytesIO],
@@ -882,8 +999,41 @@ class DashBulkUploader():
         file_key: str = None,
         modify_lambda: Callable = None,
         chunksize: int = None,
-        max_workers: int = 5
+        max_workers: int = 5,
+        **pd_read_kwargs
     ):
+        """
+        Uploads a file to the specified load, reading the file in chunks and optionally modifying
+        each chunk using a provided lambda function. This function supports both CSV and Parquet files.
+
+        Parameters
+        ----------
+        file : Union[str, io.BytesIO]
+            The file to be uploaded. Can be a file path or a BytesIO object.
+        load : Load
+            The load object to which the file will be uploaded.
+        file_key : str, optional
+            A unique key for the file being uploaded. If not provided, a key will be generated.
+        modify_lambda : Callable, optional
+            A lambda function to modify each chunk of the file before uploading.
+        chunksize : int, optional
+            The size of data chunks to be uploaded. If not provided, the default chunksize is used.
+        max_workers : int, default 5
+            The maximum number of threads to use for concurrent uploads.
+        **pd_read_kwargs
+            Additional keyword arguments to pass to the pandas read function (e.g., `pd.read_csv` or `pd.read_parquet`).
+            Note that filepath_or_buffer, chunksize and dtype are passed by default and so duplicating those here could cause issues.
+
+        Returns
+        -------
+        List[Any]
+            A list of responses from the load upload API call for each chunk.
+
+        Raises
+        ------
+        ValueError
+            If the file type cannot be determined or if an error occurs during the upload of any chunk.
+        """
         responses = []
         if not chunksize:
             chunksize = self.default_chunksize
@@ -898,7 +1048,7 @@ class DashBulkUploader():
 
         for func in try_functions:
             try:
-                func(file, nrows = 1)
+                func(file, nrows=1, **pd_read_kwargs)
                 func_to_use = func
                 break
             except:
@@ -911,15 +1061,14 @@ class DashBulkUploader():
             i = 1
             file_key_to_use = file_key + f"_{i}"
             chunk_futures = []
-            with ThreadPoolExecutor() as chunk_ex: # Is it a good idea to use threads here also?  There will essentially be "Nested" threads?  How will that affect performance?
+            with ThreadPoolExecutor(max_workers=max_workers) as chunk_ex:  # Using threads for concurrent chunk uploads
 
-                for chunk in func_to_use(file, chunksize=chunksize, dtype=object):
+                for chunk in func_to_use(file, chunksize=chunksize, dtype=object, **pd_read_kwargs):
                     future = chunk_ex.submit(self.upload_df,
-                                             df=chunk,
-                                             load=load,
-                                             file_key=file_key_to_use,
-                                             modify_lambda=modify_lambda
-                                            )
+                                            df=chunk,
+                                            load=load,
+                                            file_key=file_key_to_use,
+                                            modify_lambda=modify_lambda)
                     chunk_futures.append(future)
                     i += 1
                 
