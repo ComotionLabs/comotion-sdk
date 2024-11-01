@@ -36,9 +36,10 @@ from comodash_api_client_lowlevel.models.load_commit import LoadCommit
 from comodash_api_client_lowlevel.models.load import Load
 from comodash_api_client_lowlevel.models.query_id import QueryId
 from comodash_api_client_lowlevel.rest import ApiException
-from concurrent.futures import ThreadPoolExecutor
-import uuid
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import random 
+import string
+from inspect import signature
 
 class DashConfig(comodash_api_client_lowlevel.Configuration):
     """
@@ -113,9 +114,28 @@ class Load():
     Initialising this class starts a Load on Comotion Dash and stores the
     resulting load_id in `load_id`
 
-    If you wish to work with an existing load, then simply supply load_id parameter
+    If you wish to work with an existing load, then supply load_id only the load_id parameter
 
-    @TODO Outline of how to use this class to upload a file here.
+    Example of upload with a Load instance: 
+        load = Load(config = DashConfig(Auth('orgname')), 
+                    table_name = 'v1_inforce_policies', 
+                    load_as_service_client_id = '0') # Create the load
+        
+        for file, file_key in zip(file_path_list, file_keys): # Upload files with Load object
+            load.upload(
+                data = file,
+                file_key = file_key
+            )
+
+        load.commit( # Commit the load - this validates the files and pushes to the table_name specified
+            check_sum = { # Check that data uploaded matches what you expected before pushing to the lake.  *Also see track_rows_uploaded option
+                'sum(face_amount)': 20000,
+                'count(distinct policy_number)': 1000
+            }
+        )
+
+        print(load.get_load_info()) # Run this at any time to get the latest information on the load
+
     """
 
     def __init__(
@@ -146,10 +166,14 @@ class Load():
         load_id : str, optional
             In the case where you want to work with an existing load on dash, supply this parameter, and no other parameter (other than config) will be required.
         track_rows_uploaded: bool, optional
-            A boolean specifying if the number of rows uploaded with the current Load instance.  This can be used to automatically create a checksum on commit (see Load.commit), however is not recommended for 
+            If True, track the number of rows uploaded with the current Load instance.  This can be used to automatically create a checksum on commit (see Load.commit), however is not recommended for 
             large files as this may increase the duration of upload significantly.
+        path_to_output_for_dryrun: str, optional
+            if specified, no upload will be made to dash, but files
+            will be saved to the location specified. This is useful for testing.
         """
         load_data = locals()
+        
         if not(isinstance(config, DashConfig)):
             raise TypeError("config must be of type comotion.dash.DashConfig")
         
@@ -166,13 +190,20 @@ class Load():
                             raise TypeError("if load_id is supplied, then only the config parameter and no others should be supplied.")
             else:
                 # Enter a context with an instance of the API client
-                del load_data['config']
-                del load_data['self']
-                del load_data['load_id']
-                del load_data['track_rows_uploaded']
-                del load_data['path_to_output_for_dryrun']
+                load_data = {
+                    key: value for key, value in load_data.items() if key in lowerlevel_load_keys
+                }
 
-                load = comodash_api_client_lowlevel.Load(**load_data)
+                lowerlevel_load_sig = signature(comodash_api_client_lowlevel.Load)
+                lowerlevel_load_keys = [key for key in lowerlevel_load_sig.parameters.keys()]
+
+                lowerlevel_load_kwargs = {
+                        key: value
+                        for key, value in load_data.items()
+                        if key in lowerlevel_load_keys
+                }
+
+                load = comodash_api_client_lowlevel.Load(**lowerlevel_load_kwargs)
 
                 # Create a new load
                 load_id_model = self.load_api_instance.create_load(load)
@@ -253,9 +284,6 @@ class Load():
             The key (path) under which the file will be stored in the S3 bucket. If not provided, it will be generated.
         file_upload_response : FileUploadResponse, optional
             An instance of FileUploadResponse containing the presigned URL and AWS credentials. If not provided, it will be generated.
-        track_rows_uploaded: bool, optional
-            A boolean indicating if the number of rows uploaded with the current Load instance should be tracked.  This can be used to automatically create a 
-            checksum on commit (see Load.commit), however is not recommended for large files as this may increase the duration of upload significantly.
 
         Raises:
         ------
@@ -269,10 +297,10 @@ class Load():
         Example:
         -------
         >>> load = Load(dashconfig)
-        >>> load.upload(data = 'path/to/file.parquet', file_key='file.parquet')
+        >>> load.upload(data = 'path/to/file.parquet', file_key='my_file_id')
         """
         if isinstance(data, pd.DataFrame):
-            df = data,
+            df = data
             table = pa.Table.from_pandas(df)
 
             parquet_buffer = io.BytesIO()
@@ -336,11 +364,14 @@ class Load():
 
         Parameters
         ----------
-        check_sum : Dict[str, Union[int, float, str]]
+        check_sum : Dict[str, Union[int, float, str]] (optional)
             Checksum data for the files to be committed.
             Checksums must be in the form of a dictionary, with presto / trino expressions
             as the key, and the expected result as the value. 
-            At least one is required
+
+            A check sum is not required if track_rows_uploaded was set to true for the load.  
+            This essentially builds the checksum {'count(*)': nrows_uploads} and adds it as an extrac checksum.
+
             Example:
 
             .. code-block:: python
@@ -595,15 +626,31 @@ class DashBulkUploader():
             track_rows_uploaded = track_rows_uploaded,
             path_to_output_for_dryrun = path_to_output_for_dryrun
         )
-
+        print(f"Load ID: {load.load_id}")
         self.uploads[table_name] = {
                 'load': load,
                 'data_sources': {}, 
                 'modify_lambda': modify_lambda, # Should enforce only one modify_lambda and check_sum per lake table (i.e. load). Agree?
                 'check_sum': check_sum,
-                'load_status': load.get_load_info()
+                'load_status': load.get_load_info().load_status
             }
         
+    def create_file_key(self, length = 10) -> str:
+    # Ensure length is reasonable
+        if length < 2:
+            raise ValueError("Length must be at least 2")
+
+        # Generate the first character(s): letters or underscore
+        start = random.choice(string.ascii_lowercase + "_")
+        
+        # Generate the middle characters: letters, digits, or underscore
+        middle = ''.join(random.choices(string.ascii_lowercase + string.digits + "_", k=length - 2))
+        
+        # Generate the last character: letters or digits
+        end = random.choice(string.ascii_lowercase + string.digits)
+        
+        return start + middle + end
+    
     def add_data_to_load(
         self,
         table_name: str,
@@ -622,7 +669,7 @@ class DashBulkUploader():
             chunksize = self.default_chunksize
 
         if not file_key:
-            file_key = uuid.uuid1()
+            file_key = self.create_file_key()
 
         if not source_type:
             if isinstance(data, pd.DataFrame):
@@ -658,14 +705,12 @@ class DashBulkUploader():
                     )
         else:
             data_source = {
-                    file_key: {
-                    'data': data,
-                    'chunksize': chunksize,
-                    'source_type': source_type
-                }
-            }
+                            'data': data,
+                            'chunksize': chunksize,
+                            'source_type': source_type
+                          }
 
-            upload['data_sources'].append(data_source)
+            upload['data_sources'][file_key] = data_source
             self.uploads[table_name] = upload
 
     def remove_data_from_load(
@@ -683,71 +728,88 @@ class DashBulkUploader():
         print(f"Removing {table_name} from uploads")
         del self.uploads[table_name]
     
-    def execute_uploads(
+    def execute_upload(
             self,
-            lake_tables: List[Union[str, pd.DataFrame]],
-            on_fail: str = 'SKIP',
+            table_name: str,
             max_workers: int = 5
         ) -> None:
-        accepted_on_fail = ['SKIP', 'END']
-        pending_load_statuses = ['OPEN']
+        pending_load_statuses = ['OPEN']        
 
-        if on_fail not in accepted_on_fail:
-            raise ValueError(f"on_fail value not supported.  Please select from {str(accepted_on_fail)}")
-        
-        with ThreadPoolExecutor(max_workers = max_workers) as upload_executor: # Use multi-threading to speed up uploads
-            for table_name in lake_tables:
-                upload = self.uploads[table_name]
-                load_status = upload['load_status']
+        upload = self.uploads[table_name]
+        load_status = upload['load_status']
 
-                if load_status in pending_load_statuses: # Only perform upload on pending loads
-                    load = upload['load']
-                    data_sources = upload['data_sources']
-                    modify_lambda = upload['modify_lambda']
-                    check_sum = upload['check_sum']
-                    print(f"Uploading datasources to lake table: {table_name}")
+        if load_status in pending_load_statuses: # Only perform upload on pending loads
+            load = upload['load']
+            data_sources = upload['data_sources']
+            modify_lambda = upload['modify_lambda']
+            check_sum = upload['check_sum']
+            print(f"Uploading datasources to lake table: {table_name}")
 
-                    for file_key, data_source in data_sources.items():
-                        data = data_source['data']
-                        chunksize = data_source['chunksize']
-                        source_type = data_source['source_type']
+            upload_executors = []
 
-                        try: 
-                            print(f"Uploading data source with file key: {file_key}")
-                            if source_type == 'df':
-                                print("Uploading from DataFrame")
-                                upload_executor.submit(self.upload_df, df = data, 
-                                                                       load = load, 
-                                                                       file_key = file_key, 
-                                                                       modify_lambda = modify_lambda)
-                            elif source_type == 'file':
-                                upload_executor.submit(self.upload_file, file = data,
-                                                                        load = load,
-                                                                        file_key = file_key,
-                                                                        modify_lambda = modify_lambda,
-                                                                        chunksize = chunksize)
-                        except Exception as e:
-                            if on_fail == 'SKIP':
-                                print(f"Error with data source: {e}")
-                                print(f"Continuing to next data source")
-                            elif on_fail == 'END':
-                                raise ValueError(e)
-                        # End of uploads 
+            with ThreadPoolExecutor(max_workers = max_workers) as upload_executor: # Use multi-threading to speed up uploads
+                for file_key, data_source in data_sources.items():
+                    data = data_source['data']
+                    chunksize = data_source['chunksize']
+                    source_type = data_source['source_type']
+                    
+                    print(f"Uploading data source with file key: {file_key}")
+                    if source_type == 'df':
+                        print("Uploading from DataFrame")
+                        future = upload_executor.submit(self.upload_df, df = data, 
+                                                                        load = load, 
+                                                                        file_key = file_key, 
+                                                                        modify_lambda = modify_lambda
+                                                )
+                                                
+                    elif source_type == 'file':
+                        future = upload_executor.submit(self.upload_file, file = data,
+                                                                          load = load,
+                                                                          file_key = file_key,
+                                                                          modify_lambda = modify_lambda,
+                                                                          chunksize = chunksize
+                                                )
+                    
+                    upload_executors.append(future)
 
-                    # Commit load
-                    print(f"Uploads completed.  Committing load with the following checksums: {check_sum}")
-                    load.commit(check_sum = check_sum)
-                    updated_load_status = load.get_load_info()
-                    print(str(load_status))
-                    self.uploads[table_name]['load_status'] = updated_load_status
+                for ex in as_completed(upload_executors):
+                    try:
+                        print(ex.result())
+                    except Exception as e:
+                        print(f"Error with data source: {e}.  ")
+                    # End of uploads 
+
+            # Commit load
+            print(f"Uploads completed.  Committing load with the following checksums: {check_sum}")
+            load.commit(check_sum = check_sum)
+            updated_load_status = load.get_load_info()
+            print(str(load_status))
+            self.uploads[table_name]['load_status'] = updated_load_status
+
+    def execute_multiple_uploads(
+        self,
+        table_names: str,
+        max_workers: int = 5
+    ):
+        for table_name in table_names:
+            self.execute_upload(
+                table_name = table_name,
+                max_workers = max_workers
+            )
 
     def execute_all_uploads(self) -> dict:
-        lake_tables = [table_name for table_name in self.uploads.keys()]
-        self.execute_uploads(lake_tables = lake_tables)
+        table_names = [table_name for table_name in self.uploads.keys()]
+        self.execute_multiple_uploads(table_names = table_names)
 
     def get_load_info(self, max_workers = 5):
         with ThreadPoolExecutor(max_workers=max_workers) as status_executor:
-            load_info = {table_name: status_executor.submit(upload['load'].get_load_info()) for table_name, upload in self.uploads.items()}
+            load_info = {table_name: status_executor.submit(upload['load'].get_load_info) for table_name, upload in self.uploads.items()}
+            for table_name, ex in zip(load_info.keys(), as_completed(load_info.values())):
+                try:
+                    load_info[table_name] = ex.result()
+                    self.uploads[table_name]['load_status'] = ex.result()
+                except Exception as e:
+                    print(f"Error getting load {self.uploads[table_name]['load'].load_id}: {e}")
         
         return load_info
         
@@ -761,7 +823,11 @@ class DashBulkUploader():
         if modify_lambda:
             modify_lambda(df)
 
-        df.columns = [column.lower().replace(' ', '_').replace('__', '_') for column in df.columns]
+        if not file_key:
+            file_key = self.create_file_key()
+
+        df.columns = [re.sub(r'\s+', '_', column.lower()) for column in df.columns]
+
         response = load.upload(
             data = df,
             file_key = file_key
@@ -774,12 +840,16 @@ class DashBulkUploader():
         file: Union[str, io.BytesIO],
         load: Load,
         file_key: str = None,
-        modify_lambda: callable = None,
-        chunksize: int = None
+        modify_lambda: Callable = None,
+        chunksize: int = None,
+        max_workers: int = 5
     ):
         responses = []
         if not chunksize:
             chunksize = self.default_chunksize
+
+        if not file_key:
+            file_key = self.create_file_key()
         
         print(f"Uploading csv file: {file}")
 
@@ -799,20 +869,22 @@ class DashBulkUploader():
         
         try:
             i = 1
-            if file_key:
-                file_key_to_use = file_key + f"_{i}"
-            else:
-                file_key_to_use = None
-            
-            for chunk in func_to_use(file, chunksize=chunksize, dtype=object):
-                response = self.upload_df(
-                    df=chunk,
-                    load=load,
-                    file_key=file_key_to_use, # Need separate file keys to avoid overwriting previous keys
-                    modify_lambda=modify_lambda
-                )
-                i += 1
-                responses.append(response)
+            file_key_to_use = file_key + f"_{i}"
+            chunk_futures = []
+            with ThreadPoolExecutor() as chunk_ex: # Is it a good idea to use threads here also?  There will essentially be "Nested" threads?  How will that affect performance?
+
+                for chunk in func_to_use(file, chunksize=chunksize, dtype=object):
+                    future = chunk_ex.submit(self.upload_df,
+                                             df=chunk,
+                                             load=load,
+                                             file_key=file_key_to_use,
+                                             modify_lambda=modify_lambda
+                                            )
+                    chunk_futures.append(future)
+                    i += 1
+                
+                for future in as_completed(chunk_futures):
+                    responses.append(future.result())
 
         except Exception as e:
             raise ValueError(f"Error when uploading chunk: {e}")
@@ -1113,7 +1185,8 @@ def read_and_upload_file_to_dash(
             path_to_output_for_dryrun = path_to_output_for_dryrun,
             service_client_id = service_client_id
         )
-
+        return responses
+    
     elif data_model_version == 'v2':
         track_rows_uploaded = not check_sum
             
@@ -1136,11 +1209,11 @@ def read_and_upload_file_to_dash(
         )
 
         print("Uploader")
-        uploader.execute_uploads(lake_tables = [dash_table], on_fail = 'END', max_workers = 1) # Only need 1 workers as there is only 1 file.
+        uploader.execute_upload(table_name = dash_table, max_workers = 1) # Only need 1 workers as there is only 1 file.
         
         print(f"Upload completed and commit initiated")
 
-    return uploader
+        return uploader
 
 class Migration():
     """
