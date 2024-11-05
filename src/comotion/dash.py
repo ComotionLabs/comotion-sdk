@@ -115,9 +115,12 @@ class Load():
     Initialising this class starts a Load on Comotion Dash and stores the
     resulting load_id in `load_id`
 
-    If you wish to work with an existing load, then supply load_id only the load_id parameter
+    If you wish to work with an existing load, then supply only the load_id parameter
 
-    Example of upload with a Load instance: 
+    Example of upload with a Load instance:
+    
+    .. code-block:: python
+
         load = Load(config = DashConfig(Auth('orgname')), 
                     table_name = 'v1_inforce_policies', 
                     load_as_service_client_id = '0') # Create the load
@@ -276,7 +279,9 @@ class Load():
         file : Union[str, io.FileIO]
             The file to be uploaded. This can be a file path (str) or a file object (io.FileIO).
         file_key : str, optional
-            The key (path) under which the file will be stored in the S3 bucket. If not provided, it will be generated.
+            Optional custom key for the file. This will ensure idempotence.
+            If multiple files are uploaded to the same load with the same file_key,
+            only the last one will be pushed to the lake. Must be lowercase and can include underscores.
         file_upload_response : FileUploadResponse, optional
             An instance of FileUploadResponse containing the presigned URL and AWS credentials. If not provided, it will be generated.
 
@@ -291,8 +296,10 @@ class Load():
 
         Example:
         -------
-        >>> load = Load(dashconfig)
-        >>> load.upload(data = 'path/to/file.parquet', file_key='my_file_id')
+        .. code-block:: python
+
+        load = Load(dashconfig)
+        load.upload(data = 'path/to/file.parquet', file_key='my_file_id')
         """
         if isinstance(data, pd.DataFrame):
             df = data
@@ -707,7 +714,10 @@ class DashBulkUploader():
         data : Union[str, pd.DataFrame]
             The data to be added. Can be a path to a file or directory, or a pandas DataFrame.
         file_key : str, optional
-            A unique key for the file being added. If not provided, a key will be generated.  This is ignored if a directory is provided as data.
+            Optional custom key for the file. This will ensure idempotence. Must be lowercase and can include underscores.
+            If not provided, a random file key will be generated using DashBulkUploader.create_file_key().
+            If a directory is provided as the source of data, file_key is ignored and a random file key is generated for each file in the directory.
+            If multiple files are uploaded to the same load with the same file_key, only the last one will be pushed to the lake. 
         chunksize : int, optional
             The size of data chunks to be uploaded. If not provided, the default chunksize is used.
         source_type : str, optional
@@ -809,7 +819,7 @@ class DashBulkUploader():
     def execute_upload(
         self,
         table_name: str,
-        max_workers: int = 5
+        max_workers: int = None
     ) -> None:
         """
         Executes the upload process for a specified lake table. This function uses multi-threading
@@ -819,8 +829,8 @@ class DashBulkUploader():
         ----------
         table_name : str
             The name of the lake table to which data will be uploaded.
-        max_workers : int, default 5
-            The maximum number of threads to use for concurrent uploads.
+        max_workers : int
+            The maximum number of threads to use for concurrent uploads (passed to concurrent.futures.ThreadPoolExecutor)
 
         Raises
         ------
@@ -883,7 +893,7 @@ class DashBulkUploader():
     def execute_multiple_uploads(
         self,
         table_names: List[str],
-        max_workers: int = 5
+        max_workers: int = None
     ):
         """
             Uses execute_upload function for each table_name in the table_names list provided.
@@ -904,7 +914,7 @@ class DashBulkUploader():
         table_names = [table_name for table_name in self.uploads.keys()]
         self.execute_multiple_uploads(table_names = table_names)
 
-    def get_load_info(self, max_workers: int = 5):
+    def get_load_info(self, max_workers: int = None):
         """
         Retrieves the load information for all loads created. This function uses multi-threading
         to concurrently fetch the load status for each table.  This also updates the load_status for each 
@@ -912,8 +922,8 @@ class DashBulkUploader():
 
         Parameters
         ----------
-        max_workers : int, default 5
-            The maximum number of threads to use for concurrent status retrieval.
+        max_workers : int, default None
+            The maximum number of threads to use for concurrent status retrieval (passed to concurrent.futures.ThreadPoolExecutor)
 
         Returns
         -------
@@ -992,7 +1002,7 @@ class DashBulkUploader():
         file_key: str = None,
         modify_lambda: Callable = None,
         chunksize: int = None,
-        max_workers: int = 5,
+        max_workers: int = None,
         **pd_read_kwargs
     ):
         """
@@ -1012,7 +1022,7 @@ class DashBulkUploader():
         chunksize : int, optional
             The size of data chunks to be uploaded. If not provided, the default chunksize is used.
         max_workers : int, default 5
-            The maximum number of threads to use for concurrent uploads.
+            The maximum number of threads to use for concurrent uploads (passed to concurrent.futures.ThreadPoolExecutor)
         **pd_read_kwargs
             Additional keyword arguments to pass to the pandas read function (e.g., `pd.read_csv` or `pd.read_parquet`).
             Note that filepath_or_buffer, chunksize and dtype are passed by default and so duplicating those here could cause issues.
@@ -1130,7 +1140,7 @@ class DashBulkUploader():
             service_client_id: str
                 (optional)
                 if specified, specifies the service client for the upload. See the dash documentation for an explanation of service client.
-
+                https://docs.comotion.us/Comotion%20Dash/Analysts/How%20To/Prepare%20Your%20Data%20Model/Y%20Service%20Client%20and%20Row%20Level%20Security.html#service-client-and-row-level-security
             Returns
             -------
             List
@@ -1315,12 +1325,15 @@ def read_and_upload_file_to_dash(
     service_client_id : str, optional
         If specified, specifies the service client for the upload. See the Dash documentation for an explanation
         of the service client.
+        https://docs.comotion.us/Comotion%20Dash/Analysts/How%20To/Prepare%20Your%20Data%20Model/Y%20Service%20Client%20and%20Row%20Level%20Security.html#service-client-and-row-level-security
     partitions : Optional[List[str]], optional
         List of partitions for the load.
     load_type : str, default 'APPEND_ONLY'
         The type of load operation. Default is 'APPEND_ONLY'.
     data_model_version : str, optional
         The data model version to use for the upload. If not specified, the function will determine the version.
+        If the migration status for the org is 'Completed', v2 is the model version.  Otherwise, v1 is the model version.
+        data_model_version only needs be specified in exceptional circumstances where there are issues determining the migration status.
     entity_type : str, default Auth.USER
         The entity type for authentication.
     application_client_id : str, optional
@@ -1403,7 +1416,7 @@ def read_and_upload_file_to_dash(
             chunksize=chunksize
         )
 
-        uploader.execute_upload(table_name=dash_table, max_workers=1)  # Only need 1 worker as there is only 1 file.
+        uploader.execute_upload(table_name=dash_table)  # Only need 1 worker as there is only 1 file.
         
         print("Upload completed and commit initiated")
 
