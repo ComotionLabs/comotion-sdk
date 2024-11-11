@@ -60,8 +60,6 @@ class OIDCredirectHandler(BaseHTTPRequestHandler):
             data=payload
         )
 
-        json_response = json.loads(str(response.text))
-
         try:
             json_response = json.loads(response.text)
         except json.JSONDecodeError:
