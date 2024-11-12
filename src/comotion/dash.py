@@ -14,7 +14,7 @@ import logging
 import boto3
 import awswrangler as wr
 import re
-
+import uuid
 try:
     import cx_Oracle
     import sqlalchemy
@@ -107,6 +107,191 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
 
         self._check_and_refresh_token()
         return super().auth_settings()
+
+class Query():
+    """
+    The query object starts and tracks a query on Comotion Dash.
+
+    Initialising this class runs a query on Comotion Dash and stores the
+    resulting query id in `query_id`
+
+    """
+
+    COMPLETED_STATES = ['SUCCEEDED', 'CANCELLED', 'FAILED']
+    SUCCEEDED_STATE = 'SUCCEEDED'
+
+    def __init__(
+        self,
+        config: DashConfig,
+        query_text: str = None,
+        query_id: str = None
+    ):
+        """
+        Parameters
+        ----------
+        query_text : str
+            sql of the query to run
+        config : DashConfig
+            Object of type DashConfig including configuration details
+        query_id : str, optional
+            Query id of existing query.  If not provided, then a new query will be started on Dash
+
+        Raises
+        ------
+        TypeError
+            If config is not of type DashConfig
+
+        ValueError
+            if one of query_id or query_text is not provided
+
+        """
+
+        if not(isinstance(config, DashConfig)):
+            raise TypeError("config must be of type comotion.dash.DashConfig")
+
+        with comodash_api_client_lowlevel.ApiClient(config) as api_client:
+            self.query_api_instance = QueriesApi(api_client)
+            if query_id:
+                # query_info = self.query_api_instance.get_query(query_id)
+                self.query_id = query_id
+                # self.query_text = query_info.query
+            elif query_text:
+                self.query_text = query_text
+                query_text_model = QueryText(query=query_text)
+                try:
+                    query_id_model = self.query_api_instance.run_query(query_text_model) # noqa
+                except comodash_api_client_lowlevel.exceptions.BadRequestException as exp:
+                    raise ValueError(json.loads(exp.body)['message'])
+                    
+                self.query_id = query_id_model.query_id
+            else:
+                raise ValueError("One of query_id or query_text must be provided")
+
+    def get_query_info(self) -> QueryInfo:
+        """Gets the state of the query.
+
+        Returns
+        -------
+        QueryInfo
+            Model containing all query info, with the following attributes
+
+            `query`
+                query sql
+            `query_id`
+                query_id of query
+            `status`
+                `completion_date_time`
+                    GMT Completion Time
+                `state`
+                    Current state of query. One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED
+                `stateChangeReason`
+                    info about reason for state change (generally failure)
+                submission_date_time`
+                    GMT submission time
+
+        """
+        try:
+            return self.query_api_instance.get_query(self.query_id)
+        except comodash_api_client_lowlevel.exceptions.NotFoundException as exp:
+            raise ValueError("query_id cannot be found")
+
+    def state(self) -> str:
+        """Gets the state of the query.
+
+        Returns
+        -------
+        str
+            One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED
+        """
+        return self.get_query_info().status.state
+
+    def is_complete(self) -> bool:
+        """Indicates whether the query is in a final state.
+        This means it has either succeeded, failed or been cancelled.
+
+        Returns
+        -------
+        bool
+            Whether query complete
+        """
+        return self.state() in Query.COMPLETED_STATES
+
+    def wait_to_complete(self) -> bool:
+        """Blocks until query is in a complete state
+
+        Returns
+        -------
+        str
+            Final state, one of 'SUCCEEDED', 'CANCELLED', 'FAILED'
+        """
+
+        while True:
+            query_info = self.get_query_info()
+            if query_info.status.state in Query.COMPLETED_STATES:
+                return query_info
+            time.sleep(5)
+
+    def query_id(self) -> str:
+        """Returns query id for this query
+        """
+        return self.query_id
+
+    def get_csv_for_streaming(self) -> HTTPResponse:
+        """ Returns a ``urllib3.response.HTTPResponse`` object that can be used for streaming
+            This allows use of the downloaded file without having to save
+            it to local storage.
+
+            Be sure to use ``.release_conn()`` when completed to ensure that the
+            connection is released
+
+            This can be achieved using the `with` notation e.g.::
+
+                with query.get_csv_for3_streaming().stream() as stream:
+                  for chunk in stream:
+                      # do somthing with chunk
+                      # chunk is a byte array ``
+        """
+        response = self.query_api_instance.download_csv_without_preload_content(
+            query_id=self.query_id)
+        response.autoclose = False
+        return response
+
+    def download_csv(self, output_file_path, fail_if_exists=False):
+        """Download csv of results and check that the total file size is correct
+
+        Parameters
+        ----------
+        output_file_path : File path
+            Path of the file to output to
+        fail_if_exists : bool, optional
+            If true, then will fail if the target file name already/
+            Defaults to false.
+
+        Raises
+        ------
+        IncompleteRead
+            If only part of the file is downloaded, this is raised
+        """
+
+        with self.get_csv_for_streaming() as response:
+            write_mode = "wb"
+            if fail_if_exists:
+                write_mode = "xb"
+            with io.open(output_file_path, write_mode) as f:
+                size = 0
+                content_length = (response.getheader('Content-Length'))
+                for chunk in response.stream(1048576):
+                    size = size + len(chunk)
+                    f.write(chunk)
+                if (response.tell() != int(content_length)):
+                    raise IncompleteRead(
+                        response.tell(),
+                        int(content_length) - response.tell()
+                    )
+
+    def stop(self):
+        """ Stop the query"""
+        return self.query_api_instance.stop_query(self.query_id)
 
 class Load():
     """
@@ -325,11 +510,12 @@ class Load():
         if self.modify_lambda:
             self.modify_lambda(data)
 
-        data.columns = [re.sub(r'\s+', '_', column.lower()) for column in data.columns] # Replace spaces with underscores in column names
+        exclude_columns = ['dash$load_id']
+        data.columns = [re.sub(r'\s+', '_', column.lower()) for column in data.columns if column not in exclude_columns] # Replace spaces with underscores in column names
 
         table = pa.Table.from_pandas(data)
 
-        parquet_buffer = io.BytesIO()
+        parquet_buffer = io.BytesIO() 
         pq.write_table(table, parquet_buffer)
         parquet_buffer.seek(0)
 
@@ -458,6 +644,79 @@ class Load():
         print("All chunks uploaded successfully")
 
         return responses
+    
+    def upload_dash_query(
+        self,
+        data: Query,
+        file_key: str = None,
+        max_workers: int = None,
+        **pd_read_kwargs
+    ):
+        """
+        Uploads the result of a dash.Query() object to the specified lake table, or a local file if path_to_output_for_dryrun was specified.
+        The result is read into a pandas DataFrame and uploaded with the Load.upload_df() function.
+        Note an index is added to the end of the file key to uniquely identify chunks uploaded.
+
+        Parameters
+        ----------
+        data : Query
+            The Query whose result is to be uploaded.
+        file_key : str, optional
+            A unique key for the file being uploaded. If not provided, a key will be generated.
+        max_workers : int, optional
+            The maximum number of threads to use for concurrent uploads (passed to concurrent.futures.ThreadPoolExecutor)
+        **pd_read_kwargs
+            Additional keyword arguments to pass to the pandas read_csv function.
+            Note that filepath_or_buffer, chunksize and dtype are passed by default and so duplicating those here could cause issues.
+
+        Returns
+        -------
+        List[Any]
+            A list of responses from the load upload API call for each chunk.
+
+        Raises
+        ------
+        ValueError
+            If an error occurs during the upload of any chunk or during the Query.
+        """
+        responses = []
+        
+        print(f"Uploading Query with ID: {data.query_id}")
+
+        if not file_key:
+            file_key = self.create_file_key()
+        
+        try:
+            i = 1
+            chunk_futures = []
+            data.wait_to_complete()
+
+            print(f"Query completed with state: {data.state()}")
+
+            if data.state() == data.SUCCEEDED_STATE:
+                with ThreadPoolExecutor(max_workers=max_workers) as chunk_ex:  # Using threads for concurrent chunk uploads
+
+                    for chunk in pd.read_csv(data.get_csv_for_streaming(), chunksize=self.chunksize, dtype=object, **pd_read_kwargs):
+                        file_key_to_use = file_key + f"_{i}"
+                        future = chunk_ex.submit(self.upload_df,
+                                                data=chunk,
+                                                file_key=file_key_to_use,
+                                                modify_lambda=self.modify_lambda)
+                        chunk_futures.append(future)
+                        i += 1
+                    
+                    for future in as_completed(chunk_futures):
+                        responses.append(future.result())
+            else:
+                print(f"Query Status: {data.get_query_info().status}")
+                print("Please resolve query before re-attempting the upload.")
+
+        except Exception as e:
+            raise ValueError(f"Error when uploading chunk: {e}")
+            
+        print("All chunks uploaded successfully")
+
+        return responses
              
     def commit(self, check_sum: Optional[Dict[str, Union[int, float, str]]] = None):
         """
@@ -496,207 +755,15 @@ class Load():
         load_commit = comodash_api_client_lowlevel.LoadCommit(check_sum=check_sum)
         return self.load_api_instance.commit_load(self.load_id, load_commit)
 
-    def create_file_key(self, length = 10) -> str:
+    def create_file_key(self) -> str:
         """Used to create a random, valid file key with specified length."""
-    # Ensure length is reasonable
-        if length < 2:
-            raise ValueError("Length must be at least 2")
-
-        # Generate the first character(s): letters or underscore
-        start = random.choice(string.ascii_lowercase + "_")
+            # Generate a UUID
+        raw_uid = str(uuid.uuid4())  # Example UID: 'c4ca4238-a0b9-41b6-92d3-bf8bf236f4fc'
         
-        # Generate the middle characters: letters, digits, or underscore
-        middle = ''.join(random.choices(string.ascii_lowercase + string.digits + "_", k=length - 2))
-        
-        # Generate the last character: letters or digits
-        end = random.choice(string.ascii_lowercase + string.digits)
-        
-        return start + middle + end
+        # Replace non-alphanumeric characters with underscores
+        file_key = re.sub(r'[^a-zA-Z0-9]', '_', raw_uid)
+        return file_key
     
-class Query():
-    """
-    The query object starts and tracks a query on Comotion Dash.
-
-    Initialising this class runs a query on Comotion Dash and stores the
-    resulting query id in `query_id`
-
-    """
-
-    COMPLETED_STATES = ['SUCCEEDED', 'CANCELLED', 'FAILED']
-
-    def __init__(
-        self,
-        config: DashConfig,
-        query_text: str = None,
-        query_id: str = None
-    ):
-        """
-        Parameters
-        ----------
-        query_text : str
-            sql of the query to run
-        config : DashConfig
-            Object of type DashConfig including configuration details
-        query_id : str, optional
-            Query id of existing query.  If not provided, then a new query will be started on Dash
-
-        Raises
-        ------
-        TypeError
-            If config is not of type DashConfig
-
-        ValueError
-            if one of query_id or query_text is not provided
-
-        """
-
-        if not(isinstance(config, DashConfig)):
-            raise TypeError("config must be of type comotion.dash.DashConfig")
-
-        with comodash_api_client_lowlevel.ApiClient(config) as api_client:
-            self.query_api_instance = QueriesApi(api_client)
-            if query_id:
-                # query_info = self.query_api_instance.get_query(query_id)
-                self.query_id = query_id
-                # self.query_text = query_info.query
-            elif query_text:
-                self.query_text = query_text
-                query_text_model = QueryText(query=query_text)
-                try:
-                    query_id_model = self.query_api_instance.run_query(query_text_model) # noqa
-                except comodash_api_client_lowlevel.exceptions.BadRequestException as exp:
-                    raise ValueError(json.loads(exp.body)['message'])
-                    
-                self.query_id = query_id_model.query_id
-            else:
-                raise ValueError("One of query_id or query_text must be provided")
-
-    def get_query_info(self) -> QueryInfo:
-        """Gets the state of the query.
-
-        Returns
-        -------
-        QueryInfo
-            Model containing all query info, with the following attributes
-
-            `query`
-                query sql
-            `query_id`
-                query_id of query
-            `status`
-                `completion_date_time`
-                    GMT Completion Time
-                `state`
-                    Current state of query. One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED
-                `stateChangeReason`
-                    info about reason for state change (generally failure)
-                submission_date_time`
-                    GMT submission time
-
-        """
-        try:
-            return self.query_api_instance.get_query(self.query_id)
-        except comodash_api_client_lowlevel.exceptions.NotFoundException as exp:
-            raise ValueError("query_id cannot be found")
-
-    def state(self) -> str:
-        """Gets the state of the query.
-
-        Returns
-        -------
-        str
-            One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED
-        """
-        return self.get_query_info().status.state
-
-    def is_complete(self) -> bool:
-        """Indicates whether the query is in a final state.
-        This means it has either succeeded, failed or been cancelled.
-
-        Returns
-        -------
-        bool
-            Whether query complete
-        """
-        return self.state() in Query.COMPLETED_STATES
-
-    def wait_to_complete(self) -> bool:
-        """Blocks until query is in a complete state
-
-        Returns
-        -------
-        str
-            Final state, one of 'SUCCEEDED', 'CANCELLED', 'FAILED'
-        """
-
-        while True:
-            query_info = self.get_query_info()
-            if query_info.status.state in Query.COMPLETED_STATES:
-                return query_info
-            time.sleep(5)
-
-    def query_id(self) -> str:
-        """Returns query id for this query
-        """
-        return self.query_id
-
-    def get_csv_for_streaming(self) -> HTTPResponse:
-        """ Returns a ``urllib3.response.HTTPResponse`` object that can be used for streaming
-            This allows use of the downloaded file without having to save
-            it to local storage.
-
-            Be sure to use ``.release_conn()`` when completed to ensure that the
-            connection is released
-
-            This can be achieved using the `with` notation e.g.::
-
-                with query.get_csv_for3_streaming().stream() as stream:
-                  for chunk in stream:
-                      # do somthing with chunk
-                      # chunk is a byte array ``
-        """
-        response = self.query_api_instance.download_csv_without_preload_content(
-            query_id=self.query_id)
-        response.autoclose = False
-        return response
-
-    def download_csv(self, output_file_path, fail_if_exists=False):
-        """Download csv of results and check that the total file size is correct
-
-        Parameters
-        ----------
-        output_file_path : File path
-            Path of the file to output to
-        fail_if_exists : bool, optional
-            If true, then will fail if the target file name already/
-            Defaults to false.
-
-        Raises
-        ------
-        IncompleteRead
-            If only part of the file is downloaded, this is raised
-        """
-
-        with self.get_csv_for_streaming() as response:
-            write_mode = "wb"
-            if fail_if_exists:
-                write_mode = "xb"
-            with io.open(output_file_path, write_mode) as f:
-                size = 0
-                content_length = (response.getheader('Content-Length'))
-                for chunk in response.stream(1048576):
-                    size = size + len(chunk)
-                    f.write(chunk)
-                if (response.tell() != int(content_length)):
-                    raise IncompleteRead(
-                        response.tell(),
-                        int(content_length) - response.tell()
-                    )
-
-    def stop(self):
-        """ Stop the query"""
-        return self.query_api_instance.stop_query(self.query_id)
-
 class DashBulkUploader():
     """
     Class to handle multiple loads with utility functions by leveraging the Load class.
@@ -829,7 +896,7 @@ class DashBulkUploader():
     def add_data_to_load(
         self,
         table_name: str,
-        data: Union[str, pd.DataFrame],
+        data: Union[str, pd.DataFrame, Query],
         file_key: str = None,
         source_type: str = None
     ) -> None:
@@ -841,8 +908,8 @@ class DashBulkUploader():
         ----------
         table_name : str
             The name of the lake table to which data will be added.  A load should already be added for this table_name.
-        data : Union[str, pd.DataFrame]
-            The data to be added. Can be a path to a file or directory, or a pandas DataFrame.
+        data : Union[str, pd.DataFrame, Query]
+            The data to be added. Can be a path to a file or directory, a pandas DataFrame or a dash.Query().  See Load for how different upload types will be executed.
         file_key : str, optional
             Optional custom key for the file. This will ensure idempotence. Must be lowercase and can include underscores.
             If not provided, a random file key will be generated using DashBulkUploader.create_file_key().
@@ -878,12 +945,14 @@ class DashBulkUploader():
         if not source_type:
             if isinstance(data, pd.DataFrame):
                 source_type = 'df'
+            elif isinstance(data, Query):
+                source_type = 'query'
             elif isdir(data):
                 source_type = 'dir'
             elif isfile(data):
                 source_type = 'file'
             else:
-                raise ValueError("Source type could not be identified. Please fix datasource or specify the source_type as ['df', 'dir', 'file']")
+                raise ValueError("Source type could not be identified. Please fix datasource or specify the source_type as ['df', 'dir', 'file', 'query']")
 
         if source_type == 'dir':
             print(f"Unpacking data sources in directory: {data}")
@@ -971,7 +1040,6 @@ class DashBulkUploader():
             with ThreadPoolExecutor(max_workers=max_workers) as upload_executor:  # Use multi-threading to speed up uploads
                 for file_key, data_source in data_sources.items():
                     data = data_source['data']
-                    chunksize = data_source['chunksize']
                     source_type = data_source['source_type']
                     
                     print(f"Uploading data source with file key: {file_key}")
@@ -979,15 +1047,20 @@ class DashBulkUploader():
                         print("Uploading from DataFrame")
                         future = upload_executor.submit(load.upload_df, 
                                                         data=data, 
-                                                        load=load, 
+                                                        file_key=file_key
+                                                        )
+                    elif source_type == 'query':
+                        print(f"Uploading Query with ID: {data.query_id}")
+                        futurue = upload_executor.submit(
+                                                        load.upload_dash_query,
+                                                        data=data,
                                                         file_key=file_key
                                                         )
                     elif source_type == 'file':
                         future = upload_executor.submit(load.upload_file, 
                                                         data=data,
-                                                        load=load,
-                                                        file_key=file_key,
-                                                        chunksize=chunksize)
+                                                        file_key=file_key
+                                                        )
                     
                     upload_futures.append(future)
 
@@ -995,11 +1068,11 @@ class DashBulkUploader():
                     try:
                         f.result()
                     except Exception as e:
-                        print(f"Error uploading data source: {e}.")
+                        raise ValueError(f"Error uploading data source: {e}.  Load not yet committed.")
                     # End of uploads 
 
             # Commit load
-            print(f"Uploads completed. Committing load with the following checksums: {check_sum}")
+            print(f"All uploads completed. Committing load with the following checksums: {check_sum}")
             load.commit(check_sum=check_sum)
             updated_load_status = load.get_load_info()
             self.uploads[table_name]['load_status'] = updated_load_status
@@ -1383,14 +1456,14 @@ def read_and_upload_file_to_dash(
             load_as_service_client_id=service_client_id,
             partitions=partitions,
             track_rows_uploaded=track_rows_uploaded,
-            path_to_output_for_dryrun=path_to_output_for_dryrun
+            path_to_output_for_dryrun=path_to_output_for_dryrun,
+            chunksize=chunksize
         )
         
         uploader.add_data_to_load(
             table_name=dash_table,
             data=file,
-            file_key=file_key,
-            chunksize=chunksize
+            file_key=file_key
         )
 
         uploader.execute_upload(table_name=dash_table)
