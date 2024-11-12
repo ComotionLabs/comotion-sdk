@@ -525,6 +525,8 @@ class Load():
         if not isinstance(file_upload_response, FileUploadResponse):
             raise ValueError("file_upload_response should be a valid instance of FileUploadResponse.")
         else:
+            bucket = file_upload_response.bucket
+            key = file_upload_response.path 
             # Upload to s3 if not a dry-run
             if not self.path_to_output_for_dryrun:
                 s3_file_name = basename(file_upload_response.path)
@@ -535,8 +537,6 @@ class Load():
                     aws_secret_access_key=file_upload_response.sts_credentials['SecretAccessKey'],
                     aws_session_token=file_upload_response.sts_credentials['SessionToken']
                 )
-                bucket = file_upload_response.bucket
-                key = file_upload_response.path 
 
                 # Upload the Parquet buffer as a chunk to S3
                 print(f"Uploading to S3: {s3_file_name}")
@@ -630,8 +630,7 @@ class Load():
                     file_key_to_use = file_key + f"_{i}"
                     future = chunk_ex.submit(self.upload_df,
                                             data=chunk,
-                                            file_key=file_key_to_use,
-                                            modify_lambda=self.modify_lambda)
+                                            file_key=file_key_to_use)
                     chunk_futures.append(future)
                     i += 1
                 
@@ -700,8 +699,7 @@ class Load():
                         file_key_to_use = file_key + f"_{i}"
                         future = chunk_ex.submit(self.upload_df,
                                                 data=chunk,
-                                                file_key=file_key_to_use,
-                                                modify_lambda=self.modify_lambda)
+                                                file_key=file_key_to_use)
                         chunk_futures.append(future)
                         i += 1
                     
@@ -758,10 +756,10 @@ class Load():
     def create_file_key(self) -> str:
         """Used to create a random, valid file key with specified length."""
             # Generate a UUID
-        raw_uid = str(uuid.uuid4())  # Example UID: 'c4ca4238-a0b9-41b6-92d3-bf8bf236f4fc'
+        raw_uid = str(uuid.uuid4())
         
         # Replace non-alphanumeric characters with underscores
-        file_key = re.sub(r'[^a-zA-Z0-9]', '_', raw_uid)
+        file_key = 'x_' + re.sub(r'[^a-zA-Z0-9]', '_', raw_uid) # Add initial x_ underscore in case uid starts with integer
         return file_key
     
 class DashBulkUploader():
@@ -1072,8 +1070,10 @@ class DashBulkUploader():
                     # End of uploads 
 
             # Commit load
-            print(f"All uploads completed. Committing load with the following checksums: {check_sum}")
-            load.commit(check_sum=check_sum)
+            if not load.path_to_output_for_dryrun:
+                print(f"All uploads completed. Committing load with the following checksums: {check_sum}")
+                load.commit(check_sum=check_sum)
+                
             updated_load_status = load.get_load_info()
             self.uploads[table_name]['load_status'] = updated_load_status
 
@@ -1467,8 +1467,6 @@ def read_and_upload_file_to_dash(
         )
 
         uploader.execute_upload(table_name=dash_table)
-        
-        print("Upload completed and commit initiated")
 
         return uploader
 
