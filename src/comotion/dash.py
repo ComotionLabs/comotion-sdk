@@ -340,7 +340,7 @@ class Load():
             track_rows_uploaded: bool = None,
             path_to_output_for_dryrun: str = None,
             modify_lambda: Callable = None,
-            chunksize: int = 30000
+            chunksize: int = None
     ):
         """
         Parameters
@@ -409,7 +409,10 @@ class Load():
             self.rows_uploaded = 0
             self.path_to_output_for_dryrun = path_to_output_for_dryrun
             self.modify_lambda = modify_lambda
-            self.chunksize = chunksize
+            if not chunksize:
+                self.chunksize = 30000
+            else:
+                self.chunksize = chunksize
 
     def get_load_info(self) -> LoadInfo:
         """Gets the state of the load
@@ -1136,7 +1139,6 @@ class DashBulkUploader():
         return load_info
 
 def v1_upload_csv(
-        self,
         file: Union[str, io.FileIO],
         dash_table: str,
         dash_orgname: str,
