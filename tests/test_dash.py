@@ -173,6 +173,9 @@ class TestDashModuleLoadClass(unittest.TestCase):
         # Create a Load instance without running its __init__ method
         from comotion.dash import Load
         mock_load = Load()
+        mock_load.track_rows_uploaded = MagicMock(return_value=False)
+        mock_load.rows_uploaded = MagicMock(return_value = 0)
+
         # Manually set necessary attributes
         mock_load.load_api_instance = MagicMock()
         mock_load.load_id = '123'
