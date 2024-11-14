@@ -6,6 +6,7 @@ from comotion import dash
 from comotion.dash import DashConfig, Auth
 import requests
 import io
+import pandas as pd
 
 import unittest
 from unittest.mock import MagicMock, patch
@@ -13,7 +14,8 @@ from comodash_api_client_lowlevel.models.query import Query as QueryInfo
 from comodash_api_client_lowlevel.models.query_id import QueryId
 from comodash_api_client_lowlevel.models.query_text import QueryText
 from comodash_api_client_lowlevel.models.query_status import QueryStatus
-from comotion.dash import Query, DashConfig
+from comotion.dash import Query, DashConfig, DashBulkUploader, Load
+from comodash_api_client_lowlevel.models.load import Load as LoadInfo
 from comodash_api_client_lowlevel.models.file_upload_response import FileUploadResponse
 from urllib3.response import HTTPResponse
 
@@ -733,6 +735,126 @@ class TestDashConfig(unittest.TestCase):
         # Check jwt.decode was called with the correct token
         mock_jwt_decode.assert_called_with('unexpected_payload_token', options={"verify_signature": False})
 
+class TestDashBulkUploader(unittest.TestCase):
+
+    def setUp(self):
+        self.mock_auth = Mock(spec=Auth)
+        self.mock_auth.orgname = 'test_org'
+        self.mock_auth.get_access_token.return_value = 'new_token'
+        self.uploader = DashBulkUploader(auth_token=self.mock_auth)
+
+    def test_add_load(self):
+        table_name = 'test_table'
+        check_sum = {'count(*)': 100}
+        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
+
+        self.assertIn(table_name, self.uploader.uploads)
+        self.assertEqual(self.uploader.uploads[table_name]['check_sum'], check_sum)
+        self.assertIsInstance(self.uploader.uploads[table_name]['load'], Load)
+
+    def test_add_load_with_invalid_table_name(self):
+        with self.assertRaises(ValueError):
+            self.uploader.add_load(table_name='Test_Table', check_sum={'count(*)': 100})
+
+    def test_add_load_without_checksum_or_tracking(self):
+        with self.assertRaises(KeyError):
+            self.uploader.add_load(table_name='test_table')
+
+    def test_add_data_to_load(self):
+        table_name = 'test_table'
+        check_sum = {'count(*)': 100}
+        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
+
+        data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+        self.uploader.add_data_to_load(table_name=table_name, data=data)
+
+        self.assertIn('data_sources', self.uploader.uploads[table_name])
+        self.assertEqual(len(self.uploader.uploads[table_name]['data_sources']), 1)
+
+    def test_add_data_to_load_with_invalid_table_name(self):
+        with self.assertRaises(ValueError):
+            self.uploader.add_data_to_load(table_name='non_existent_table', data=pd.DataFrame())
+
+    def test_remove_data_from_load(self):
+        table_name = 'test_table'
+        check_sum = {'count(*)': 100}
+        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
+
+        data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+        self.uploader.add_data_to_load(table_name=table_name, data=data, file_key='test_key')
+
+        self.uploader.remove_data_from_load(table_name=table_name, file_key='test_key')
+        self.assertNotIn('test_key', self.uploader.uploads[table_name]['data_sources'])
+
+    def test_remove_load(self):
+        table_name = 'test_table'
+        check_sum = {'count(*)': 100}
+        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
+
+        self.uploader.remove_load(table_name=table_name)
+        self.assertNotIn(table_name, self.uploader.uploads)
+
+    @patch('comotion.dash.ThreadPoolExecutor')
+    def test_execute_upload(self, mock_executor):
+        table_name = 'test_table'
+        check_sum = {'count(*)': 100}
+        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
+
+        data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+        self.uploader.add_data_to_load(table_name=table_name, data=data, file_key='test_key')
+
+        mock_future = Mock()
+        mock_future.result.return_value = None
+        mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
+
+        self.uploader.execute_upload(table_name=table_name)
+        mock_executor.return_value.__enter__.return_value.submit.assert_called()
+
+    @patch('comotion.dash.ThreadPoolExecutor')
+    def test_execute_multiple_uploads(self, mock_executor):
+        table_names = ['test_table1', 'test_table2']
+        check_sum = {'count(*)': 100}
+        for table_name in table_names:
+            self.uploader.add_load(table_name=table_name, check_sum=check_sum)
+            data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+            self.uploader.add_data_to_load(table_name=table_name, data=data, file_key='test_key')
+
+        mock_future = Mock()
+        mock_future.result.return_value = None
+        mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
+
+        self.uploader.execute_multiple_uploads(table_names=table_names)
+        mock_executor.return_value.__enter__.return_value.submit.assert_called()
+
+    @patch('comotion.dash.ThreadPoolExecutor')
+    def test_execute_all_uploads(self, mock_executor):
+        table_names = ['test_table1', 'test_table2']
+        check_sum = {'count(*)': 100}
+        for table_name in table_names:
+            self.uploader.add_load(table_name=table_name, check_sum=check_sum)
+            data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+            self.uploader.add_data_to_load(table_name=table_name, data=data, file_key='test_key')
+
+        mock_future = Mock()
+        mock_future.result.return_value = None
+        mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
+
+        self.uploader.execute_all_uploads()
+        mock_executor.return_value.__enter__.return_value.submit.assert_called()
+
+    @patch('comotion.dash.ThreadPoolExecutor')
+    def test_get_load_info(self, mock_executor):
+        table_name = 'test_table'
+        check_sum = {'count(*)': 100}
+        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
+
+        mock_future = Mock()
+        mock_future.result.return_value = LoadInfo(load_status='OPEN')
+        mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
+
+        load_info = self.uploader.get_load_info()
+        self.assertIn(table_name, load_info)
+        self.assertEqual(load_info[table_name].load_status, 'OPEN')
     
 if __name__ == '__main__':
     unittest.main()
