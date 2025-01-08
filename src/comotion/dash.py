@@ -148,8 +148,9 @@ class Query():
 
         if not(isinstance(config, DashConfig)):
             raise TypeError("config must be of type comotion.dash.DashConfig")
-
-        with comodash_api_client_lowlevel.ApiClient(config) as api_client:
+        
+        self.config = config
+        with comodash_api_client_lowlevel.ApiClient(self.config) as api_client:
             self.query_api_instance = QueriesApi(api_client)
             if query_id:
                 # query_info = self.query_api_instance.get_query(query_id)
@@ -166,6 +167,30 @@ class Query():
                 self.query_id = query_id_model.query_id
             else:
                 raise ValueError("One of query_id or query_text must be provided")
+
+    def refresh_api_instance(self):
+            auth_token = self.config.auth
+            orgname = auth_token.orgname
+            entity_type = auth_token.entity_type
+
+            if entity_type == Auth.APPLICATION:
+                application_client_id = auth_token.application_client_id
+                application_client_secret = auth_token.application_client_secret
+            else:
+                application_client_id = None
+                application_client_secret = None
+            
+            self.config = DashConfig(
+                Auth(
+                    orgname=orgname,
+                    entity_type=entity_type,
+                    application_client_id=application_client_id,
+                    application_client_secret=application_client_secret
+                )
+            )
+            with comodash_api_client_lowlevel.ApiClient(self.config) as api_client:
+                # Create an instance of the API class with provided parameters
+                self.query_api_instance = QueriesApi(api_client)  
 
     def get_query_info(self) -> QueryInfo:
         """Gets the state of the query.
@@ -191,6 +216,7 @@ class Query():
 
         """
         try:
+            self.refresh_api_instance()
             return self.query_api_instance.get_query(self.query_id)
         except comodash_api_client_lowlevel.exceptions.NotFoundException as exp:
             raise ValueError("query_id cannot be found")
@@ -251,6 +277,7 @@ class Query():
                       # do somthing with chunk
                       # chunk is a byte array ``
         """
+        self.refresh_api_instance()
         response = self.query_api_instance.download_csv_without_preload_content(
             query_id=self.query_id)
         response.autoclose = False
@@ -291,6 +318,7 @@ class Query():
 
     def stop(self):
         """ Stop the query"""
+        self.refresh_api_instance()
         return self.query_api_instance.stop_query(self.query_id)
 
 class Load():
@@ -376,43 +404,70 @@ class Load():
         if not(isinstance(config, DashConfig)):
             raise TypeError("config must be of type comotion.dash.DashConfig")
         
+        self.config = config
+        
         with comodash_api_client_lowlevel.ApiClient(config) as api_client:
             # Create an instance of the API class with provided parameters
             self.load_api_instance = LoadsApi(api_client)
 
-            if (load_id is not None):
-                # if load_id provided, then initialise this object with the provided load_id
-                self.load_id = load_id
-                for key,value in load_data.items():
-                    if key not in  ['load_id', 'config', 'self']:
-                        if value is not None:
-                            raise TypeError("if load_id is supplied, then only the config parameter and no others should be supplied.")
-            else:
-                # Enter a context with an instance of the API client
-                lowerlevel_load_kwargs = {
-                        key: value
-                        for key, value in load_data.items()
-                        if key in lowerlevel_load_keys
-                }
+        if (load_id is not None):
+            # if load_id provided, then initialise this object with the provided load_id
+            self.load_id = load_id
+            for key,value in load_data.items():
+                if key not in  ['load_id', 'config', 'self']:
+                    if value is not None:
+                        raise TypeError("if load_id is supplied, then only the config parameter and no others should be supplied.")
+        else:
+            # Enter a context with an instance of the API client
+            lowerlevel_load_kwargs = {
+                    key: value
+                    for key, value in load_data.items()
+                    if key in lowerlevel_load_keys
+            }
 
-                load = comodash_api_client_lowlevel.Load(**lowerlevel_load_kwargs)
+            load = comodash_api_client_lowlevel.Load(**lowerlevel_load_kwargs)
 
-                # Create a new load
-                load_id_model = self.load_api_instance.create_load(load)
-                self.load_id = load_id_model.load_id
+            # Create a new load
+            load_id_model = self.load_api_instance.create_load(load)
+            self.load_id = load_id_model.load_id
 
-            if track_rows_uploaded:
-                self.track_rows_uploaded = track_rows_uploaded
-            else:
-                self.track_rows_uploaded = False
+        if track_rows_uploaded:
+            self.track_rows_uploaded = track_rows_uploaded
+        else:
+            self.track_rows_uploaded = False
 
-            self.rows_uploaded = 0
-            self.path_to_output_for_dryrun = path_to_output_for_dryrun
-            self.modify_lambda = modify_lambda
-            if not chunksize:
-                self.chunksize = 30000
-            else:
-                self.chunksize = chunksize
+        self.rows_uploaded = 0
+        self.path_to_output_for_dryrun = path_to_output_for_dryrun
+        self.modify_lambda = modify_lambda
+        if not chunksize:
+            self.chunksize = 30000
+        else:
+            self.chunksize = chunksize
+
+    def refresh_api_instance(self):
+        auth_token = self.config.auth
+        orgname = auth_token.orgname
+        entity_type = auth_token.entity_type
+
+        if entity_type == Auth.APPLICATION:
+            application_client_id = auth_token.application_client_id
+            application_client_secret = auth_token.application_client_secret
+        else:
+            application_client_id = None
+            application_client_secret = None
+        
+        self.config = DashConfig(
+            Auth(
+                orgname=orgname,
+                entity_type=entity_type,
+                application_client_id=application_client_id,
+                application_client_secret=application_client_secret
+            )
+        )
+        with comodash_api_client_lowlevel.ApiClient(self.config) as api_client:
+            # Create an instance of the API class with provided parameters
+            self.load_api_instance = LoadsApi(api_client)  
+
 
     def get_load_info(self) -> LoadInfo:
         """Gets the state of the load
@@ -430,6 +485,7 @@ class Load():
                 Detailed error messages if the load status is FAIL.
 
         """
+        self.refresh_api_instance()
         return self.load_api_instance.get_load(self.load_id)
 
     def generate_presigned_url_for_file_upload(self, file_key: str = None) -> FileUploadResponse:
@@ -464,6 +520,7 @@ class Load():
         if file_key:
             file_upload_request = FileUploadRequest(file_key=file_key)
 
+        self.refresh_api_instance()
         return self.load_api_instance.generate_presigned_url_for_file_upload(self.load_id, file_upload_request=file_upload_request)
         
     def upload_df(self, 
@@ -754,6 +811,7 @@ class Load():
             check_sum["count(*)"] = self.rows_uploaded
             
         load_commit = comodash_api_client_lowlevel.LoadCommit(check_sum=check_sum)
+        self.refresh_api_instance()
         return self.load_api_instance.commit_load(self.load_id, load_commit)
 
     def create_file_key(self) -> str:
@@ -1028,10 +1086,11 @@ class DashBulkUploader():
         pending_load_statuses = ['OPEN']        
 
         upload = self.uploads[table_name]
-        load_status = upload['load_status']
+        load = upload['load']
+        # Refresh load status
+        load_status = load.get_load_info().load_status
 
         if load_status in pending_load_statuses:  # Only perform upload on pending loads
-            load = upload['load']
             data_sources = upload['data_sources']
             check_sum = upload['check_sum']
             print(f"Uploading datasources to lake table: {table_name}")
@@ -1051,8 +1110,7 @@ class DashBulkUploader():
                                                         file_key=file_key
                                                         )
                     elif source_type == 'query':
-                        print(f"Uploading Query with ID: {data.query_id}")
-                        futurue = upload_executor.submit(
+                        future = upload_executor.submit(
                                                         load.upload_dash_query,
                                                         data=data,
                                                         file_key=file_key
@@ -1077,8 +1135,7 @@ class DashBulkUploader():
                 print(f"All uploads completed. Committing load with the following checksums: {check_sum}")
                 load.commit(check_sum=check_sum)
                 
-            updated_load_status = load.get_load_info()
-            self.uploads[table_name]['load_status'] = updated_load_status
+            self.uploads[table_name]['load_status'] =  load.get_load_info().load_status
 
     def execute_multiple_uploads(
         self,
@@ -1127,15 +1184,15 @@ class DashBulkUploader():
             If an error occurs while retrieving the load information for any table, it is caught
             and printed, but the function continues to retrieve the remaining load statuses.
         """
-        with ThreadPoolExecutor(max_workers=max_workers) as status_executor:
-            load_info = {table_name: status_executor.submit(upload['load'].get_load_info) for table_name, upload in self.uploads.items()}
-            for table_name, future in zip(load_info.keys(), as_completed(load_info.values())):
-                try:
-                    load_info[table_name] = future.result()
-                    self.uploads[table_name]['load_status'] = future.result()
-                except Exception as e:
-                    print(f"Error getting load {self.uploads[table_name]['load'].load_id}: {e}")
-        
+        load_info = {}
+        for table_name, upload in self.uploads.items():
+            try:
+                self.uploads[table_name]['load_status'] = upload['load'].get_load_info().load_status
+                load_info[table_name] = upload['load'].get_load_info()
+            except Exception as e:
+                print(f"Error getting load {self.uploads[table_name]['load'].load_id}: {e}")
+                self.uploads[table_name]['load_status'] = f'ERROR: {e}'
+                
         return load_info
 
 def v1_upload_csv(
