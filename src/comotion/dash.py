@@ -686,7 +686,7 @@ class Load():
             chunk_futures = []
             with ThreadPoolExecutor(max_workers=max_workers) as chunk_ex:  # Using threads for concurrent chunk uploads
 
-                for chunk in func_to_use(data, chunksize=self.chunksize, dtype=object, **pd_read_kwargs):
+                for chunk in func_to_use(data, chunksize=self.chunksize, **pd_read_kwargs):
                     file_key_to_use = file_key + f"_{i}"
                     future = chunk_ex.submit(self.upload_df,
                                             data=chunk,
