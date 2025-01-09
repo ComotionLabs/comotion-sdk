@@ -32,8 +32,7 @@ class TestDashModuleLoadClass(unittest.TestCase):
         mock_api_client_instance = mock_api_client.return_value.__enter__.return_value
         mock_loads_api_instance = mock_loads_api.return_value
         mock_load_id_model = mock_loads_api_instance.create_load.return_value
-        mock_load_id_model.load_id ='123'
-        # mock_loads_api_instance.create_load.return_value = mock_load_id_model
+        mock_load_id_model.load_id = '123'
         
         from comotion.dash import Load
         # Test valid initialization
@@ -49,6 +48,68 @@ class TestDashModuleLoadClass(unittest.TestCase):
         mock_loads_api_instance.create_load.assert_called_once_with(mock_comodash_api_client_lowlevel_load.return_value)
         self.assertIsNotNone(load)
         self.assertEqual(load.load_id, '123')
+
+    @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.LoadsApi')
+    @patch('comodash_api_client_lowlevel.Load')
+    def test_init_missing_table_name(self, mock_comodash_api_client_lowlevel_load, mock_loads_api, mock_api_client):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+
+        from comotion.dash import Load
+        # Test missing table_name
+        with self.assertRaises(ValueError):
+            Load(
+                config=mock_config,
+                load_type='APPEND_ONLY'
+            )
+
+    @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.LoadsApi')
+    @patch('comodash_api_client_lowlevel.Load')
+    def test_init_invalid_partitions(self, mock_comodash_api_client_lowlevel_load, mock_loads_api, mock_api_client):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+
+        from comotion.dash import Load
+        # Test invalid partitions
+        with self.assertRaises(ValueError):
+            Load(
+                config=mock_config,
+                load_type='APPEND_ONLY',
+                table_name='test_table',
+                partitions='invalid_partitions'
+            )
+
+    @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.LoadsApi')
+    @patch('comodash_api_client_lowlevel.Load')
+    def test_init_valid_input_with_chunksize(self, mock_comodash_api_client_lowlevel_load, mock_loads_api, mock_api_client):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+
+        # Mock the API client and LoadsApi
+        mock_api_client_instance = mock_api_client.return_value.__enter__.return_value
+        mock_loads_api_instance = mock_loads_api.return_value
+        mock_load_id_model = mock_loads_api_instance.create_load.return_value
+        mock_load_id_model.load_id = '123'
+        
+        from comotion.dash import Load
+        # Test valid initialization with chunksize
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2'],
+            chunksize=50000
+        )
+        mock_comodash_api_client_lowlevel_load.assert_called_once_with(load_type='APPEND_ONLY', table_name='test_table', load_as_service_client_id='service_client', partitions=['partition1', 'partition2'])
+        mock_loads_api.assert_called_once_with(mock_api_client_instance)
+        mock_loads_api_instance.create_load.assert_called_once_with(mock_comodash_api_client_lowlevel_load.return_value)
+        self.assertIsNotNone(load)
+        self.assertEqual(load.load_id, '123')
+        self.assertEqual(load.chunksize, 50000)
 
     @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
     @patch('comotion.dash.LoadsApi')
