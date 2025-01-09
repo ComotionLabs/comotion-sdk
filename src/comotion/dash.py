@@ -647,7 +647,8 @@ class Load():
             The maximum number of threads to use for concurrent uploads (passed to concurrent.futures.ThreadPoolExecutor)
         **pd_read_kwargs
             Additional keyword arguments to pass to the pandas read function (e.g., `pd.read_csv` or `pd.read_parquet`).
-            Note that filepath_or_buffer, chunksize and dtype are passed by default and so duplicating those here could cause issues.
+            Note that filepath_or_buffer and chunksize are passed by default and so duplicating those here could cause issues.
+            If you do not provide dtype here, dtype will be determined automatically from the first chunk of data.
 
         Returns
         -------
@@ -680,6 +681,12 @@ class Load():
         if not func_to_use:
             raise ValueError(f"Could not determine file type for datasource with the following file key: {file_key}")
         
+        # Determine the dtype for each column if not provided.  
+        # Not providing dtype can lead to issues with empty columns and chunks where dtype is determined differently to other chunks.
+        if 'dtype' not in pd_read_kwargs:
+            sample_df = func_to_use(data, nrows=self.chunksize, **pd_read_kwargs)
+            pd_read_kwargs['dtype'] = {col: dtype for col, dtype in sample_df.dtypes.items()}
+
         try:
             i = 1
             chunk_futures = []
