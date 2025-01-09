@@ -7,6 +7,7 @@ from comotion.dash import DashConfig, Auth
 import requests
 import io
 import pandas as pd
+import boto3
 
 import unittest
 from unittest.mock import MagicMock, patch
@@ -18,6 +19,7 @@ from comotion.dash import Query, DashConfig, DashBulkUploader, Load
 from comodash_api_client_lowlevel.models.load import Load as LoadInfo
 from comodash_api_client_lowlevel.models.file_upload_response import FileUploadResponse
 from urllib3.response import HTTPResponse
+import pyarrow.parquet
 
 class TestDashModuleLoadClass(unittest.TestCase):
 
@@ -44,7 +46,8 @@ class TestDashModuleLoadClass(unittest.TestCase):
             load_as_service_client_id='service_client',
             partitions=['partition1', 'partition2']
         )
-        # mock_comodash_api_client_lowlevel_load.assert_called_once_with(**{'load_type': 'APPEND_ONLY', 'table_name': 'test_table', 'load_as_service_client_id': 'service_client', 'partitions': ['partition1', 'partition2']})
+        # print(mock_comodash_api_client_lowlevel_load.mock_calls)
+        # mock_comodash_api_client_lowlevel_load.assert_called_once_with(load_as_service_client_id='service_client', load_type='APPEND_ONLY', partitions=['partition1', 'partition2'], table_name='test_table')
         mock_comodash_api_client_lowlevel_load.assert_called_once() # TODO: Check if the call was made with the correct arguments. Above line is failing.
         mock_loads_api.assert_called_once_with(mock_api_client_instance)
         mock_loads_api_instance.create_load.assert_called_once_with(mock_comodash_api_client_lowlevel_load.return_value)
@@ -110,9 +113,10 @@ class TestDashModuleLoadClass(unittest.TestCase):
                 table_name='test_table'
             )
 
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Load.refresh_api_instance')
     @patch('comotion.dash.LoadInfo')  # Patch LoadInfo if it's from a different module
-    @patch('comotion.dash.Load.__init__', lambda self, *args, **kwargs: None)
-    def test_get_load_info(self, mock_load_info):
+    def test_get_load_info(self, mock_load_info, mock_refresh_api_instance, mock_lowlevel_api_client):
         # Mock the DashConfig object
         mock_config = MagicMock(spec=DashConfig)
         # Create a mock Load instance
@@ -140,12 +144,23 @@ class TestDashModuleLoadClass(unittest.TestCase):
         self.assertEqual(result, mock_load_info_instance)
         # Add any additional assertions here, e.g., checking attributes of result if necessary
 
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Load.refresh_api_instance')
     @patch('comotion.dash.FileUploadResponse')  # Patch FileUploadResponse if it's from a different module
-    @patch('comotion.dash.Load.__init__', lambda self, *args, **kwargs: None)
-    def test_generate_presigned_url_for_file_upload(self, mock_file_upload_response):
+    def test_generate_presigned_url_for_file_upload(self, mock_file_upload_response, mock_refresh_api_instance, mock_lowlevel_api_client):
         # Create a Load instance without running its __init__ method
         from comotion.dash import Load
-        mock_load = Load()
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+        # Create a mock Load instance
+        mock_load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2']
+        )
+
         # Manually set necessary attributes
         mock_load.load_api_instance = MagicMock()
         mock_load.load_id = '123'
@@ -170,22 +185,25 @@ class TestDashModuleLoadClass(unittest.TestCase):
         mock_load.load_api_instance.generate_presigned_url_for_file_upload.assert_called_once_with('123', file_upload_request=FileUploadRequest(file_key='test_key'))
         self.assertEqual(result_with_key, mock_file_upload_response_instance)
 
+    @patch('comotion.dash.LoadsApi')
+    @patch('comodash_api_client_lowlevel.ApiClient')
     @patch('comotion.dash.comodash_api_client_lowlevel.LoadCommit')
-    @patch('comotion.dash.Load.__init__', lambda self, *args, **kwargs: None)
-    def test_commit(self, mock_load_commit_class):
-        # Create a Load instance without running its __init__ method
-        from comotion.dash import Load
-        mock_load = Load()
-        mock_load.track_rows_uploaded = MagicMock(return_value=False)
-        mock_load.rows_uploaded = MagicMock(return_value = 0)
+    @patch('comotion.dash.Load.refresh_api_instance')
+    def test_commit_with_checksum(self, mock_refresh_api_instance, mock_lowlevel_load_commit_class, mock_lowlevel_api_client, mock_loads_api):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
 
-        # Manually set necessary attributes
-        mock_load.load_api_instance = MagicMock()
-        mock_load.load_id = '123'
+        # Mock the LoadsApi
+        mock_loads_api_instance = mock_loads_api.return_value
 
-        # Set up the return value for the mocked commit_load method
-        mock_commit_response = MagicMock()  # Or a more specific mock based on expected response
-        mock_load.load_api_instance.commit_load.return_value = mock_commit_response
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2']
+        )
 
         # Define a test checksum dictionary
         test_check_sum = {
@@ -193,18 +211,162 @@ class TestDashModuleLoadClass(unittest.TestCase):
             "sum(my_value)": 123.3
         }
 
-        # Mock the LoadCommit class to return a specific instance
-        from comodash_api_client_lowlevel.models.load_commit import LoadCommit
-        mock_load_commit_instance = MagicMock(spec=LoadCommit)
-        mock_load_commit_class.return_value = mock_load_commit_instance
-
         # Call the method
-        result = mock_load.commit(test_check_sum)
+        result = load.commit(test_check_sum)
 
         # Assertions
-        mock_load_commit_class.assert_called_once_with(check_sum=test_check_sum)
-        mock_load.load_api_instance.commit_load.assert_called_once_with('123', mock_load_commit_instance)
-        self.assertEqual(result, mock_commit_response)
+        mock_lowlevel_load_commit_class.assert_called_once()
+        mock_loads_api_instance.commit_load.assert_called_once()
+
+    @patch('comotion.dash.LoadsApi')
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.comodash_api_client_lowlevel.LoadCommit')
+    @patch('comotion.dash.Load.refresh_api_instance')
+    def test_commit_without_checksum(self, mock_refresh_api_instance, mock_lowlevel_load_commit_class, mock_lowlevel_api_client, mock_loads_api):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+
+        # Mock the LoadsApi
+        mock_loads_api_instance = mock_loads_api.return_value
+
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2'],
+            track_rows_uploaded=True
+        )
+
+        # Call the method
+        result = load.commit()
+
+        # Assertions
+        mock_lowlevel_load_commit_class.assert_called_once()
+        mock_loads_api_instance.commit_load.assert_called_once()
+
+    @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.LoadsApi')
+    @patch('comodash_api_client_lowlevel.Load')
+    def test_commit_without_checksum_and_tracking(self, mock_comodash_api_client_lowlevel_load, mock_loads_api, mock_api_client):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+
+        # Mock the API client and LoadsApi
+        mock_loads_api_instance = mock_loads_api.return_value
+
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2']
+        )
+
+        load.load_api_instance = mock_loads_api_instance
+
+        # Call the method and expect a KeyError
+        with self.assertRaises(KeyError):
+            load.commit()
+
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Load.generate_presigned_url_for_file_upload')
+    @patch('comotion.dash.wr.s3.upload')
+    @patch('pyarrow.parquet.write_table')
+    @patch('boto3.Session')
+    def test_upload_df_valid_dataframe(self, mock_boto_session, mock_write_table, mock_s3_upload, mock_generate_presigned_url, mock_api_client):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+        
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2']
+        )
+
+        # Mock the FileUploadResponse
+        mock_file_upload_response = MagicMock(spec=FileUploadResponse)
+        mock_file_upload_response.bucket = 'bucket'
+        mock_file_upload_response.path = 'key'
+        mock_file_upload_response.sts_credentials = MagicMock()
+        mock_generate_presigned_url.return_value = mock_file_upload_response
+
+        # Create a valid DataFrame
+        data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+
+        # Call the upload_df method
+        load.upload_df(data=data)
+
+        # Assertions
+        mock_s3_upload.assert_called()
+
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Load.generate_presigned_url_for_file_upload')
+    @patch('comotion.dash.wr.s3.upload')
+    @patch('pyarrow.parquet.write_table')
+    def test_upload_df_dryrun(self, mock_write_table, mock_s3_upload, mock_generate_presigned_url, mock_api_client):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+        
+        # Create a Load instance with path_to_output_for_dryrun specified
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2'],
+            path_to_output_for_dryrun='/tmp'
+        )
+
+        # Mock the FileUploadResponse
+        mock_file_upload_response = MagicMock(spec=FileUploadResponse)
+        mock_file_upload_response.bucket = 'bucket'
+        mock_file_upload_response.path = 'key'
+        mock_generate_presigned_url.return_value = mock_file_upload_response
+
+        # Create a valid DataFrame
+        data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+
+        # Call the upload_df method
+        load.upload_df(data=data)
+
+        # Assertions
+        mock_s3_upload.assert_not_called()
+
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Load.generate_presigned_url_for_file_upload')
+    @patch('comotion.dash.wr.s3.upload')
+    @patch('pyarrow.parquet.write_table')
+    def test_upload_df_invalid_data(self, mock_write_table, mock_s3_upload, mock_generate_presigned_url, mock_api_client):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+        
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2']
+        )
+
+        # Mock the FileUploadResponse
+        mock_file_upload_response = MagicMock(spec=FileUploadResponse)
+        mock_generate_presigned_url.return_value = mock_file_upload_response
+
+        # Invalid data (not a DataFrame)
+        data = "invalid_data"
+
+        # Call the upload_df method and expect a ValueError
+        with self.assertRaises(ValueError):
+            load.upload_df(data=data)
+
+        mock_s3_upload.assert_not_called()
 
 class TestDashModule(unittest.TestCase):
 

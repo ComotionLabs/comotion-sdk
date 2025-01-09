@@ -468,7 +468,6 @@ class Load():
             # Create an instance of the API class with provided parameters
             self.load_api_instance = LoadsApi(api_client)  
 
-
     def get_load_info(self) -> LoadInfo:
         """Gets the state of the load
 
