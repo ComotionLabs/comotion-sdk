@@ -641,12 +641,10 @@ class TestDashModuleQueryClass(unittest.TestCase):
         # Check if the exception message is as expected
         self.assertIn("config must be of type comotion.dash.DashConfig", str(context.exception))
 
-
-
-
     @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
     @patch('comotion.dash.QueriesApi')  # Patch the QueriesApi
-    def test_get_query_info(self, mock_queries_api, mock_api_client):
+    @patch('comotion.dash.Query.refresh_api_instance')
+    def test_get_query_info(self, mock_query_refresh_api, mock_queries_api, mock_api_client):
         # Mock the DashConfig object
         mock_config = MagicMock(spec=DashConfig)
         
@@ -748,7 +746,8 @@ class TestDashModuleQueryClass(unittest.TestCase):
     
     @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
     @patch('comotion.dash.QueriesApi')
-    def test_get_csv_for_streaming(self, mock_queries_api, mock_api_client):
+    @patch('comotion.dash.Query.refresh_api_instance')
+    def test_get_csv_for_streaming(self, mock_query_refresh_api, mock_queries_api, mock_api_client):
         # Setup
         mock_config = MagicMock(spec=DashConfig)
         mock_query = Query(config=mock_config, query_text='SELECT * FROM test_table')
@@ -767,29 +766,8 @@ class TestDashModuleQueryClass(unittest.TestCase):
 
     @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
     @patch('comotion.dash.QueriesApi')
-    def test_download_csv(self, mock_queries_api, mock_api_client):
-        # Setup
-        mock_config = MagicMock(spec=DashConfig)
-        mock_query = Query(config=mock_config, query_text='SELECT * FROM test_table')
-        mock_query.query_id = '123'
-        mock_query.query_api_instance = mock_queries_api.return_value
-
-        # Mock the response from download_csv
-        mock_response = MagicMock()
-        mock_response.getheader.return_value = '100'
-        mock_response.stream.return_value = [b'data']
-        mock_response.tell.return_value = 100
-        mock_query.query_api_instance.download_csv_without_preload_content.return_value.__enter__.return_value = mock_response
-
-        # Test
-        with patch("io.open", mock_open()) as mocked_file_open:
-            mock_query.download_csv('output_file_path.csv')
-            mocked_file_open.assert_called_once_with('output_file_path.csv', 'wb')
-            mock_query.query_api_instance.download_csv_without_preload_content.assert_called_once_with(query_id='123')
-
-    @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
-    @patch('comotion.dash.QueriesApi')
-    def test_download_csv(self, mock_queries_api, mock_api_client):
+    @patch('comotion.dash.Query.refresh_api_instance')
+    def test_download_csv(self, mock_query_refresh_api, mock_queries_api, mock_api_client):
         # Setup
         mock_config = MagicMock(spec=DashConfig)
         mock_query = Query(config=mock_config, query_text='SELECT * FROM test_table')
@@ -813,7 +791,8 @@ class TestDashModuleQueryClass(unittest.TestCase):
 
     @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
     @patch('comotion.dash.QueriesApi')
-    def test_stop(self, mock_queries_api, mock_api_client):
+    @patch('comotion.dash.Query.refresh_api_instance')
+    def test_stop(self, mock_query_refresh_api, mock_queries_api, mock_api_client):
         # Setup
         mock_config = MagicMock(spec=DashConfig)
         mock_query = Query(config=mock_config, query_text='SELECT * FROM test_table')
