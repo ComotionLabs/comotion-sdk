@@ -952,7 +952,8 @@ class TestDashBulkUploader(unittest.TestCase):
         )
         self.assertNotIn('test_key', self.uploader.uploads['test_table']['data_sources'])
 
-    def test_remove_load(self):
+    @patch('comotion.dash.Load')
+    def test_remove_load(self, mock_load):
         self.uploader.add_load(
             table_name='test_table',
             check_sum={'count(*)': 100},
