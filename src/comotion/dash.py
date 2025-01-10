@@ -627,7 +627,7 @@ class Load():
         
     def upload_file(
         self,
-        data: Union[str, io.BytesIO],
+        data,
         file_key: str = None,
         max_workers: int = None,
         **pd_read_kwargs
@@ -639,16 +639,17 @@ class Load():
 
         Parameters
         ----------
-        data : Union[str, io.BytesIO]
-            The file to be uploaded. Can be a file path or a BytesIO object.
+        data : Any
+            The file to be uploaded.  This should be readable by pandas.read_csv, pandas.read_parquet, pandas.read_json or pandas.read_excel.
         file_key : str, optional
             A unique key for the file being uploaded. If not provided, a key will be generated.
         max_workers : int, optional
             The maximum number of threads to use for concurrent uploads (passed to concurrent.futures.ThreadPoolExecutor)
         **pd_read_kwargs
-            Additional keyword arguments to pass to the pandas read function (e.g., `pd.read_csv` or `pd.read_parquet`).
-            Note that filepath_or_buffer and chunksize are passed by default and so duplicating those here could cause issues.
-            If you do not provide dtype here, dtype will be determined automatically from the first chunk of data.
+            Additional keyword arguments to pass to the pandas read function (one of [pd.read_csv, pd.read_parquet, pd.read_json, pd.read_excel]).
+            You should not pass the variable pointing to the file here (e.g. filepath_or_buffer in pandas.read_csv), as this is passed in the data parameter.
+            Chunksize and nrows should also not be provided as extra parameters.
+            If you do not provide dtype, dtype will be determined automatically from the first chunk of data.
 
         Returns
         -------
@@ -661,11 +662,17 @@ class Load():
             If the file type cannot be determined or if an error occurs during the upload of any chunk.
         """
         responses = []
+
+        invalid_keys = {'filepath_or_buffer', 'chunksize', 'nrows', 'path', 'path_or_buf', 'io'}
+        provided_invalid_keys = invalid_keys.intersection(pd_read_kwargs.keys())
+        
+        if provided_invalid_keys:
+            raise ValueError(f"Do not provide the following keys: {', '.join(provided_invalid_keys)}")
         
         print(f"Uploading file: {data}")
 
         # Reading CSV in chunks, converting each to Parquet, and uploading
-        try_functions = [pd.read_csv, pd.read_parquet, pd.read_sql, pd.read_json, pd.read_excel]
+        try_functions = [pd.read_csv, pd.read_parquet, pd.read_json, pd.read_excel]
 
         if not file_key:
             file_key = self.create_file_key()
@@ -750,7 +757,13 @@ class Load():
 
         if not file_key:
             file_key = self.create_file_key()
+
+        invalid_keys = {'filepath_or_buffer', 'chunksize', 'nrows', 'path', 'path_or_buf', 'io'}
+        provided_invalid_keys = invalid_keys.intersection(pd_read_kwargs.keys())
         
+        if provided_invalid_keys:
+            raise ValueError(f"Do not provide the following keys: {', '.join(provided_invalid_keys)}")
+
         try:
             i = 1
             chunk_futures = []
@@ -759,9 +772,15 @@ class Load():
             print(f"Query completed with state: {data.state()}")
 
             if data.state() == data.SUCCEEDED_STATE:
+                # Determine the dtype for each column if not provided.  
+                # Not providing dtype can lead to issues with empty columns and chunks where dtype is determined differently to other chunks.
+                if 'dtype' not in pd_read_kwargs:
+                    sample_df = pd.read_csv(data, nrows=self.chunksize, **pd_read_kwargs)
+                    pd_read_kwargs['dtype'] = {col: dtype for col, dtype in sample_df.dtypes.items()}
+
                 with ThreadPoolExecutor(max_workers=max_workers) as chunk_ex:  # Using threads for concurrent chunk uploads
 
-                    for chunk in pd.read_csv(data.get_csv_for_streaming(), chunksize=self.chunksize, dtype=object, **pd_read_kwargs):
+                    for chunk in pd.read_csv(data.get_csv_for_streaming(), chunksize=self.chunksize, **pd_read_kwargs):
                         file_key_to_use = file_key + f"_{i}"
                         future = chunk_ex.submit(self.upload_df,
                                                 data=chunk,
