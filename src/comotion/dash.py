@@ -1019,9 +1019,9 @@ class DashBulkUploader():
         None
         """
         upload = self.uploads.get(table_name)
-        load = upload['load']
         if not upload:
             raise ValueError(f"No existing load for lake table: {table_name}. First run add_load with the table_name specified before adding data to the load.")
+        load = upload['load']
 
         if not file_key:
             file_key = load.create_file_key()

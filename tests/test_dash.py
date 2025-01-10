@@ -572,7 +572,6 @@ class TestDashModule(unittest.TestCase):
         self.assertEqual(result,request.return_value)
         raise_for_status_function.assert_called_once()
 
-
 class TestDashModuleQueryClass(unittest.TestCase):
 
     @patch('comotion.dash.comodash_api_client_lowlevel.ApiClient')
@@ -876,130 +875,131 @@ class TestDashConfig(unittest.TestCase):
         self.mock_auth.get_access_token.assert_called_once()
         # Check jwt.decode was called with the correct token
         mock_jwt_decode.assert_called_with('unexpected_payload_token', options={"verify_signature": False})
-
+        
 class TestDashBulkUploader(unittest.TestCase):
 
-    @patch('comodash_api_client_lowlevel.Load', autospec=True)
-    def setUp(self, mock_load_class):
+    def setUp(self):
         self.mock_auth = Mock(spec=Auth)
         self.mock_auth.orgname = 'test_org'
-        self.mock_auth.get_access_token.return_value = 'new_token'
         self.uploader = DashBulkUploader(auth_token=self.mock_auth)
-        self.uploader.uploads = {}
-        self.uploader.add_load_mock = Mock()
-        self.mock_load_class = mock_load_class
-        self.mock_load_class.load_id = 'mock_load_id'
-        def add_load_side_effect(table_name, check_sum = None):
-            self.uploader.uploads[table_name] = {
-                'load': self.mock_load_class,
-                'data_sources': {},
-                'check_sum': check_sum,
-                'load_status': 'OPEN'
-            }
 
-        self.uploader.add_load_mock.side_effect = add_load_side_effect
+    @patch('comotion.dash.Load')
+    def test_add_load(self, mock_load):
+        self.uploader.add_load(
+            table_name='test_table',
+            check_sum={'count(*)': 100},
+            load_as_service_client_id='service_client'
+        )
+        self.assertIn('test_table', self.uploader.uploads)
+        self.assertEqual(self.uploader.uploads['test_table']['check_sum'], {'count(*)': 100})
+        mock_load.assert_called_once()
 
-    def test_add_load(self):
-        table_name = 'test_table'
-        check_sum = {'count(*)': 100}
-        self.uploader.add_load_mock(table_name=table_name, check_sum=check_sum)
-
-        # self.mock_load_class.assert_called_once_with(
-        #     config=mock.ANY,
-        #     load_type='APPEND_ONLY',
-        #     table_name=table_name,
-        #     load_as_service_client_id=None,
-        #     partitions=None,
-        #     track_rows_uploaded=False,
-        #     path_to_output_for_dryrun=None,
-        #     modify_lambda=None,
-        #     chunksize=30000
-        # )
-
-        self.assertIn(table_name, self.uploader.uploads)
-        self.assertEqual(self.uploader.uploads[table_name]['check_sum'], check_sum)
-        self.assertIsInstance(self.uploader.uploads[table_name]['load'], self.mock_load_class)
-
-    def test_add_load_with_invalid_table_name(self):
+    def test_add_load_invalid_table_name(self):
         with self.assertRaises(ValueError):
-            self.uploader.add_load(table_name='Test_Table', check_sum={'count(*)': 100})
+            self.uploader.add_load(
+                table_name='Test_Table',
+                check_sum={'count(*)': 100}
+            )
 
-    def test_add_load_without_checksum_or_tracking(self):
-        with self.assertRaises(KeyError):
-            self.uploader.add_load(table_name='test_table')
-
-    def test_add_data_to_load(self):
-        table_name = 'test_table'
-        check_sum = {'count(*)': 100}
-        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
-
-        data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
-        self.uploader.add_data_to_load(table_name=table_name, data=data)
-
-        self.assertIn('data_sources', self.uploader.uploads[table_name])
-        self.assertEqual(len(self.uploader.uploads[table_name]['data_sources']), 1)
-
-    def test_add_data_to_load_with_invalid_table_name(self):
+    @patch('comotion.dash.Load')
+    def test_add_load_existing_table(self, mock_load):
+        self.uploader.add_load(
+                table_name='test_table',
+                check_sum={'count(*)': 100}
+            )
         with self.assertRaises(ValueError):
-            self.uploader.add_data_to_load(table_name='non_existent_table', data=pd.DataFrame())
+            self.uploader.add_load(
+                table_name='test_table',
+                check_sum={'count(*)': 100}
+            )
 
-    def test_remove_data_from_load(self):
-        table_name = 'test_table'
-        check_sum = {'count(*)': 100}
-        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
+    @patch('comotion.dash.Load')
+    def test_add_data_to_load(self, mock_load):
+        self.uploader.add_load(
+            table_name='test_table',
+            check_sum={'count(*)': 100},
+            load_as_service_client_id='service_client'
+        )
+        self.uploader.add_data_to_load(
+            table_name='test_table',
+            data=pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]}),
+            file_key='test_key'
+        )
+        self.assertIn('test_key', self.uploader.uploads['test_table']['data_sources'])
 
-        data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
-        self.uploader.add_data_to_load(table_name=table_name, data=data, file_key='test_key')
+    def test_add_data_to_load_no_existing_load(self):
+        with self.assertRaises(ValueError):
+            self.uploader.add_data_to_load(
+                table_name='test_table',
+                data=pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+            )
 
-        self.uploader.remove_data_from_load(table_name=table_name, file_key='test_key')
-        self.assertNotIn('test_key', self.uploader.uploads[table_name]['data_sources'])
+    @patch('comotion.dash.Load')
+    def test_remove_data_from_load(self, mock_load):
+        self.uploader.add_load(
+            table_name='test_table',
+            check_sum={'count(*)': 100},
+            load_as_service_client_id='service_client'
+        )
+        self.uploader.add_data_to_load(
+            table_name='test_table',
+            data=pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]}),
+            file_key='test_key'
+        )
+        self.uploader.remove_data_from_load(
+            table_name='test_table',
+            file_key='test_key'
+        )
+        self.assertNotIn('test_key', self.uploader.uploads['test_table']['data_sources'])
 
     def test_remove_load(self):
-        table_name = 'test_table'
-        check_sum = {'count(*)': 100}
-        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
-        self.uploader.remove_load(table_name=table_name)
+        self.uploader.add_load(
+            table_name='test_table',
+            check_sum={'count(*)': 100},
+            load_as_service_client_id='service_client'
+        )
+        self.uploader.remove_load('test_table')
+        self.assertNotIn('test_table', self.uploader.uploads)
 
-        self.assertNotIn(table_name, self.uploader.uploads)
+    @patch('comotion.dash.Load')
+    @patch('concurrent.futures.ThreadPoolExecutor')
+    def test_execute_upload(self, mock_executor, mock_load):
+        mock_load_instance = mock_load.return_value
+        mock_load_instance.get_load_info.return_value.load_status = 'OPEN'
 
-    def test_add_data_to_load(self):
-        table_name = 'test_table'
-        check_sum = {'count(*)': 100}
-        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
+        self.uploader.add_load(
+            table_name='test_table',
+            check_sum={'count(*)': 100},
+            load_as_service_client_id='service_client'
+        )
+        self.uploader.add_data_to_load(
+            table_name='test_table',
+            data=pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]}),
+            file_key='test_key'
+        )
+        self.uploader.execute_upload('test_table')
+        self.assertEqual(self.uploader.uploads['test_table']['load_status'], 'OPEN')
 
-        data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
-        self.uploader.add_data_to_load(table_name=table_name, data=data, file_key='test_key')
-
-        self.assertIn('test_key', self.uploader.uploads[table_name]['data'])
-
-    @patch('comotion.dash.ThreadPoolExecutor')
-    def test_execute_all_uploads(self, mock_executor):
-        table_names = ['test_table1', 'test_table2']
-        check_sum = {'count(*)': 100}
-        for table_name in table_names:
-            self.uploader.add_load(table_name=table_name, check_sum=check_sum)
-            data = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
-            self.uploader.add_data_to_load(table_name=table_name, data=data, file_key='test_key')
-
-        mock_future = Mock()
-        mock_future.result.return_value = None
-        mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
-
-        self.uploader.execute_all_uploads()
-        mock_executor.return_value.__enter__.return_value.submit.assert_called()
-
-    @patch('comotion.dash.ThreadPoolExecutor')
-    def test_get_load_info(self, mock_executor):
-        table_name = 'test_table'
-        check_sum = {'count(*)': 100}
-        self.uploader.add_load(table_name=table_name, check_sum=check_sum)
-
-        mock_future = Mock()
-        mock_future.result.return_value = LoadInfo(load_status='OPEN')
-        mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
-
+    @patch('comotion.dash.Load')
+    def test_get_load_info(self, mock_load):
+        mock_load_instance = mock_load.return_value
+        mock_load_instance.get_load_info.return_value.load_status = 'OPEN'
+        self.uploader.add_load(
+            table_name='test_table',
+            check_sum={'count(*)': 100},
+            load_as_service_client_id='service_client'
+        )
         load_info = self.uploader.get_load_info()
-        self.assertIn(table_name, load_info)
+        self.assertIn('test_table', load_info)
+        self.assertEqual(load_info['test_table'].load_status, 'OPEN')
+
+    def test_add_load_without_checksum_or_tracking(self):
+        table_name = 'test_table'
+        with self.assertRaises(KeyError):
+            self.uploader.add_load(
+                table_name=table_name,
+                load_as_service_client_id='service_client'
+            )
 
 if __name__ == '__main__':
     unittest.main()
