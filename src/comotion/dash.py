@@ -690,7 +690,7 @@ class Load():
         
         # Determine the dtype for each column if not provided.  
         # Not providing dtype can lead to issues with empty columns and chunks where dtype is determined differently to other chunks.
-        if 'dtype' not in pd_read_kwargs:
+        if not pd_read_kwargs.get('dtype'):
             sample_df = func_to_use(data, nrows=self.chunksize, **pd_read_kwargs)
             pd_read_kwargs['dtype'] = {col: dtype for col, dtype in sample_df.dtypes.items()}
 
@@ -774,7 +774,7 @@ class Load():
             if data.state() == data.SUCCEEDED_STATE:
                 # Determine the dtype for each column if not provided.  
                 # Not providing dtype can lead to issues with empty columns and chunks where dtype is determined differently to other chunks.
-                if 'dtype' not in pd_read_kwargs:
+                if not pd_read_kwargs.get('dtype'):
                     sample_df = pd.read_csv(data.get_csv_for_streaming(), nrows=self.chunksize, **pd_read_kwargs)
                     pd_read_kwargs['dtype'] = {col: dtype for col, dtype in sample_df.dtypes.items()}
 
@@ -982,7 +982,8 @@ class DashBulkUploader():
         table_name: str,
         data: Union[str, pd.DataFrame, Query],
         file_key: str = None,
-        source_type: str = None
+        source_type: str = None,
+        dtype: Any = None
     ) -> None:
         """
         Adds data to an existing load for a specified lake table. This function supports adding data
@@ -1003,8 +1004,10 @@ class DashBulkUploader():
             The type of data source. Can be 'df' for DataFrame, 'dir' for directory, or 'file' for file.
             If not specified, the function will attempt to infer the source type.
             If a directory is provided, loop through the paths in the directory from listdir() and add valid files as datasources for the lake table.
-        validate_file_extensions : bool, default False
-            Whether to validate file extensions against accepted types.  See the accepted_file_extensions class variable.
+        dtype : 
+            Will be passed into the pandas read function for the data source.  
+            If not provided, dtype will be determined automatically from the first chunk of data.
+            This is ignored if the source_type is 'df', as the dtype can be fixed in the dataframe before upload.
 
         Raises
         ------
@@ -1050,13 +1053,15 @@ class DashBulkUploader():
                         table_name=table_name, 
                         data=file,
                         file_key=None,  # File keys can't be applied to directories - individual files should be specified if this is required
-                        source_type='file'
+                        source_type='file',
+                        dtype = dtype
                     )
         else:
             
             data_source = {
                 'data': data,
-                'source_type': source_type
+                'source_type': source_type,
+                'dtype': dtype
             }
 
             upload['data_sources'][file_key] = data_source
@@ -1126,6 +1131,7 @@ class DashBulkUploader():
                 for file_key, data_source in data_sources.items():
                     data = data_source['data']
                     source_type = data_source['source_type']
+                    dtype = data_source['dtype']
                     
                     print(f"Uploading data source with file key: {file_key}")
                     if source_type == 'df':
@@ -1138,12 +1144,14 @@ class DashBulkUploader():
                         future = upload_executor.submit(
                                                         load.upload_dash_query,
                                                         data=data,
-                                                        file_key=file_key
+                                                        file_key=file_key,
+                                                        dtype = dtype
                                                         )
                     elif source_type == 'file':
                         future = upload_executor.submit(load.upload_file, 
                                                         data=data,
-                                                        file_key=file_key
+                                                        file_key=file_key,
+                                                        dtype = dtype
                                                         )
                     
                     upload_futures.append(future)
