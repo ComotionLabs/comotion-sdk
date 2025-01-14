@@ -772,16 +772,15 @@ class Load():
             print(f"Query completed with state: {data.state()}")
 
             if data.state() == data.SUCCEEDED_STATE:
-                data_stream = data.get_csv_for_streaming()
                 # Determine the dtype for each column if not provided.  
                 # Not providing dtype can lead to issues with empty columns and chunks where dtype is determined differently to other chunks.
                 if 'dtype' not in pd_read_kwargs:
-                    sample_df = pd.read_csv(data_stream, nrows=self.chunksize, **pd_read_kwargs)
+                    sample_df = pd.read_csv(data.get_csv_for_streaming(), nrows=self.chunksize, **pd_read_kwargs)
                     pd_read_kwargs['dtype'] = {col: dtype for col, dtype in sample_df.dtypes.items()}
 
                 with ThreadPoolExecutor(max_workers=max_workers) as chunk_ex:  # Using threads for concurrent chunk uploads
 
-                    for chunk in pd.read_csv(data_stream, chunksize=self.chunksize, **pd_read_kwargs):
+                    for chunk in pd.read_csv(data.get_csv_for_streaming(), chunksize=self.chunksize, **pd_read_kwargs):
                         file_key_to_use = file_key + f"_{i}"
                         future = chunk_ex.submit(self.upload_df,
                                                 data=chunk,
