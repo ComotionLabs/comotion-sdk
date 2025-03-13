@@ -9,7 +9,7 @@ Getting Started with Comotion Python SDK
 This documentation helps you get set up on and use the python Comotion SDK.  This documentation includes this getting started page, and full documentation on the sdk functions:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    comotion.dash
    comotion.auth
@@ -34,15 +34,13 @@ Uploading Data to Dash: Data Model v1
 .. note::
    Comotion has released a new version of our data model in 2025. We refer to the original version as Data Model v1, and the new version as Data Model v2.
 
-"""
-
 In order to use the SDK in your python file, you must first import it.  In these examples we will import the dash module directly as follows
 
 ::
 
    from comotion import dash
 
-The "read_and_upload_file_to_dash" function can be used to upload a csv file or stream to Data Model v1.
+The ``read_and_upload_file_to_dash`` function can be used to upload a csv file or stream to Data Model v1.
 
 Uploading a file to Dash
 ****************************
@@ -192,26 +190,30 @@ Here is an example of reading a table named ``my_table`` from a postgres databas
 Uploading Data to Dash: Data Model v2
 ####################################
 
-read_and_upload_file_to_dash
+``read_and_upload_file_to_dash``
 **************************
-The "read_and_upload_file_to_dash" function can also be used to upload to Data Model v2. Please see the section above for more information on the behaviour of this function.
+The ``read_and_upload_file_to_dash`` function can also be used to upload to Data Model v2. Please see the section above for more information on the behaviour of this function.
 
-**Note that this function will be deprecated in the future!**.  See below on the Load and DashBulkUploader classes to see the mechanism to use for uploads going forward.
+**Note that this function will be deprecated along with the v1 data model on 1 December 2025!**  See below on the ``Load`` and ``DashBulkUploader`` classes to see the mechanism to use for uploads going forward.
 
 The key considerations when uploading to the v2 data model with this function are as follows:
 
-* The file parameter can now accept a path to a csv, excel, json, parquet or directory, a pandas dataframe or a dash.Query object. If a path to a directory is provided, all compatible files in the directory will be uploaded.
-* The dash_api_key is no longer required.  Instead you will have to run the following in your command line to authenticate (more on this in the Running Queries and Extracting Data section): 
-```
-comotion authenticate
-```
-* You will need to specify the the data_model_version = 'v2' if you have not run a full migration (more on migrating below)
-* The function will return a DashBulkUploader object.
+* The ``file`` parameter can now accept a path to a csv, excel, json, parquet or directory, a ``pandas.DataFrame`` or a ``dash.Query`` object. 
+.. admonition:: tip 
+
+      If a path to a directory is specified, all valid files in the directory will be uploaded to the lake table specified.  
+      
+      This allows you to chunk files and store them in the same folder for more efficient extract and upload.
+
+* The ``dash_api_key`` is no longer required.  Instead you will have to run the following in your command line to authenticate: ``comotion authenticate``
+
+* You will need to specify the the ``data_model_version = 'v2'`` if you have not run a full migration (more on migrating below)
+* The function will return a ``DashBulkUploader`` object.
 
 DashBulkUploader
 ****************
 
-The DashBulkUploader class is the recommended way to upload data to Dash. If more control is needed over the upload process, the Load class can be used instead.
+The ``DashBulkUploader`` class is the recommended way to upload data to Dash. If more control is needed over the upload process, the ``Load`` class can be used instead.
 
 .. code-block:: python
 
@@ -219,12 +221,13 @@ The DashBulkUploader class is the recommended way to upload data to Dash. If mor
    from comotion.auth import Auth 
 
    auth_token = Auth(orgname = 'my_org_name')
-
+   my_lake_table = 'v1_policies'
    uploader = DashBulkUploader(auth_token = auth_token)
 
 You can now add a load to the uploader.
 
 .. code-block:: python
+
    uploader.add_load(
                      table_name = my_lake_table,
                      check_sum = {
@@ -234,15 +237,16 @@ You can now add a load to the uploader.
                      load_as_service_client_id = '0'
                    )
 
-This creates a Load and adds it to the uploader.uploads object.  Note that modify_lambda, path_to_output_for_dryrun and chunksize can also be specified and will behave the same as for the read_and_upload_file_to_dash function.
+This creates a Load and adds it to the ``uploader.uploads`` object.  Note that ``modify_lambda``, ``path_to_output_for_dryrun`` and ``chunksize`` can also be specified and will behave the same as for the ``read_and_upload_file_to_dash`` function.
 
-The check_sum parameter can be used to verify a load before it is pushed to the lake.  Specify a dictionary of valid check_sums as in the example above to ensure data quality and completeness. Any valid SQL aggregation can be provided in the keys, and a scalar value should be provided for the values.  You will need to calculate these check sums at source and then provide the expected result as the value.
+The ``check_sum`` parameter can be used to verify a load before it is pushed to the lake.  Specify a dictionary of valid check sums as in the example above to ensure data quality and completeness. Any valid SQL aggregation can be provided in the keys, and a scalar value should be provided for the values.  You will need to calculate these check sums at source and then provide the expected result as the value.
 
-If this is not required, you can set track_rows_uploaded = True, which will automatically create the check_sum {'count(*)': x}, where x is the number of rows in the source data. 
+If this is not required, you can set ``track_rows_uploaded = True``, which will automatically create the check_sum ``{'count(*)': x}``, where ``x`` is the number of rows in the source data. 
 
 Now we need to add a data source to the load
 
 .. code-block:: python
+
    uploader.add_data_to_load(
                               table_name = my_lake_table,
                               data = 'data/inforce_policies', # Can be a path to a csv, parquet or directory, a pandas dataframe or a dash.Query object
@@ -251,37 +255,43 @@ Now we need to add a data source to the load
 
    print(uploader.uploads) # Will print the dictionary containing loads and data sources added to the uploader.
 
-This function will add the datasource to the applicable load.  You can add multiple data sources to 1 load.  We recommend using the dtype parameter, which should be compatible with the pandas dtype argument.
+This function will add the datasource to the applicable load.  You can add multiple data sources to 1 load.  We recommend using the ``dtype`` parameter, which should be compatible with the pandas ``dtype`` argument.
 
-The file_key parameter is used to avoid duplicating a data source within a Load.  You do not need to provide this unless there is a specific reason to do so.
+The ``file_key`` parameter is used to avoid duplicating a data source within a load.  This is automatically generated if not provided.
 
-You can also use the uploader.remove_load or uploader.remove_data_from_load functions to remove loads or data sources from the uploader respectively.
+You can also use the ``uploader.remove_load()`` or ``uploader.remove_data_from_load()`` functions to remove loads or data sources from the uploader respectively.
 
-The remove_data_from_load function requires a file key to be specified, which you can get from the uploader.uploads object.
+.. admonition::  Obtaining the ``file_key`` to remove data from a load
+   
+   The ``remove_data_from_load`` function requires a file key to be specified, which you can get from the ``uploader.uploads`` object.
 
 Finally, we can execute the upload.
 
 .. code-block:: python
-   uploader.execute_upload(table_name = table_name) # Also see functions execute_multiple_uploads and execute_all_uploads.
+
+   uploader.execute_upload(table_name = my_lake_table) # Also see functions execute_multiple_uploads and execute_all_uploads.
 
 This will execute the upload. 
 
 You can also check on the load statuses at any time.
 
-:: 
+.. code-block:: python
+
    uploader.get_load_info()
 
 Load
 ****
 
-The Load class is the most flexible for uploading data to Dash.  The process can be outlined as follows
-1. Create a Load object
-2. Upload data sources to the Load 
+The ``Load`` class is the most flexible for uploading data to Dash.  The process can be outlined as follows:
+
+1. Create a ``Load`` object
+2. Upload data sources to the load 
 3. Commit the load with a valid check sum
 
-Creating the load is simple.
+Creating the ``Load`` object is simple.
 
 .. code-block:: python
+
    from comotion.dash import Load, Dashconfig 
    from comotion.auth import Auth
 
@@ -294,24 +304,26 @@ Creating the load is simple.
                # Note modify_lambda, chunksize and path_to_output_for_dryrun are also options
                )
 
-This creates a Load object.  The load_type currently only supports 'APPEND_ONLY', which means the data sources is added to the existing data in the lake table (same behaviour as before, but other upload types will be released in the future).
+This creates a ``Load`` object.  The ``load_type`` currently only supports ``APPEND_ONLY``, which means the data sources is added to the existing data in the lake table.
 
-The load_as_service_client_id parameter is not required if the service_client_id column exists in the data already. You will receive a warning when this is not specified, but it can be ignored if the service_client_id column exists in the data source.
+The ``load_as_service_client_id`` parameter is not required if the ``service_client_id`` column exists in the data already. You will receive a warning when this is not specified, but it can be ignored if the ``service_client_id`` column exists in the data source.
 
-The modify_lambda, path_to_output_for_dryrun and chunksize arguments are also available.
+The ``modify_lambda``, ``path_to_output_for_dryrun`` and ``chunksize`` arguments are also available.
 
-You can also re-create an existing load if you have the correct load_id.
+You can also re-create an existing load if you have the correct ``load_id``.
 
 .. code-block:: python 
+
    load = Load(config = DashConfig,
                load_id = 'load_id'
                )
 
-Do not specify any load_type, table_name, load_as_service_client_id or partitions if parameters if the load_id is provided.
+Do not specify any ``load_type``, ``table_name``, ``load_as_service_client_id`` or ``partitions`` if parameters if the ``load_id`` is provided.
 
 Now we can add data sources to the load.
 
 .. code-block:: python
+
    # Several examples shown for demonstration, but typically only one of these functions will be required.
 
    dtype = {'id': 'int32', 'name': 'string', 'age': 'int32', 'salary': 'float64'}
@@ -331,9 +343,10 @@ Now we can add data sources to the load.
 
 Note that a file key can be specified, but a valid file key will be generated if not provided.
 
-Uploads are always converted to a pandas.DataFrame before uploading the data.  This allows you to provide valid pandas arguments in the upload_file and upload_dash_query functions as well, e.g. for an excel spreadsheet:
+Uploads are always converted to a ``pandas.DataFrame`` before uploading the data.  This allows you to provide valid pandas arguments in the ``upload_file`` and ``upload_dash_query`` functions as well, e.g. for an excel spreadsheet:
 
 .. code-block:: python
+
    load.upload_file(
       data = path_to_upload_file,
       sheet_name = 'inforce_book',
@@ -341,24 +354,26 @@ Uploads are always converted to a pandas.DataFrame before uploading the data.  T
       # Add any more valid pandas arguments here
    )
 
-The following pandas arguments should not be provided: ['filepath_or_buffer', 'chunksize', 'nrows', 'path', 'path_or_buf', 'io']
+The following pandas arguments should not be provided: ``['filepath_or_buffer', 'chunksize', 'nrows', 'path', 'path_or_buf', 'io']``
 
 Once all your data sources are added, you can commit the load.
 
 .. code-block:: python
+
    load.commit(
       check_sum = {
          'sum(salary)': 12345
       }
    )
 
-The check_sum parameter is used to verify a load before it is pushed to the lake.  Specify a dictionary of valid check_sums as in the example above to ensure data quality and completeness. Any valid SQL aggregation can be provided in the keys, and a scalar value should be provided for the values.  You will need to calculate these check sums at source and then provide the expected result as the value.
+The ``check_sum`` parameter is used to verify a load before it is pushed to the lake.  Specify a dictionary of valid check sums as in the example above to ensure data quality and completeness. Any valid SQL aggregation can be provided in the keys, and a scalar value should be provided for the values.  You will need to calculate these check sums at source and then provide the expected result as the value.
 
-Note that in this example, a check sum is not necessarily required because we specified track_rows_uploaded = True when creating the load.  If the load had been created with track_rows_uploaded = False, a check sum is required on commit.
+Note that in this example, a check sum is not necessarily required because we specified ``track_rows_uploaded = True`` when creating the load.  If the load had been created with ``track_rows_uploaded = False``, a check sum is required on commit.
 
 You can check the status of your load at any time.
 
 .. code-block:: python
+
    load_info = load.get_load_info()
    print(load_info)
 
@@ -366,9 +381,10 @@ You can check the status of your load at any time.
 Migrating to Data Model v2
 *************************
 
-You can migrate to data model v2 with the SDK.  First you will need to run a FLASH_SCHEMA migration.
+You can migrate to data model v2 with the SDK.  First you will need to run a flash schema migration.
 
 .. code-block:: python
+
    from comotion.dash import DashConfig, Migration
    from comotion.auth import Auth
 
@@ -379,17 +395,19 @@ You can migrate to data model v2 with the SDK.  First you will need to run a FLA
 
 This copies the schema of all your lake tables from the v1 lake to the v2 lake.
 
-Now you will be able to test your ETL on the new lake, using the read_and_upload_file_to_dash function, DashBulkUploader class or Load class.
+Now you will be able to test your ETL on the new lake, using the ``read_and_upload_file_to_dash`` function, ``DashBulkUploader`` class or ``Load`` class.
 
 Once you are happy that your ETL will work with the new lake, you can run a full migration.
 
 .. code-block:: python
+
    migration.start(migration_type = 'FULL_MIGRATION',
                    clear_out_new_lake = True)
 
-This clears out the v2 lake and runs the full migration of data.  If clear_out_new_lake is false and there is data in the v2 lake, the full migration will fail.
+This clears out the v2 lake and runs the full migration of data.  If ``clear_out_new_lake`` is false and there is data in the v2 lake, the full migration will fail.
 
 Good practice when migrating would be:
+
 1. Run the flash schema migration 
 2. Test your ETL on the new lake until satisfied.
 3. Stop ETL processes to the old lake.
@@ -401,6 +419,7 @@ Once the full migration is run, you can no longer upload to the v1 lake.
 Check on the migration status at any time.
 
 .. code-block:: python
+
    print(migration.status())
    
 Running Queries and Extracting Data
@@ -419,11 +438,11 @@ In order to do this, after you have installed the SDK, you need to authenticate 
 
    > comotion authenticate
 
-You will be prompted for your `orgname` which is your orgnisation's unique name, and then a browser will open for you to login.
+You will be prompted for your ``orgname`` which is your orgnisation's unique name, and then a browser will open for you to login.
 
 Once this process is complete, the relevant keys will automatically be saved in your computers's credentials manager.
 
-To prevent asking for orgname every time, you can save your orgname as an environment variable `COMOTION_ORGNAME`
+To prevent asking for orgname every time, you can save your orgname as an environment variable ``COMOTION_ORGNAME``
 
 ::
 
@@ -476,9 +495,9 @@ We have introduced an additional method of authenticating to the Comotion API us
       
       This section deals with the scenario where the application itself is acting as the user, which is useful for various data extraction and loading scenarios.
 
-In order to use this functionality, the dash team will need to create a new `client`, and supply a client_id and secret key that will be used to authenticate.  Get in touch with dash@comotion.co.za.
+In order to use this functionality, the dash team will need to create a new ``client``, and supply a client_id and secret key that will be used to authenticate.  Get in touch with dash@comotion.co.za.
 
-Once that is done, your application can authenticate using the secret key using the `application_secret_id` and `application_client_secret` parameters, as shown in the example below.
+Once that is done, your application can authenticate using the secret key using the ``application_secret_id`` and ``application_client_secret`` parameters, as shown in the example below.
 
 .. code-block:: python
 
