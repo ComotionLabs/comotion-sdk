@@ -29,9 +29,10 @@ Install the comotion-sdk in your python environment using pip:
 
 
 Uploading Data to Dash: Data Model v1
-####################################
+######################################
 
 .. note::
+
    Comotion has released a new version of our data model in 2025. We refer to the original version as Data Model v1, and the new version as Data Model v2.
 
 In order to use the SDK in your python file, you must first import it.  In these examples we will import the dash module directly as follows
@@ -43,7 +44,7 @@ In order to use the SDK in your python file, you must first import it.  In these
 The ``read_and_upload_file_to_dash`` function can be used to upload a csv file or stream to Data Model v1.
 
 Uploading a file to Dash
-****************************
+*************************
 
 The ``read_and_upload_file_to_dash`` reads a csv file, breaks it up, gzips the files and pushes them to the Dash API.
 
@@ -107,7 +108,7 @@ Often you will want to add a column - such as an upload timestamp or batch numbe
 
 
 Testing and debugging an upload script
-**************************************
+***************************************
 
 In order to check that your script is working, you can run a dry run. This saves the files locally rather than uploading them to dash - so that you can check the result before uploading.
 ::
@@ -135,7 +136,7 @@ In order to check that your script is working, you can run a dry run. This saves
 Instead of uploading, this will output the files that would have been uploaded to ``./outputpath/``. If the file to be uplaoded is large, it will break it up and all files would be placed in the output path.
 
 Advanced usage with Pandas
-**************************
+***************************
 
 Using this sdk in conjunction with `pandas <https://pandas.pydata.org>`_ provides a powerful toolset to integrate with any source.
 
@@ -188,10 +189,11 @@ Here is an example of reading a table named ``my_table`` from a postgres databas
       )
 
 Uploading Data to Dash: Data Model v2
-####################################
+#####################################
 
 ``read_and_upload_file_to_dash``
-**************************
+********************************
+
 The ``read_and_upload_file_to_dash`` function can also be used to upload to Data Model v2. Please see the section above for more information on the behaviour of this function.
 
 **Note that this function will be deprecated along with the v1 data model on 1 December 2025!**  See below on the ``Load`` and ``DashBulkUploader`` classes to see the mechanism to use for uploads going forward.
@@ -199,7 +201,8 @@ The ``read_and_upload_file_to_dash`` function can also be used to upload to Data
 The key considerations when uploading to the v2 data model with this function are as follows:
 
 * The ``file`` parameter can now accept a path to a csv, excel, json, parquet or directory, a ``pandas.DataFrame`` or a ``dash.Query`` object. 
-.. admonition:: tip 
+
+.. admonition:: Uploading from a file directory
 
       If a path to a directory is specified, all valid files in the directory will be uploaded to the lake table specified.  
       
@@ -379,7 +382,7 @@ You can check the status of your load at any time.
 
 
 Migrating to Data Model v2
-*************************
+**************************
 
 You can migrate to data model v2 with the SDK.  First you will need to run a flash schema migration.
 

@@ -533,7 +533,7 @@ class Load():
         This is to prevent potential schema issues in the Dash lake.
 
         Parameters:
-        ----------
+        -----------
         data : pandas.DataFrame
             The DataFrame to be uploaded. This should be a pandas.DataFrame object.
         file_key : str, optional
@@ -545,16 +545,16 @@ class Load():
             See Load.generate_presigned_url_for_file_upload()
 
         Raises:
-        ------
+        -------
         ValueError
             If `file_upload_response` is not a valid instance of FileUploadResponse.
 
         Returns:
-        -------
+        --------
         None
 
         Example:
-        -------
+        --------
         .. code-block:: python
 
         load = Load(dashconfig)
@@ -856,6 +856,7 @@ class DashBulkUploader():
     Example of upload with a DashBulkUploader instance:
     
     .. code-block:: python
+
         auth_token = Auth(orgname = 'my_org_name')
 
         uploader = DashBulkUploader(auth_token = auth_token)
