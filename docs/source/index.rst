@@ -27,6 +27,7 @@ Install the comotion-sdk in your python environment using pip:
 
    pip install comotion-sdk
 
+.. _data-model-v1-upload:
 
 Uploading Data to Dash: Data Model v1
 ######################################
@@ -191,32 +192,83 @@ Here is an example of reading a table named ``my_table`` from a postgres databas
 Uploading Data to Dash: Data Model v2
 #####################################
 
+The following upload toolsets are available after :ref:`migrate-to-v2`:
+
+* ``read_and_upload_file_to_dash``: :ref:`data-model-v1-upload`
+* :ref:`dashbulkuploader`
+* :ref:`load`
+
 ``read_and_upload_file_to_dash``
 ********************************
 
-The ``read_and_upload_file_to_dash`` function can also be used to upload to Data Model v2. Please see the section above for more information on the behaviour of this function.
+.. warning:: 
 
-**Note that this function will be deprecated along with the v1 data model on 1 December 2025!**  See below on the ``Load`` and ``DashBulkUploader`` classes to see the mechanism to use for uploads going forward.
+    Comotion will deprecate the ``read_and_upload_file_to_dash`` function on 1 December 2025, along with Data Model v1.
+
+    Once you are operating in the new lake, we recommend you move to using the new :ref:`load` and :ref:`dashbulkuploader` class for uploads.  Reach out to us for assistance at dash@comotion.co.za .
+
+The ``read_and_upload_file_to_dash`` function can also be used to upload to Data Model v2.  See the above section on using this function: 
+
+* :ref:`data-model-v1-upload`.
 
 The key considerations when uploading to the v2 data model with this function are as follows:
 
 * The ``file`` parameter can now accept a path to a csv, excel, json, parquet or directory, a ``pandas.DataFrame`` or a ``dash.Query`` object. 
-
-.. admonition:: Uploading from a file directory
-
-      If a path to a directory is specified, all valid files in the directory will be uploaded to the lake table specified.  
-      
-      This allows you to chunk files and store them in the same folder for more efficient extract and upload.
-
 * The ``dash_api_key`` is no longer required.  Instead you will have to run the following in your command line to authenticate: ``comotion authenticate``
-
-* You will need to specify the the ``data_model_version = 'v2'`` if you have not run a full migration (more on migrating below)
+* You will need to specify ``data_model_version = 'v2'`` if you have not run a full migration (more on migrating below)
 * The function will return a ``DashBulkUploader`` object.
 
+Example of ETL change for Data Model v2
+***************************************
+
+**Python for v1 Upload**
+
+.. code-block:: python
+
+   from comotion.dash import read_and_upload_file_to_dash
+   from datetime import datetime
+
+   # In this example, we use the modify_lambda argument to add a column to the end of the lake table to mark the timestamp when the upload was started
+   def add_upload_timestamp(df):
+      upload_timestamp = datetime.now()
+      df['upload_timestamp'] = upload_timestamp.strftime('%Y-%m-%d %H:%M:%S')
+
+   upload_response = read_and_upload_file_to_dash(
+      file = 'path/to/file.csv',
+      dash_table = 'my_lake_table_name',
+      dash_orgname = 'my_dash_orgname',
+      dash_api_key = 'my_api_key',
+      modify_lambda = add_upload_timestamp # Function defined above
+   )
+
+**Python for v2 Upload**
+
+.. code-block:: python
+
+   from comotion.dash import read_and_upload_file_to_dash
+   from datetime import datetime
+
+   # In this example, we use the modify_lambda argument to add a column to the end of the lake table to mark the timestamp when the upload was started
+   def add_upload_timestamp(df):
+      upload_timestamp = datetime.now()
+      df['upload_timestamp'] = upload_timestamp.strftime('%Y-%m-%d %H:%M:%S')
+      df['data_import_batch'] = upload_timestamp.strftime('%Y-%m-%d') # First change: Add the data import batch column.
+
+   upload_response = read_and_upload_file_to_dash(
+      file = 'path/to/file.csv',
+      dash_table = 'my_lake_table_name',
+      dash_orgname = 'my_dash_orgname',
+      # API key is no longer required for the upload
+      modify_lambda = add_upload_timestamp, # Function defined above
+      data_model_version = 'v2' # Add this parameter to force an attempted upload to the new lake
+   )
+
+
+.. _dashbulkuploader:
 DashBulkUploader
 ****************
 
-The ``DashBulkUploader`` class is the recommended way to upload data to Dash. If more control is needed over the upload process, the ``Load`` class can be used instead.
+The ``DashBulkUploader`` class is the recommended way to upload data to Dash. If more control is needed over the upload process, the :ref:`load` class can be used instead.
 
 .. code-block:: python
 
@@ -260,6 +312,12 @@ Now we need to add a data source to the load
 
 This function will add the datasource to the applicable load.  You can add multiple data sources to 1 load.  We recommend using the ``dtype`` parameter, which should be compatible with the pandas ``dtype`` argument.
 
+.. hint::
+
+      If a path to a directory is specified, all valid files in the directory will be uploaded to the lake table specified.  
+      
+      This allows you to chunk files and store them in the same folder for more efficient extract and upload.
+
 The ``file_key`` parameter is used to avoid duplicating a data source within a load.  This is automatically generated if not provided.
 
 You can also use the ``uploader.remove_load()`` or ``uploader.remove_data_from_load()`` functions to remove loads or data sources from the uploader respectively.
@@ -282,6 +340,8 @@ You can also check on the load statuses at any time.
 
    uploader.get_load_info()
 
+
+.. _load:
 Load
 ****
 
@@ -321,7 +381,8 @@ You can also re-create an existing load if you have the correct ``load_id``.
                load_id = 'load_id'
                )
 
-Do not specify any ``load_type``, ``table_name``, ``load_as_service_client_id`` or ``partitions`` if parameters if the ``load_id`` is provided.
+.. warning::
+   Do not specify ``load_type``, ``table_name``, ``load_as_service_client_id`` or ``partitions`` if the ``load_id`` is provided. The Load object will not be created.
 
 Now we can add data sources to the load.
 
@@ -381,6 +442,7 @@ You can check the status of your load at any time.
    print(load_info)
 
 
+.. _migrate-to-v2:
 Migrating to Data Model v2
 **************************
 
