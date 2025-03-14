@@ -326,11 +326,11 @@ class Load():
     The Load object starts and tracks a multi-file load to a single lake table on Comotion Dash
 
     Initialising this class starts a Load on Comotion Dash and stores the
-    resulting load_id in `load_id`.
+    resulting `load_id`.
 
     The load then needs to be committed with valid checksums to be pushed to the lake.
 
-    If you wish to work with an existing load, then supply only the load_id parameter
+    If you wish to work with an existing load, then supply only the `load_id` parameter
 
     Example of upload with a Load instance:
     
@@ -340,6 +340,7 @@ class Load():
                     table_name = 'v1_inforce_policies', 
                     load_as_service_client_id = '0') # Create the load
         
+        print(load.load_id) # It can be useful to track these to fix 
         for file, file_key in zip(file_path_list, file_keys): # Upload files with Load object
             load.upload_file(
                 data = file,
@@ -527,9 +528,9 @@ class Load():
                 file_key: str = None,
                 file_upload_response: FileUploadResponse = None):
         """
-        Uploads a pandas DataFrame as a parquet file to an S3 bucket using a presigned URL.
-        If path_to_output_for_dryrun is specified for the load, write the file to a local directory instead.
-        Before uploading, modify_lambda is applied.  Then, column names are forced to be lowercase and spaces are replaced with underscores.
+        Uploads a `pandas.DataFrame` as a parquet file to an S3 bucket using a presigned URL.
+        If `path_to_output_for_dryrun` is specified for the load, write the file to a local directory instead.
+        Before uploading, `modify_lambda` is applied.  Then, column names are forced to be lowercase and spaces are replaced with underscores.
         This is to prevent potential schema issues in the Dash lake.
 
         Parameters:
@@ -538,7 +539,7 @@ class Load():
             The DataFrame to be uploaded. This should be a pandas.DataFrame object.
         file_key : str, optional
             Optional custom key for the file. If not provided, a random file key is created.  See Load.create_file_key().
-            This will ensure idempotence. If multiple files are uploaded to the same load with the same file_key, only the last one will be pushed to the lake. 
+            This will ensure idempotence. If multiple files are uploaded to the same load with the same `file_key`, only the last one will be pushed to the lake. 
             Must be lowercase and can include underscores.
         file_upload_response : FileUploadResponse, optional
             An instance of FileUploadResponse containing the presigned URL and AWS credentials. If not provided, it will be generated.
@@ -555,10 +556,14 @@ class Load():
 
         Example:
         --------
+
         .. code-block:: python
 
-        load = Load(dashconfig)
-        load.upload(data = 'path/to/file.parquet', file_key='my_file_id')
+            import pandas as pd
+            load = Load(dashconfig)
+            df = pd.read_parquet('path/to/file.parquet')
+            load.upload_df(data = df, file_key='my_file_id')
+
         """
         if not isinstance(data, pd.DataFrame):
             raise ValueError("data should be a valid pandas.DataFrame object")
@@ -633,14 +638,14 @@ class Load():
         **pd_read_kwargs
     ):
         """
-        Uploads a file to the lake table specified in the load, or a local file if path_to_output_for_dryrun was specified.
-        The file provided is read into a pandas DataFrame using pd_read_kwargs with an appropriate pandas function.
+        Uploads a file to the lake table specified in the load, or a local file if `path_to_output_for_dryrun` was specified.
+        The file provided is read into a `pandas.DataFrame` using `pd_read_kwargs` with an appropriate pandas function.
         Note an index is added to the end of the file key to uniquely identify chunks uploaded.
 
         Parameters
         ----------
         data : Any
-            The file to be uploaded.  This should be readable by pandas.read_csv, pandas.read_parquet, pandas.read_json or pandas.read_excel.
+            The file to be uploaded.  This should be readable by `pandas.read_csv`, `pandas.read_parquet`, `pandas.read_json` or `pandas.read_excel`.
         file_key : str, optional
             A unique key for the file being uploaded. If not provided, a key will be generated.
         max_workers : int, optional
@@ -725,8 +730,8 @@ class Load():
         **pd_read_kwargs
     ):
         """
-        Uploads the result of a dash.Query() object to the specified lake table, or a local file if path_to_output_for_dryrun was specified.
-        The result is read into a pandas DataFrame and uploaded with the Load.upload_df() function.
+        Uploads the result of a `dash.Query` object to the specified lake table, or a local file if `path_to_output_for_dryrun` was specified.
+        The result is read into a `pandas.DataFrame` and uploaded with the `Load.upload_df()` function.
         Note an index is added to the end of the file key to uniquely identify chunks uploaded.
 
         Parameters
@@ -736,9 +741,9 @@ class Load():
         file_key : str, optional
             A unique key for the file being uploaded. If not provided, a key will be generated.
         max_workers : int, optional
-            The maximum number of threads to use for concurrent uploads (passed to concurrent.futures.ThreadPoolExecutor)
+            The maximum number of threads to use for concurrent uploads (passed to `concurrent.futures.ThreadPoolExecutor`)
         **pd_read_kwargs
-            Additional keyword arguments to pass to the pandas read_csv function.
+            Additional keyword arguments to pass to the pandas function.
             Note that filepath_or_buffer, chunksize and dtype are passed by default and so duplicating those here could cause issues.
 
         Returns
@@ -805,8 +810,7 @@ class Load():
         """
         Kicks off the commit of the load. A checksum must be provided
         which is checked on the server side to ensure that the data provided
-        has integrity.  You can then use the `get_load_info` function to see
-        when it is successful.
+        has integrity.  This is automatically created if you specify `track_rows_uploaded = True` when creating the load.
 
         Parameters
         ----------
@@ -815,8 +819,8 @@ class Load():
             Checksums must be in the form of a dictionary, with presto / trino expressions
             as the key, and the expected result as the value. 
 
-            A check sum is not required if track_rows_uploaded was set to true for the load.  
-            This essentially builds the checksum {'count(*)': nrows_uploads} and adds it as an extrac checksum.
+            A check sum is not required if `track_rows_uploaded` was set to true for the load.  
+            This essentially builds the checksum `{'count(*)': nrows_uploads}` and adds it as an extrac checksum.
 
             Example:
 
@@ -850,10 +854,10 @@ class Load():
     
 class DashBulkUploader():
     """
-    Class to handle multiple loads with utility functions by leveraging the Load class.
-    Since a Load creates an upload to a lake table, DashBulkUploader allows concurrent uploads to several lake tables.
+    Class to handle multiple loads with utility functions by leveraging the `Load` class.
+    Since a `Load` creates an upload to a lake table, `DashBulkUploader` helps to manage uploads to several lake tables with 1 object.
        
-    Example of upload with a DashBulkUploader instance:
+    Example of upload with a `DashBulkUploader` instance:
     
     .. code-block:: python
 
@@ -861,7 +865,7 @@ class DashBulkUploader():
 
         uploader = DashBulkUploader(auth_token = auth_token)
 
-        # A better use would be to loop through a json config to run the following below code repeatedly.  A single upload is shown for demonstration purposes.
+        # A better use would be to loop through a config to run the following below code repeatedly.  A single upload is shown for demonstration purposes.
 
         my_lake_table = 'v1_inforce_policies'
 
@@ -910,7 +914,7 @@ class DashBulkUploader():
         """
         Creates a new load for a specified lake table. This function initializes the load
         process, ensuring that the table name is in lowercase and that a checksum or row tracking
-        is provided for data integrity. Created loads can be fetched using the DashBulkUploader().uploads class variable.
+        is provided for data integrity. Created loads can be fetched using the `DashBulkUploader.uploads` class variable.
 
         Parameters
         ----------
@@ -927,7 +931,7 @@ class DashBulkUploader():
             The service client ID to use for the load. 
             If service_client is not a field in the source data added to the load, this must be provided or the load will fail on commit.
         partitions : Optional[List[str]], optional
-            List of partitions for the load to improve query efficieny from the Dash lake.
+            List of partitions for the load to improve query efficiency from the Dash lake.
         track_rows_uploaded : bool, default False
             Whether to track the number of rows uploaded for the load.
         path_to_output_for_dryrun : str, optional
@@ -995,16 +999,16 @@ class DashBulkUploader():
         table_name : str
             The name of the lake table to which data will be added.  A load should already be added for this table_name.
         data : Union[str, pd.DataFrame, Query]
-            The data to be added. Can be a path to a file or directory, a pandas DataFrame or a dash.Query().  See Load for how different upload types will be executed.
+            The data to be added. Can be a path to a file or directory, a `pandas.DataFrame` or a `dash.Query`.  See `Load` for how different upload types will be executed.
         file_key : str, optional
             Optional custom key for the file. This will ensure idempotence. Must be lowercase and can include underscores.
-            If not provided, a random file key will be generated using DashBulkUploader.create_file_key().
-            If a directory is provided as the source of data, file_key is ignored and a random file key is generated for each file in the directory.
-            If multiple files are uploaded to the same load with the same file_key, only the last one will be pushed to the lake. 
+            If not provided, a random file key will be generated using `DashBulkUploader.create_file_key()`.
+            If a directory is provided as the source of data, `file_key` is ignored and a random file key is generated for each file in the directory.
+            If multiple files are uploaded to the same load with the same `file_key`, only the last one will be pushed to the lake. 
         source_type : str, optional
             The type of data source. Can be 'df' for DataFrame, 'dir' for directory, or 'file' for file.
             If not specified, the function will attempt to infer the source type.
-            If a directory is provided, loop through the paths in the directory from listdir() and add valid files as datasources for the lake table.
+            If a directory is provided, loop through the paths in the directory from `listdir()` and add valid files as datasources for the lake table.
         dtype : 
             Will be passed into the pandas read function for the data source.  
             If not provided, dtype will be determined automatically from the first chunk of data.
@@ -1103,7 +1107,7 @@ class DashBulkUploader():
         table_name : str
             The name of the lake table to which data will be uploaded.
         max_workers : int
-            The maximum number of threads to use for concurrent uploads (passed to concurrent.futures.ThreadPoolExecutor)
+            The maximum number of threads to use for concurrent uploads (passed to `concurrent.futures.ThreadPoolExecutor`)
 
         Raises
         ------
@@ -1177,7 +1181,7 @@ class DashBulkUploader():
         max_workers: int = None
     ):
         """
-            Uses execute_upload function for each table_name in the table_names list provided.
+            Uses execute_upload function for each table name in the list provided.
         """
         for table_name in table_names:
             try:
@@ -1195,16 +1199,10 @@ class DashBulkUploader():
         table_names = [table_name for table_name in self.uploads.keys()]
         self.execute_multiple_uploads(table_names = table_names)
 
-    def get_load_info(self, max_workers: int = None):
+    def get_load_info(self):
         """
-        Retrieves the load information for all loads created. This function uses multi-threading
-        to concurrently fetch the load status for each table.  This also updates the load_status for each 
-        table_name in the uploads class variable.
-
-        Parameters
-        ----------
-        max_workers : int, default None
-            The maximum number of threads to use for concurrent status retrieval (passed to concurrent.futures.ThreadPoolExecutor)
+        Retrieves the load information for all loads created. This also updates the load status for each 
+        Load created by the `DashBulkUploader`.
 
         Returns
         -------
