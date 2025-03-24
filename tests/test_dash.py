@@ -946,6 +946,7 @@ class TestDashBulkUploader(unittest.TestCase):
             data=pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]}),
             file_key='test_key'
         )
+        self.uploader.uploads['test_table']['load_status'] = 'OPEN'
         self.uploader.remove_data_from_load(
             table_name='test_table',
             file_key='test_key'
@@ -959,6 +960,7 @@ class TestDashBulkUploader(unittest.TestCase):
             check_sum={'count(*)': 100},
             load_as_service_client_id='service_client'
         )
+        self.uploader.uploads['test_table']['load_status'] = 'OPEN'
         self.uploader.remove_load('test_table')
         self.assertNotIn('test_table', self.uploader.uploads)
 

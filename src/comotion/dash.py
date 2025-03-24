@@ -897,7 +897,7 @@ class DashBulkUploader():
                  auth_token: Auth) -> None:
 
         self.auth_token = auth_token
-        self.pending_load_status = ['OPEN']
+        self.pending_load_statuses = ['OPEN']
         self.uploads = {}
     
     def add_load(
@@ -1098,7 +1098,7 @@ class DashBulkUploader():
             print(f"Removing {table_name} from uploads")
             self.uploads.pop(table_name)
         else:
-            print("Load has already been committed.  Please attempt to re-upload.")
+            print("Load has already been committed abd can't be removed from uploader.  Please re-create uploader if ")
     
     def execute_upload(
         self,

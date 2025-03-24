@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "d33961683fb541a2f1bb3c5af0ef28ce44947b6207e33a2acb566dd6d847e43e"
+            "sha256": "0fcb15c2bfb2da696620e34a0d9bfd0e21d2552c6debb7a1534acfe109906c6f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -680,7 +680,6 @@
                 "sha256:f486038e44caa08dbd97275a9a35a283a8f1d2f0ee60ac260a1790e76660833c",
                 "sha256:f7de08cbe5551911886d1ab60de58448c6df0f67d9feb7d1fb21e9875ef95e91"
             ],
-            "index": "pypi",
             "markers": "python_version >= '3.10'",
             "version": "==2.2.4"
         },
@@ -1059,11 +1058,11 @@
         },
         "setuptools": {
             "hashes": [
-                "sha256:583b361c8da8de57403743e756609670de6fb2345920e36dc5c2d914c319c945",
-                "sha256:67122e78221da5cf550ddd04cf8742c8fe12094483749a792d56cd669d6cf58c"
+                "sha256:1cc9b32ee94f93224d6c80193cbb768004667aa2f2732a473d6949b0236c1d4e",
+                "sha256:4321d2dc2157b976dee03e1037c9f2bc5fea503c0c47d3c9458e0e8e49e659ce"
             ],
             "markers": "python_version >= '3.9'",
-            "version": "==77.0.3"
+            "version": "==78.0.1"
         },
         "six": {
             "hashes": [
@@ -2342,7 +2341,6 @@
                 "sha256:f486038e44caa08dbd97275a9a35a283a8f1d2f0ee60ac260a1790e76660833c",
                 "sha256:f7de08cbe5551911886d1ab60de58448c6df0f67d9feb7d1fb21e9875ef95e91"
             ],
-            "index": "pypi",
             "markers": "python_version >= '3.10'",
             "version": "==2.2.4"
         },
@@ -2816,11 +2814,11 @@
         },
         "setuptools": {
             "hashes": [
-                "sha256:583b361c8da8de57403743e756609670de6fb2345920e36dc5c2d914c319c945",
-                "sha256:67122e78221da5cf550ddd04cf8742c8fe12094483749a792d56cd669d6cf58c"
+                "sha256:1cc9b32ee94f93224d6c80193cbb768004667aa2f2732a473d6949b0236c1d4e",
+                "sha256:4321d2dc2157b976dee03e1037c9f2bc5fea503c0c47d3c9458e0e8e49e659ce"
             ],
             "markers": "python_version >= '3.9'",
-            "version": "==77.0.3"
+            "version": "==78.0.1"
         },
         "setuptools-scm": {
             "hashes": [
