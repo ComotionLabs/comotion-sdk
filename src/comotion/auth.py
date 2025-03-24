@@ -60,7 +60,20 @@ class OIDCredirectHandler(BaseHTTPRequestHandler):
             data=payload
         )
 
-        json_response = json.loads(str(response.text))
+        try:
+            json_response = json.loads(response.text)
+        except json.JSONDecodeError:
+            self.error = "Trouble getting your security tokens: " + response.text
+            return
+
+        if response.status_code != 200:
+            if "error" in json_response and "error_description" in json_response:
+                self.error = json_response["error_description"]
+            else:
+                self.error = "Could not get a token for you."
+            return
+
+
         self.id_token = json_response['id_token']
 
         self.id_token_decoded = jwt.decode(
@@ -68,9 +81,12 @@ class OIDCredirectHandler(BaseHTTPRequestHandler):
             options={"verify_signature": False}
         )
 
-        self.server.como_authenticator.credentials_cache.set_refresh_token(
-            self.id_token_decoded['preferred_username'],
-            json.loads(str(response.text))['refresh_token'])
+        try:
+            self.server.como_authenticator.credentials_cache.set_refresh_token(
+                self.id_token_decoded['preferred_username'],
+                json.loads(str(response.text))['refresh_token'])
+        except CredentialsCacheException as e:
+            self.error = f"There was a problem saving your credentials: {str(e)}"
 
     # Handler for the redirect from keycloak
     def do_GET(self):
@@ -79,9 +95,13 @@ class OIDCredirectHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         if self.error is not None:
-            myheader = "There was a problem authenticating:" +self.error
+            myheader = "There was a problem authenticating you"
+            issuer_message = self.error
+            final_message = "If the issue persists, please get in touch with support"
         else:
             myheader = "Authentication complete for " + self.id_token_decoded['preferred_username']
+            issuer_message = f"Authenticated at: {self.id_token_decoded['iss']}"
+            final_message = f"Go ahead and close this window, your keys are saved in your computer's credentials manager."
         message="""
         <html>
             <head>
@@ -95,15 +115,15 @@ class OIDCredirectHandler(BaseHTTPRequestHandler):
                         <h2>
                             {myheader}
                         </h2>
-                        Authenticated at: {issuer}
+                        {issuer_message}
                         <br/>
                         <br/>
-                        Go ahead and close this window, your keys are saved in your computer's credentials manager.
+                        {final_message}
                     </center>
                 </span>
             </body>
         <html>
-        """.format(myheader=myheader, issuer=self.id_token_decoded['iss'])
+        """.format(myheader=myheader, issuer_message=issuer_message, final_message=final_message)
         self.wfile.write(bytes(message,"utf-8"))
         return
 
@@ -148,10 +168,18 @@ class PKCE():
         return PKCE(code_challenge, code_verifier)
 
 
+class CredentialsCacheException(Exception):
+    """
+    CredentialsCacheException Thrown in credential save and retrieve in classes implementing CredentialsCacheInterface
+    """
+    pass
+
 class CredentialsCacheInterface():
     """
     Interfaced to be implemented in concrete class that executes caching
     of credentials for users
+
+    Any errors in the functions should raise a CredentialsCacheException
     """
 
     def __init__(self, issuer, orgname):
@@ -209,18 +237,21 @@ class KeyringCredentialCache(CredentialsCacheInterface):
 
     def set_refresh_token(self, username, token):
         import keyring
-        # save latest username
-        keyring.set_password(
-            self._get_username_key(),
-            self.orgname,
-            username
-        )
+        try:
+            # save latest username
+            keyring.set_password(
+                self._get_username_key(),
+                self.orgname,
+                username
+            )
 
-        keyring.set_password(
-            self._get_token_key(),
-            username,
-            token
-        )
+            keyring.set_password(
+                self._get_token_key(),
+                username,
+                token
+            )
+        except keyring.errors.KeyringError as e:
+            raise CredentialsCacheException(e)
 
 class AuthException(Exception):
     """
