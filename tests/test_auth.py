@@ -27,6 +27,11 @@ class TestOIDCredirectHandler(unittest.TestCase):
             self.handler.id_token = "test_id_token"
             self.handler.id_token_decoded = {"preferred_username": "test_user", "iss": "test_issuer"}
 
+    def tearDown(self):
+        self.mock_server = None
+        self.handler = None
+
+
     @patch('requests.post')
     @patch('jwt.decode')
     def test_process_code(self, mock_jwt_decode, mock_post):
@@ -35,6 +40,7 @@ class TestOIDCredirectHandler(unittest.TestCase):
             'id_token': self.handler.id_token,
             'refresh_token': 'test_refresh_token'
         })
+        mock_response.status_code = 200
         mock_post.return_value = mock_response
         mock_jwt_decode.return_value = self.handler.id_token_decoded
 
@@ -45,6 +51,23 @@ class TestOIDCredirectHandler(unittest.TestCase):
         self.handler.server.como_authenticator.credentials_cache.set_refresh_token.assert_called_with(
             "test_user", "test_refresh_token"
         )
+
+
+
+    @patch('requests.post')
+    @patch('jwt.decode')
+    def test_process_code_fail(self, mock_jwt_decode, mock_post):
+        mock_response = MagicMock()
+        mock_response.text = json.dumps({
+            'error_message': 'this is an error message'
+        })
+        mock_response.status_code = 500
+        mock_post.return_value = mock_response
+
+        self.handler._process_code()
+        
+        mock_jwt_decode.assert_not_called()
+        self.handler.server.como_authenticator.credentials_cache.set_refresh_token.assert_not_called()
 
     def test_read_query_parameters(self):
         self.handler._read_query_parameters("code=test_code&state=test_state")
