@@ -28,6 +28,7 @@ sphinx-material = "*"
 "keyrings.cryptfile" = "*"
 build = "*"
 mock = "*"
+exceptiongroup = "*"
 
 [requires]
 python_version = "3.9"
