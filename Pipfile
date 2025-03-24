@@ -29,6 +29,7 @@ sphinx-material = "*"
 build = "*"
 mock = "*"
 exceptiongroup = "*"
+tomli = "*"
 
 [requires]
 python_version = "3.9"

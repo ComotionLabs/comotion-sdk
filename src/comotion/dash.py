@@ -897,6 +897,7 @@ class DashBulkUploader():
                  auth_token: Auth) -> None:
 
         self.auth_token = auth_token
+        self.pending_load_status = ['OPEN']
         self.uploads = {}
     
     def add_load(
@@ -1080,8 +1081,11 @@ class DashBulkUploader():
         """
             Deletes data source with specified file key for table_name from uploads class variable.
         """
-        print(f"Removing {file_key} from load for {table_name}")
-        self.uploads[table_name]['data_sources'].pop(file_key)
+        if self.uploads[table_name]['load_status'] in self.pending_load_statuses:
+            print(f"Removing {file_key} from load for {table_name}")
+            self.uploads[table_name]['data_sources'].pop(file_key)
+        else:
+            print("Load has already been committed.  Please attempt to re-upload.")
 
     def remove_load(
         self,
@@ -1090,8 +1094,11 @@ class DashBulkUploader():
         """
             Deletes load for specified table_name from uploads class variable.
         """
-        print(f"Removing {table_name} from uploads")
-        self.uploads.pop(table_name)
+        if self.uploads[table_name]['load_status'] in self.pending_load_statuses:
+            print(f"Removing {table_name} from uploads")
+            self.uploads.pop(table_name)
+        else:
+            print("Load has already been committed.  Please attempt to re-upload.")
     
     def execute_upload(
         self,
@@ -1117,15 +1124,13 @@ class DashBulkUploader():
         Returns
         -------
         None
-        """
-        pending_load_statuses = ['OPEN']        
-
+        """       
         upload = self.uploads[table_name]
         load = upload['load']
         # Refresh load status
         load_status = load.get_load_info().load_status
 
-        if load_status in pending_load_statuses:  # Only perform upload on pending loads
+        if load_status in self.pending_load_statuses:  # Only perform upload on pending loads
             data_sources = upload['data_sources']
             check_sum = upload['check_sum']
             print(f"Uploading datasources to lake table: {table_name}")
