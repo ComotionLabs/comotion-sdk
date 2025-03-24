@@ -30,6 +30,7 @@ build = "*"
 mock = "*"
 exceptiongroup = "*"
 tomli = "*"
+numpy = "*"
 
 [requires]
 python_version = "3.9"
