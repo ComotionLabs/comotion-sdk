@@ -1240,7 +1240,11 @@ def v1_upload_csv(
         path_to_output_for_dryrun: str = None,
         service_client_id: str = '0'
     ):
-        """Reads a file and uploads to dash.
+        """
+        .. Warning::
+            This function is deprecated.  Use `read_and_upload_file_to_dash` instead.
+
+        Reads a file and uploads to dash.
 
         This function will:
         - Read a csv file
@@ -1431,6 +1435,9 @@ def read_and_upload_file_to_dash(
     application_client_secret: str = None
 ) -> Union[List[Any], DashBulkUploader]:
     """
+    .. Warning::
+        This function will be deprecated on 1 December 2025.  Please Migrate and move to the Load/DashBulkUploader class before then.
+
     Reads a file and uploads it to Dash.
 
     This function will:
