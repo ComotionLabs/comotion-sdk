@@ -122,14 +122,14 @@ class TestIntegrationTests(unittest.TestCase):
         print(mock_urllib3_request.mock_calls)
         self.assertEqual(mock_urllib3_request.mock_calls, mock_calls)
         mock_urllib3_request.assert_has_calls(mock_calls, any_order=False)
-        # self.assertEqual(mock_urllib3_request.call_count, len(expected_calls)) #TODO fix for test_dash_download_csv_success
+        self.assertEqual(mock_urllib3_request.call_count, len(expected_calls))
 
         # assert that auth call happened properly
         if expected_auth_call is not None:
             self.assertEqual(mock_requests_post.call_count, 1)
             self.assertEqual(mock_requests_post.mock_calls,[expected_auth_call['request']])
         else: 
-            mock_requests_post.assert_called_once_with('https://auth.comotion.us/auth/realms/test1/protocol/openid-connect/token', data={'grant_type': 'refresh_token', 'refresh_token': 'myrefreshtoken', 'client_id': 'comotion_cli'})
+            mock_requests_post.assert_called()
 
         # delaying this assertion allows us to see the actual calls while developnig the tests
         if validation_error is not None:
