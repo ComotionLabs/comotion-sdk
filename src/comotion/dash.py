@@ -1079,13 +1079,13 @@ class DashBulkUploader():
         file_key
     ):
         """
-            Deletes data source with specified file key for table_name from uploads class variable.
+            Deletes data source with specified file key for table_name from uploads class variable if the load has not been comitted yet.
         """
         if self.uploads[table_name]['load_status'] in self.pending_load_statuses:
             print(f"Removing {file_key} from load for {table_name}")
             self.uploads[table_name]['data_sources'].pop(file_key)
         else:
-            print("Load has already been committed.  Please attempt to re-upload.")
+            raise Exception("Load has already been committed.  First run remove_load and attempt to re-upload.")
 
     def remove_load(
         self,
@@ -1093,12 +1093,9 @@ class DashBulkUploader():
     ):
         """
             Deletes load for specified table_name from uploads class variable.
-        """
-        if self.uploads[table_name]['load_status'] in self.pending_load_statuses:
-            print(f"Removing {table_name} from uploads")
-            self.uploads.pop(table_name)
-        else:
-            print("Load has already been committed abd can't be removed from uploader.  Please re-create uploader if ")
+        """ 
+        print(f"Removing {table_name} from uploads")
+        self.uploads.pop(table_name)
     
     def execute_upload(
         self,

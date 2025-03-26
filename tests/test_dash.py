@@ -6,6 +6,7 @@ from comotion import dash
 from comotion.dash import DashConfig, Auth
 import requests
 import io
+from pandas import DataFrame 
 import pandas as pd
 import boto3
 
@@ -367,6 +368,134 @@ class TestDashModuleLoadClass(unittest.TestCase):
             load.upload_df(data=data)
 
         mock_s3_upload.assert_not_called()
+
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Load.generate_presigned_url_for_file_upload')
+    @patch('comotion.dash.Load.upload_df')
+    @patch('pandas.read_excel')
+    @patch('pandas.read_json')
+    @patch('pandas.read_parquet')
+    @patch('pandas.read_csv')
+    def test_upload_file(self, mock_read_csv, mock_read_parquet, mock_read_json, mock_read_excel, mock_upload_df, mock_generate_presigned_url, mock_api_client):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+
+        # Create a Load instance
+        from comotion.dash import Load
+        chunksize = 1000
+        pd_read_options = 4
+        csv_load, parquet_load, json_load, excel_load, invalid_load = (
+                Load(
+                config=mock_config,
+                load_type='APPEND_ONLY',
+                table_name='test_table',
+                load_as_service_client_id='service_client',
+                chunksize=chunksize
+            )
+            for i in range(pd_read_options+1)
+        )
+
+        # Mock the file reading and chunking
+        mock_chunk = pd.DataFrame({'col1': [1, 2, 5, 6], 'col2': [3, 4, 7, 8]})
+        expected_dtype = {col: dtype for col, dtype in mock_chunk.dtypes.items()}
+
+        mock_read_functions = [
+            (mock_read_csv, csv_load),
+            (mock_read_parquet, parquet_load),
+            (mock_read_json, json_load),
+            (mock_read_excel, excel_load)
+        ]
+
+        for mock_read, load_instance in mock_read_functions:
+            mock_read.return_value = mock_chunk
+            load_instance.upload_file(
+            data='valid_file_path',
+            file_key='test_file_key'
+            )
+            mock_read.assert_called_with('valid_file_path', chunksize=chunksize, dtype=expected_dtype)
+
+            # Simulate an exception for the next iteration
+            mock_read.side_effect = Exception(f"An error occurred while reading the file")
+
+        self.assertEqual(mock_upload_df.call_count, pd_read_options*2)
+
+        # Assert that if all the above read methods fail, an exception is raised
+        with self.assertRaises(Exception) as context:
+            invalid_load.upload_file(
+                data='invalid_file_path',
+                file_key='test_file_key'
+            )
+
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Query.wait_to_complete')
+    @patch('comotion.dash.Query.get_csv_for_streaming')
+    @patch('comotion.dash.Load.upload_df')
+    @patch('pandas.read_csv')
+    def test_upload_dash_query_successful(
+        self, mock_read_csv, mock_upload_df, mock_get_csv_for_streaming, mock_wait_to_complete, mock_api_client
+    ):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2']
+        )
+
+        # Mock the Query object
+        mock_query = MagicMock(spec=Query)
+        mock_query.state = MagicMock(return_value=Query.SUCCEEDED_STATE)
+        mock_query.SUCCEEDED_STATE = Query.SUCCEEDED_STATE
+        mock_query.query_id = '123'
+
+        # Mock the CSV streaming response
+        mock_csv_stream = MagicMock()
+        mock_get_csv_for_streaming.return_value = mock_csv_stream
+
+        # Mock the DataFrame chunks
+        mock_chunk = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+        mock_read_csv.return_value = mock_chunk
+
+        # Call the upload_dash_query method
+        responses = load.upload_dash_query(data=mock_query, file_key='test_file_key', max_workers=1)
+
+        # Assertions
+        self.assertEqual(mock_upload_df.call_count, 2) 
+        self.assertEqual(len(responses), 2)
+
+    @patch('comotion.dash.Load.upload_df')
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Query.wait_to_complete')
+    @patch('comotion.dash.Query.state', return_value='FAILED')
+    def test_upload_dash_query_failed_query(self, mock_query_state, mock_wait_to_complete, mock_api_client, mock_upload_df):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2']
+        )
+
+        # Mock the Query object
+        mock_query = MagicMock(spec=Query)
+        mock_query.state = MagicMock(return_value='Failed', spec=callable)
+        mock_query.SUCCEEDED_STATE = Query.SUCCEEDED_STATE
+        mock_query.query_id = '123'
+
+        # Call the upload_dash_query method
+        responses = load.upload_dash_query(data=mock_query, file_key='test_file_key')
+
+        # Assertions
+        mock_upload_df.assert_not_called()
+        self.assertEqual(responses, [])
 
 class TestDashModule(unittest.TestCase):
 
@@ -963,6 +1092,25 @@ class TestDashBulkUploader(unittest.TestCase):
         self.uploader.uploads['test_table']['load_status'] = 'OPEN'
         self.uploader.remove_load('test_table')
         self.assertNotIn('test_table', self.uploader.uploads)
+
+    @patch('comotion.dash.Load')
+    def test_remove_data_from_load_when_load_status_not_open(self, mock_load):
+        self.uploader.add_load(
+            table_name='test_table',
+            check_sum={'count(*)': 100},
+            load_as_service_client_id='service_client'
+        )
+        self.uploader.add_data_to_load(
+            table_name='test_table',
+            data=pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]}),
+            file_key='test_key'
+        )
+        self.uploader.uploads['test_table']['load_status'] = 'FAILED'
+        with self.assertRaises(Exception):
+            self.uploader.remove_data_from_load(
+                table_name='test_table',
+                file_key='test_key'
+            )
 
     @patch('comotion.dash.Load')
     @patch('concurrent.futures.ThreadPoolExecutor')
