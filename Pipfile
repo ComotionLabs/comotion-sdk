@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 requests = ">=2.25.0"
-pandas = ">=1.2.0"
+pandas = "*"
 click = ">=8.0.3"
 keyring = ">=23.2.1"
 pyjwt = "*"
@@ -30,7 +30,6 @@ build = "*"
 mock = "*"
 exceptiongroup = "*"
 tomli = "*"
-pandas = "*"
 
 [requires]
 python_version = "3.9"
