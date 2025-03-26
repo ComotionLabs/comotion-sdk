@@ -9,6 +9,7 @@ import io
 from pandas import DataFrame 
 import pandas as pd
 import boto3
+import os
 
 import unittest
 from unittest.mock import MagicMock, patch
@@ -410,7 +411,7 @@ class TestDashModuleLoadClass(unittest.TestCase):
             mock_read.return_value = mock_chunk
             load_instance.upload_file(
             data='valid_file_path',
-            file_key='test_file_key'
+            # file_key='test_file_key'
             )
             mock_read.assert_called_with('valid_file_path', chunksize=chunksize, dtype=expected_dtype)
 
@@ -423,7 +424,7 @@ class TestDashModuleLoadClass(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             invalid_load.upload_file(
                 data='invalid_file_path',
-                file_key='test_file_key'
+                # file_key='test_file_key'
             )
 
     @patch('comodash_api_client_lowlevel.ApiClient')
@@ -497,6 +498,138 @@ class TestDashModuleLoadClass(unittest.TestCase):
         mock_upload_df.assert_not_called()
         self.assertEqual(responses, [])
 
+    @patch('comotion.dash.Load.create_file_key')
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Load.upload_df')
+    @patch('pandas.read_csv')
+    def test_upload_file_with_file_key(self, mock_read_csv, mock_upload_df, mock_api_client, file_key_mock):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+        chunksize = 1000
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2'],
+            chunksize=1000
+        )
+
+        # Mock the file reading and chunking
+        mock_chunk = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+        mock_read_csv.return_value = mock_chunk
+        expected_dtype = {col: dtype for col, dtype in mock_chunk.dtypes.items()}
+
+        # Call the upload_file method with a file key
+        load.upload_file(
+            data='valid_file_path',
+            file_key='test_file_key'
+        )
+
+        # Assertions
+        file_key_mock.assert_not_called()
+        mock_read_csv.assert_called_with('valid_file_path', chunksize=chunksize, dtype=expected_dtype)
+        self.assertEqual(mock_upload_df.call_count, 2)
+
+    @patch('comotion.dash.Load.create_file_key')
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Load.upload_df')
+    @patch('pandas.read_csv')
+    def test_upload_file_without_file_key(self, mock_read_csv, mock_upload_df, mock_api_client, file_key_mock):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+        chunksize = 1000
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2'],
+            chunksize=chunksize
+        )
+
+         # Mock the file reading and chunking
+        mock_chunk = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+        mock_read_csv.return_value = mock_chunk
+        expected_dtype = {col: dtype for col, dtype in mock_chunk.dtypes.items()}
+
+        # Call the upload_file method without a file key
+        load.upload_file(
+            data='valid_file_path'
+        )
+
+        # Assertions
+        file_key_mock.assert_called_once()
+        mock_read_csv.assert_called_with('valid_file_path', chunksize=chunksize, dtype=expected_dtype)
+        self.assertEqual(mock_upload_df.call_count, 2)
+
+    @patch('os.path.basename', return_value = 'valid_file_path.csv')
+    @patch('comotion.dash.Load.create_file_key')
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Load.upload_df')
+    @patch('pandas.read_csv')
+    def test_upload_file_with_use_file_name_as_key(self, mock_read_csv, mock_upload_df, mock_api_client, file_key_mock, basename_mock):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+        chunksize = 1000
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2'],
+            chunksize=chunksize
+        )
+
+        # Mock the file reading and chunking
+        mock_chunk = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+        mock_read_csv.return_value = mock_chunk
+        expected_dtype = {col: dtype for col, dtype in mock_chunk.dtypes.items()}
+        
+
+        # Call the upload_file method with use_file_name_as_key set to True
+        load.upload_file(
+            data='valid_file_path.csv',
+            use_file_name_as_key=True
+        )
+
+        # Assertions
+        basename_mock.assert_called_once()
+        file_key_mock.assert_not_called()
+        mock_read_csv.assert_called_with('valid_file_path.csv', chunksize=chunksize, dtype=expected_dtype)
+        self.assertEqual(mock_upload_df.call_count, 2)
+
+    @patch('comodash_api_client_lowlevel.ApiClient')
+    @patch('comotion.dash.Load.upload_df')
+    @patch('pandas.read_csv')
+    def test_upload_file_with_file_key_and_use_file_name_as_key(self, mock_read_csv, mock_upload_df, mock_api_client):
+        # Mock the DashConfig object
+        mock_config = MagicMock(spec=DashConfig)
+
+        # Create a Load instance
+        load = Load(
+            config=mock_config,
+            load_type='APPEND_ONLY',
+            table_name='test_table',
+            load_as_service_client_id='service_client',
+            partitions=['partition1', 'partition2']
+        )
+
+        # Mock the file reading and chunking
+        mock_chunk = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+        mock_read_csv.return_value = mock_chunk
+
+        # Call the upload_file method with both file_key and use_file_name_as_key
+        with self.assertRaises(Exception):
+            load.upload_file(
+                data='valid_file_path.csv',
+                file_key='test_file_key',
+                use_file_name_as_key=True
+            )
+        
 class TestDashModule(unittest.TestCase):
 
     @mock.patch('comotion.dash.create_gzipped_csv_stream_from_df')

@@ -634,6 +634,7 @@ class Load():
         self,
         data,
         file_key: str = None,
+        use_file_name_as_key: bool = False,
         max_workers: int = None,
         **pd_read_kwargs
     ):
@@ -648,6 +649,8 @@ class Load():
             The file to be uploaded.  This should be readable by `pandas.read_csv`, `pandas.read_parquet`, `pandas.read_json` or `pandas.read_excel`.
         file_key : str, optional
             A unique key for the file being uploaded. If not provided, a key will be generated.
+        use_file_name_as_key : bool, optional
+            If True, the file name will be used as the file key. If False, a random key will be generated. Will throw an error when this is True and a file key is provided.
         max_workers : int, optional
             The maximum number of threads to use for concurrent uploads (passed to concurrent.futures.ThreadPoolExecutor)
         **pd_read_kwargs
@@ -679,7 +682,13 @@ class Load():
         # Reading CSV in chunks, converting each to Parquet, and uploading
         try_functions = [pd.read_csv, pd.read_parquet, pd.read_json, pd.read_excel]
 
-        if not file_key:
+        if file_key and use_file_name_as_key:
+            raise Exception("Cannot provide a file key when use_file_name_as_key is True")
+        elif file_key and not use_file_name_as_key:
+            pass # To be explicit only
+        elif use_file_name_as_key and not file_key:
+            file_key = os.path.basename(data).split('.')[0] # Remove file extension
+        elif not use_file_name_as_key and not file_key:
             file_key = self.create_file_key()
         
         for func in try_functions:
@@ -1244,7 +1253,7 @@ def v1_upload_csv(
         .. Warning::
             This function is deprecated.  Use `read_and_upload_file_to_dash` instead.
 
-        Reads a file and uploads to dash.
+        Reads a file and uploads it to Dash.
 
         This function will:
         - Read a csv file
