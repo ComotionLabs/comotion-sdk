@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 requests = ">=2.25.0"
-pandas = ">=1.2.0"
+pandas = "*"
 click = ">=8.0.3"
 keyring = ">=23.2.1"
 pyjwt = "*"
@@ -27,9 +27,11 @@ sphinx-material = "*"
 "keyrings.cryptfile" = "*"
 build = "*"
 mock = "*"
+exceptiongroup = "*"
+tomli = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"
 
 [scripts]
 test = "pytest"
