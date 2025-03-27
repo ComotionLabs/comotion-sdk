@@ -525,8 +525,7 @@ class Load():
         
     def upload_df(self, 
                 data: pd.DataFrame, 
-                file_key: str = None,
-                file_upload_response: FileUploadResponse = None):
+                file_key: str = None):
         """
         Uploads a `pandas.DataFrame` as a parquet file to an S3 bucket using a presigned URL.
         If `path_to_output_for_dryrun` is specified for the load, write the file to a local directory instead.
@@ -538,17 +537,9 @@ class Load():
         data : pandas.DataFrame
             The DataFrame to be uploaded. This should be a pandas.DataFrame object.
         file_key : str, optional
-            Optional custom key for the file. If not provided, a random file key is created.  See Load.create_file_key().
+            Optional custom key for the file to be. If not provided, a random file key is created.  See Load.create_file_key().
             This will ensure idempotence. If multiple files are uploaded to the same load with the same `file_key`, only the last one will be pushed to the lake. 
             Must be lowercase and can include underscores.
-        file_upload_response : FileUploadResponse, optional
-            An instance of FileUploadResponse containing the presigned URL and AWS credentials. If not provided, it will be generated.
-            See Load.generate_presigned_url_for_file_upload()
-
-        Raises:
-        -------
-        ValueError
-            If `file_upload_response` is not a valid instance of FileUploadResponse.
 
         Returns:
         --------
@@ -583,8 +574,7 @@ class Load():
         pq.write_table(table, parquet_buffer)
         parquet_buffer.seek(0)
 
-        if not file_upload_response:
-            file_upload_response = self.generate_presigned_url_for_file_upload(file_key=file_key)
+        file_upload_response = self.generate_presigned_url_for_file_upload(file_key=file_key)
 
         if not isinstance(file_upload_response, FileUploadResponse):
             raise ValueError("file_upload_response should be a valid instance of FileUploadResponse.")
