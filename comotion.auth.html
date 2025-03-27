@@ -291,11 +291,17 @@ for each.</p>
 <em class="property">exception </em><code class="sig-prename descclassname">comotion.auth.</code><code class="sig-name descname">AuthException</code><a class="reference internal" href="_modules/comotion/auth.html#AuthException"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.AuthException" title="Permalink to this definition">¶</a></dt>
 <dd><p>Exception thrown by Auth class</p>
 </dd></dl>
+<dl class="exception">
+<dt id="comotion.auth.CredentialsCacheException">
+<em class="property">exception </em><code class="sig-prename descclassname">comotion.auth.</code><code class="sig-name descname">CredentialsCacheException</code><a class="reference internal" href="_modules/comotion/auth.html#CredentialsCacheException"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.CredentialsCacheException" title="Permalink to this definition">¶</a></dt>
+<dd><p>CredentialsCacheException Thrown in credential save and retrieve in classes implementing CredentialsCacheInterface</p>
+</dd></dl>
 <dl class="class">
 <dt id="comotion.auth.CredentialsCacheInterface">
 <em class="property">class </em><code class="sig-prename descclassname">comotion.auth.</code><code class="sig-name descname">CredentialsCacheInterface</code><span class="sig-paren">(</span><em class="sig-param">issuer</em>, <em class="sig-param">orgname</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/auth.html#CredentialsCacheInterface"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.CredentialsCacheInterface" title="Permalink to this definition">¶</a></dt>
 <dd><p>Interfaced to be implemented in concrete class that executes caching
 of credentials for users</p>
+<p>Any errors in the functions should raise a CredentialsCacheException</p>
 <dl class="method">
 <dt id="comotion.auth.CredentialsCacheInterface.get_current_user">
 <code class="sig-name descname">get_current_user</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/auth.html#CredentialsCacheInterface.get_current_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.auth.CredentialsCacheInterface.get_current_user" title="Permalink to this definition">¶</a></dt>
