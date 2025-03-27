@@ -1484,7 +1484,7 @@ def read_and_upload_file_to_dash(
         If the migration status for the org is 'Completed', v2 is the model version.  Otherwise, v1 is the model version.
         data_model_version only needs be specified in exceptional circumstances where there are issues determining the migration status.
     entity_type : str, default Auth.USER
-        The entity type for authentication.
+        The entity type for authentication.  Use Auth.USER if uploading as a user.  Use Auth.APPLICATION if uploading with application credentials.
     application_client_id : str, optional
         The application client ID for authentication.
     application_client_secret : str, optional
