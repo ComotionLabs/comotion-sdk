@@ -1515,7 +1515,7 @@ def read_and_upload_file_to_dash(
             # Get migration status
             migration = Migration(config)
             print('Migration Status: ' + str(migration.status().full_migration_status))
-            if migration.status().full_migration_status == 'Completed':
+            if migration.status().full_migration_status in ['Completed', 'Complete']:
                 data_model_version = 'v2'
             else:
                 data_model_version = 'v1'
