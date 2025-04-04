@@ -684,7 +684,7 @@ finalising file...
                 'response': mock.MagicMock(
                     headers={'header1': "2"},
                     status=200,
-                    data=b'{"presigned_url": {"data": "my_presigned_url"}, "sts_credentials": {"AccessKeyId": "myaccesskey", "SecretAccessKey": "mysecret", "SessionToken": "mysession"}, "bucket": "mybucket", "path": "mypath"}'
+                    data=b'{"presigned_url": "my presigned url", "sts_credentials": {"AccessKeyId": "myaccesskey", "SecretAccessKey": "mysecret", "SessionToken": "mysession"}, "bucket": "mybucket", "path": "mypath"}'
                 )
             }
         ]
