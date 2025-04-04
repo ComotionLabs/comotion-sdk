@@ -68,13 +68,14 @@ The latest swagger file is stored in openapi_generator/comodash_api_swagger.json
 Download latest [jar of OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator#13---download-jar)
 
 ```
-java -jar \
-  ./openapi_generator/openapi-generator-cli.jar generate \
-        -i ./openapi_generator/comodash_api_swagger.yaml\
-        -g python \
-        --package-name comodash_api_client_lowlevel \
-        --additional-properties \
-            generateSourceCodeOnly=True,library=urllib3 \
+java -jar `
+  C:\Users\ErkinBurnaAsefi\OneDrive - Comotion Business Solutions (Pty) Ltd\Documents\comotion-sdk\openapi_generator\openapi-generator-cli.jar generate `
+        -i C:\Users\ErkinBurnaAsefi\OneDrive - Comotion Business Solutions (Pty) Ltd\Documents\comotion-sdk\openapi_generator\comodash_api_swagger.yaml`
+        -g python `
+        --package-name comodash_api_client_lowlevel `
+        --additional-properties `
+            generateSourceCodeOnly=True,library=urllib3 `
+        -o ./src/
 ```
 We have changed from asyncio to urllib3 to ensure simplicity in coding without requiring "await" and "async"
 
