@@ -834,8 +834,7 @@ finalising file...
         ]
 
         # Define the expected result/output from the CLI command
-        expected_result = 'FAIL\nmy error type 2:my error message 2\n'
-
+        expected_result = "FAIL\n{'ErrorType': 'my error type 2', 'ErrorMessage': 'my error message 2'}\n"
 
         # Call the generic integration test function with the above parameters
         self._generic_integration_test(

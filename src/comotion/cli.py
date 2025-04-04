@@ -471,7 +471,10 @@ def get_load_info(
     click.echo(load_info.load_status)
     if load_info.load_status == "FAIL":
         for error_message in load_info.error_messages:
-            click.echo(f"{error_message.error_type}:{error_message.error_message}", err=True)
+            try:
+                click.echo(f"{error_message.error_type}:{error_message.error_message}", err=True)
+            except:
+                click.echo(f"{error_message}", err=True)
 
 @dash.command()
 @click.option(
