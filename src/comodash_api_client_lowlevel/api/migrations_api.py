@@ -11,16 +11,22 @@
     Do not edit the class manually.
 """  # noqa: E501
 
-import warnings
-from pydantic import validate_call, Field, StrictFloat, StrictStr, StrictInt
-from typing import Any, Dict, List, Optional, Tuple, Union
-from typing_extensions import Annotated
 
-from pydantic import StrictStr
+import io
+import warnings
+
+from pydantic import validate_call, Field, StrictFloat, StrictStr, StrictInt
+from typing import Dict, List, Optional, Tuple, Union, Any
+
+try:
+    from typing import Annotated
+except ImportError:
+    from typing_extensions import Annotated
+
 from comodash_api_client_lowlevel.models.migration import Migration
 from comodash_api_client_lowlevel.models.migration_status import MigrationStatus
 
-from comodash_api_client_lowlevel.api_client import ApiClient, RequestSerialized
+from comodash_api_client_lowlevel.api_client import ApiClient
 from comodash_api_client_lowlevel.api_response import ApiResponse
 from comodash_api_client_lowlevel.rest import RESTResponseType
 
@@ -91,7 +97,8 @@ class MigrationsApi:
             '200': "MigrationStatus",
             '400': "Error",
             '401': "Error",
-            '5XX': "Error",
+            '5XX': "Error"
+            
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -157,7 +164,8 @@ class MigrationsApi:
             '200': "MigrationStatus",
             '400': "Error",
             '401': "Error",
-            '5XX': "Error",
+            '5XX': "Error"
+            
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -223,7 +231,8 @@ class MigrationsApi:
             '200': "MigrationStatus",
             '400': "Error",
             '401': "Error",
-            '5XX': "Error",
+            '5XX': "Error"
+            
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -238,20 +247,19 @@ class MigrationsApi:
         _content_type,
         _headers,
         _host_index,
-    ) -> RequestSerialized:
+    ) -> Tuple:
 
         _host = None
 
         _collection_formats: Dict[str, str] = {
+            
         }
 
         _path_params: Dict[str, str] = {}
         _query_params: List[Tuple[str, str]] = []
         _header_params: Dict[str, Optional[str]] = _headers or {}
         _form_params: List[Tuple[str, str]] = []
-        _files: Dict[
-            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
-        ] = {}
+        _files: Dict[str, str] = {}
         _body_params: Optional[bytes] = None
 
         # process the path parameters
@@ -262,12 +270,11 @@ class MigrationsApi:
 
 
         # set the HTTP header `Accept`
-        if 'Accept' not in _header_params:
-            _header_params['Accept'] = self.api_client.select_header_accept(
-                [
-                    'application/json'
-                ]
-            )
+        _header_params['Accept'] = self.api_client.select_header_accept(
+            [
+                'application/json'
+            ]
+        )
 
 
         # authentication setting
@@ -351,7 +358,8 @@ class MigrationsApi:
             '400': "Error",
             '401': "Error",
             '409': "Error",
-            '5XX': "Error",
+            '5XX': "Error"
+            
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -422,7 +430,8 @@ class MigrationsApi:
             '400': "Error",
             '401': "Error",
             '409': "Error",
-            '5XX': "Error",
+            '5XX': "Error"
+            
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -493,7 +502,8 @@ class MigrationsApi:
             '400': "Error",
             '401': "Error",
             '409': "Error",
-            '5XX': "Error",
+            '5XX': "Error"
+            
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -509,20 +519,19 @@ class MigrationsApi:
         _content_type,
         _headers,
         _host_index,
-    ) -> RequestSerialized:
+    ) -> Tuple:
 
         _host = None
 
         _collection_formats: Dict[str, str] = {
+            
         }
 
         _path_params: Dict[str, str] = {}
         _query_params: List[Tuple[str, str]] = []
         _header_params: Dict[str, Optional[str]] = _headers or {}
         _form_params: List[Tuple[str, str]] = []
-        _files: Dict[
-            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
-        ] = {}
+        _files: Dict[str, str] = {}
         _body_params: Optional[bytes] = None
 
         # process the path parameters
@@ -535,13 +544,12 @@ class MigrationsApi:
 
 
         # set the HTTP header `Accept`
-        if 'Accept' not in _header_params:
-            _header_params['Accept'] = self.api_client.select_header_accept(
-                [
-                    'text/plain', 
-                    'application/json'
-                ]
-            )
+        _header_params['Accept'] = self.api_client.select_header_accept(
+            [
+                'text/plain', 
+                'application/json'
+            ]
+        )
 
         # set the HTTP header `Content-Type`
         if _content_type:

@@ -17,10 +17,14 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
+
 from typing import Any, ClassVar, Dict, List, Optional
-from typing import Optional, Set
-from typing_extensions import Self
+from pydantic import BaseModel, StrictStr, field_validator
+from pydantic import Field
+try:
+    from typing import Self
+except ImportError:
+    from typing_extensions import Self
 
 class QueryResultResultSetMetaDataColumnInfoInner(BaseModel):
     """
@@ -36,15 +40,14 @@ class QueryResultResultSetMetaDataColumnInfoInner(BaseModel):
         if value is None:
             return value
 
-        if value not in set(['timestamp', 'varchar', 'bigint', 'char', 'date', 'decimal', 'double']):
+        if value not in ('timestamp', 'varchar', 'bigint', 'char', 'date', 'decimal', 'double'):
             raise ValueError("must be one of enum values ('timestamp', 'varchar', 'bigint', 'char', 'date', 'decimal', 'double')")
         return value
 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        validate_assignment=True,
-        protected_namespaces=(),
-    )
+    model_config = {
+        "populate_by_name": True,
+        "validate_assignment": True
+    }
 
 
     def to_str(self) -> str:
@@ -57,7 +60,7 @@ class QueryResultResultSetMetaDataColumnInfoInner(BaseModel):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> Optional[Self]:
+    def from_json(cls, json_str: str) -> Self:
         """Create an instance of QueryResultResultSetMetaDataColumnInfoInner from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
@@ -71,18 +74,16 @@ class QueryResultResultSetMetaDataColumnInfoInner(BaseModel):
           were set at model initialization. Other fields with value `None`
           are ignored.
         """
-        excluded_fields: Set[str] = set([
-        ])
-
         _dict = self.model_dump(
             by_alias=True,
-            exclude=excluded_fields,
+            exclude={
+            },
             exclude_none=True,
         )
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
+    def from_dict(cls, obj: Dict) -> Self:
         """Create an instance of QueryResultResultSetMetaDataColumnInfoInner from a dict"""
         if obj is None:
             return None

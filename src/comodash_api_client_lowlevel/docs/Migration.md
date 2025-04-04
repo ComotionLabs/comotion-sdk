@@ -2,7 +2,6 @@
 
 
 ## Properties
-
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **migration_type** | **str** | whether to run a full migration (FULL_MIGRATION) or only copy the schema of the lake across to the new lake (FLASH_SCHEMA)  | 
@@ -18,12 +17,12 @@ json = "{}"
 # create an instance of Migration from a JSON string
 migration_instance = Migration.from_json(json)
 # print the JSON string representation of the object
-print(Migration.to_json())
+print Migration.to_json()
 
 # convert the object into a dict
 migration_dict = migration_instance.to_dict()
 # create an instance of Migration from a dict
-migration_from_dict = Migration.from_dict(migration_dict)
+migration_form_dict = migration.from_dict(migration_dict)
 ```
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

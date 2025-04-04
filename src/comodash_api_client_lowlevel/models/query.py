@@ -17,11 +17,15 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
+
 from typing import Any, ClassVar, Dict, List, Optional
+from pydantic import BaseModel, StrictStr
+from pydantic import Field
 from comodash_api_client_lowlevel.models.query_status import QueryStatus
-from typing import Optional, Set
-from typing_extensions import Self
+try:
+    from typing import Self
+except ImportError:
+    from typing_extensions import Self
 
 class Query(BaseModel):
     """
@@ -33,11 +37,10 @@ class Query(BaseModel):
     status: Optional[QueryStatus] = None
     __properties: ClassVar[List[str]] = ["query", "queryId", "statementType", "status"]
 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        validate_assignment=True,
-        protected_namespaces=(),
-    )
+    model_config = {
+        "populate_by_name": True,
+        "validate_assignment": True
+    }
 
 
     def to_str(self) -> str:
@@ -50,7 +53,7 @@ class Query(BaseModel):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> Optional[Self]:
+    def from_json(cls, json_str: str) -> Self:
         """Create an instance of Query from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
@@ -64,12 +67,10 @@ class Query(BaseModel):
           were set at model initialization. Other fields with value `None`
           are ignored.
         """
-        excluded_fields: Set[str] = set([
-        ])
-
         _dict = self.model_dump(
             by_alias=True,
-            exclude=excluded_fields,
+            exclude={
+            },
             exclude_none=True,
         )
         # override the default output from pydantic by calling `to_dict()` of status
@@ -78,7 +79,7 @@ class Query(BaseModel):
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
+    def from_dict(cls, obj: Dict) -> Self:
         """Create an instance of Query from a dict"""
         if obj is None:
             return None
@@ -90,7 +91,7 @@ class Query(BaseModel):
             "query": obj.get("query"),
             "queryId": obj.get("queryId"),
             "statementType": obj.get("statementType"),
-            "status": QueryStatus.from_dict(obj["status"]) if obj.get("status") is not None else None
+            "status": QueryStatus.from_dict(obj.get("status")) if obj.get("status") is not None else None
         })
         return _obj
 

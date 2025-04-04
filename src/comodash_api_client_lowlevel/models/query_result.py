@@ -17,12 +17,16 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field
+
 from typing import Any, ClassVar, Dict, List, Optional
+from pydantic import BaseModel
+from pydantic import Field
 from comodash_api_client_lowlevel.models.query_result_result_set import QueryResultResultSet
 from comodash_api_client_lowlevel.models.query_result_result_set_meta_data import QueryResultResultSetMetaData
-from typing import Optional, Set
-from typing_extensions import Self
+try:
+    from typing import Self
+except ImportError:
+    from typing_extensions import Self
 
 class QueryResult(BaseModel):
     """
@@ -32,11 +36,10 @@ class QueryResult(BaseModel):
     result_set_meta_data: Optional[QueryResultResultSetMetaData] = Field(default=None, alias="ResultSetMetaData")
     __properties: ClassVar[List[str]] = ["resultSet", "ResultSetMetaData"]
 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        validate_assignment=True,
-        protected_namespaces=(),
-    )
+    model_config = {
+        "populate_by_name": True,
+        "validate_assignment": True
+    }
 
 
     def to_str(self) -> str:
@@ -49,7 +52,7 @@ class QueryResult(BaseModel):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> Optional[Self]:
+    def from_json(cls, json_str: str) -> Self:
         """Create an instance of QueryResult from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
@@ -63,12 +66,10 @@ class QueryResult(BaseModel):
           were set at model initialization. Other fields with value `None`
           are ignored.
         """
-        excluded_fields: Set[str] = set([
-        ])
-
         _dict = self.model_dump(
             by_alias=True,
-            exclude=excluded_fields,
+            exclude={
+            },
             exclude_none=True,
         )
         # override the default output from pydantic by calling `to_dict()` of result_set
@@ -80,7 +81,7 @@ class QueryResult(BaseModel):
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
+    def from_dict(cls, obj: Dict) -> Self:
         """Create an instance of QueryResult from a dict"""
         if obj is None:
             return None
@@ -89,8 +90,8 @@ class QueryResult(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "resultSet": QueryResultResultSet.from_dict(obj["resultSet"]) if obj.get("resultSet") is not None else None,
-            "ResultSetMetaData": QueryResultResultSetMetaData.from_dict(obj["ResultSetMetaData"]) if obj.get("ResultSetMetaData") is not None else None
+            "resultSet": QueryResultResultSet.from_dict(obj.get("resultSet")) if obj.get("resultSet") is not None else None,
+            "ResultSetMetaData": QueryResultResultSetMetaData.from_dict(obj.get("ResultSetMetaData")) if obj.get("ResultSetMetaData") is not None else None
         })
         return _obj
 

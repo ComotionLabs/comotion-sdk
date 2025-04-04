@@ -17,11 +17,15 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field
+
 from typing import Any, ClassVar, Dict, List, Optional
+from pydantic import BaseModel
+from pydantic import Field
 from comodash_api_client_lowlevel.models.query_result_result_set_rows_inner import QueryResultResultSetRowsInner
-from typing import Optional, Set
-from typing_extensions import Self
+try:
+    from typing import Self
+except ImportError:
+    from typing_extensions import Self
 
 class QueryResultResultSet(BaseModel):
     """
@@ -30,11 +34,10 @@ class QueryResultResultSet(BaseModel):
     rows: Optional[List[QueryResultResultSetRowsInner]] = Field(default=None, alias="Rows")
     __properties: ClassVar[List[str]] = ["Rows"]
 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        validate_assignment=True,
-        protected_namespaces=(),
-    )
+    model_config = {
+        "populate_by_name": True,
+        "validate_assignment": True
+    }
 
 
     def to_str(self) -> str:
@@ -47,7 +50,7 @@ class QueryResultResultSet(BaseModel):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> Optional[Self]:
+    def from_json(cls, json_str: str) -> Self:
         """Create an instance of QueryResultResultSet from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
@@ -61,25 +64,23 @@ class QueryResultResultSet(BaseModel):
           were set at model initialization. Other fields with value `None`
           are ignored.
         """
-        excluded_fields: Set[str] = set([
-        ])
-
         _dict = self.model_dump(
             by_alias=True,
-            exclude=excluded_fields,
+            exclude={
+            },
             exclude_none=True,
         )
         # override the default output from pydantic by calling `to_dict()` of each item in rows (list)
         _items = []
         if self.rows:
-            for _item_rows in self.rows:
-                if _item_rows:
-                    _items.append(_item_rows.to_dict())
+            for _item in self.rows:
+                if _item:
+                    _items.append(_item.to_dict())
             _dict['Rows'] = _items
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
+    def from_dict(cls, obj: Dict) -> Self:
         """Create an instance of QueryResultResultSet from a dict"""
         if obj is None:
             return None
@@ -88,7 +89,7 @@ class QueryResultResultSet(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "Rows": [QueryResultResultSetRowsInner.from_dict(_item) for _item in obj["Rows"]] if obj.get("Rows") is not None else None
+            "Rows": [QueryResultResultSetRowsInner.from_dict(_item) for _item in obj.get("Rows")] if obj.get("Rows") is not None else None
         })
         return _obj
 

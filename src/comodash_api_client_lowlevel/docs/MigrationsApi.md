@@ -13,16 +13,14 @@ Method | HTTP request | Description
 
 Get status of lake migration
 
-The migration job converts the lake v1 data to lake v2 data.  It can only be run once, after which the old lake will be disabled.
-Migrations can take a number of hours to complete. So get a cup of coffee.
-Use the /migration GET endpoint to monitor the progress of the migration
-
+The migration job converts the lake v1 data to lake v2 data.  It can only be run once, after which the old lake will be disabled. Migrations can take a number of hours to complete. So get a cup of coffee. Use the /migration GET endpoint to monitor the progress of the migration 
 
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
-
 ```python
+import time
+import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.models.migration_status import MigrationStatus
 from comodash_api_client_lowlevel.rest import ApiException
@@ -61,7 +59,6 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 
 ### Parameters
-
 This endpoint does not need any parameter.
 
 ### Return type
@@ -78,7 +75,6 @@ This endpoint does not need any parameter.
  - **Accept**: application/json
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Migration started successfully. |  -  |
@@ -93,16 +89,14 @@ This endpoint does not need any parameter.
 
 Run migration from Lake V1 to Lake V2
 
-The migration job converts the lake v1 data to lake v2 data.  It can only be run once, after which the old lake will be disabled.
-Migrations can take a number of hours to complete. So get a cup of coffee.
-Use the /migration GET endpoint to monitor the progress of the migration
-
+The migration job converts the lake v1 data to lake v2 data.  It can only be run once, after which the old lake will be disabled. Migrations can take a number of hours to complete. So get a cup of coffee. Use the /migration GET endpoint to monitor the progress of the migration 
 
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
-
 ```python
+import time
+import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.models.migration import Migration
 from comodash_api_client_lowlevel.rest import ApiException
@@ -143,7 +137,6 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
-
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **migration** | [**Migration**](Migration.md)|  | 
@@ -162,7 +155,6 @@ Name | Type | Description  | Notes
  - **Accept**: text/plain, application/json
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **202** | Migration started successfully. |  -  |

@@ -17,11 +17,15 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
+
 from typing import Any, ClassVar, Dict, List, Optional
+from pydantic import BaseModel, StrictStr, field_validator
+from pydantic import Field
 from typing_extensions import Annotated
-from typing import Optional, Set
-from typing_extensions import Self
+try:
+    from typing import Self
+except ImportError:
+    from typing_extensions import Self
 
 class Load(BaseModel):
     """
@@ -36,7 +40,7 @@ class Load(BaseModel):
     @field_validator('load_type')
     def load_type_validate_enum(cls, value):
         """Validates the enum"""
-        if value not in set(['APPEND_ONLY']):
+        if value not in ('APPEND_ONLY'):
             raise ValueError("must be one of enum values ('APPEND_ONLY')")
         return value
 
@@ -47,11 +51,10 @@ class Load(BaseModel):
             raise ValueError(r"must validate the regular expression /^[a-z_]+[a-z0-9_]*[a-z0-9]$/")
         return value
 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        validate_assignment=True,
-        protected_namespaces=(),
-    )
+    model_config = {
+        "populate_by_name": True,
+        "validate_assignment": True
+    }
 
 
     def to_str(self) -> str:
@@ -64,7 +67,7 @@ class Load(BaseModel):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> Optional[Self]:
+    def from_json(cls, json_str: str) -> Self:
         """Create an instance of Load from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
@@ -78,18 +81,16 @@ class Load(BaseModel):
           were set at model initialization. Other fields with value `None`
           are ignored.
         """
-        excluded_fields: Set[str] = set([
-        ])
-
         _dict = self.model_dump(
             by_alias=True,
-            exclude=excluded_fields,
+            exclude={
+            },
             exclude_none=True,
         )
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
+    def from_dict(cls, obj: Dict) -> Self:
         """Create an instance of Load from a dict"""
         if obj is None:
             return None
