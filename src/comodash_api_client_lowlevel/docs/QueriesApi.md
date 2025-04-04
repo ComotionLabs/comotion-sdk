@@ -19,9 +19,8 @@ Download the csv result file of a query
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
+
 ```python
-import time
-import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
@@ -61,6 +60,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query_id** | **str**| Unique Identifier for the query | 
@@ -79,6 +79,7 @@ Name | Type | Description  | Notes
  - **Accept**: binary/octet-stream, application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Successful redirect will result in a 200 from the download endpoint |  -  |
@@ -98,9 +99,8 @@ Get information about a query
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
+
 ```python
-import time
-import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.models.query import Query
 from comodash_api_client_lowlevel.rest import ApiException
@@ -141,6 +141,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query_id** | **str**| Unique Identifier for the query | 
@@ -159,6 +160,7 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Details of query status |  -  |
@@ -177,9 +179,8 @@ Get paginated results of a query
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
+
 ```python
-import time
-import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.models.query_result import QueryResult
 from comodash_api_client_lowlevel.rest import ApiException
@@ -221,6 +222,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query_id** | **str**| Unique Identifier for the query | 
@@ -240,6 +242,7 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Query results page |  -  |
@@ -258,9 +261,8 @@ Run a query
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
+
 ```python
-import time
-import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.models.query_id import QueryId
 from comodash_api_client_lowlevel.models.query_text import QueryText
@@ -302,6 +304,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query_text** | [**QueryText**](QueryText.md)|  | 
@@ -320,6 +323,7 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **202** | Query successfully started |  -  |
@@ -337,9 +341,8 @@ Stop a running query
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
+
 ```python
-import time
-import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
@@ -377,6 +380,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query_id** | **str**| Unique Identifier for the query | 
@@ -395,6 +399,7 @@ void (empty response body)
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Successfully stopped query |  -  |
