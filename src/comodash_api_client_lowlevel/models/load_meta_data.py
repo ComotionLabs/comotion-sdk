@@ -33,7 +33,7 @@ class LoadMetaData(BaseModel):
     """ # noqa: E501
     load_status: StrictStr = Field(description="Current status of the load.", alias="LoadStatus")
     error_type: Optional[StrictStr] = Field(default=None, description="Type of error if the load status is FAIL.", alias="ErrorType")
-    error_messages: Optional[List[LoadMetaDataErrorMessagesInner]] = Field(default=None, description="Detailed error messages if the load status is FAIL.", alias="ErrorMessages")
+    error_messages: Optional[Any] = Field(default=None, description="Detailed error messages if the load status is FAIL.", alias="ErrorMessages")
     __properties: ClassVar[List[str]] = ["LoadStatus", "ErrorType", "ErrorMessages"]
 
     @field_validator('load_status')
@@ -110,7 +110,7 @@ class LoadMetaData(BaseModel):
         _obj = cls.model_validate({
             "LoadStatus": obj.get("LoadStatus"),
             "ErrorType": obj.get("ErrorType"),
-            "ErrorMessages": [LoadMetaDataErrorMessagesInner.from_dict(_item) for _item in obj.get("ErrorMessages")] if obj.get("ErrorMessages") is not None else None
+            "ErrorMessages": obj.get("ErrorMessages")
         })
         return _obj
 
