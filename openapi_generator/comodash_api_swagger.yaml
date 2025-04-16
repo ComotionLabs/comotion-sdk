@@ -4,11 +4,20 @@ info:
   description: Comotion Dash API
   version: '2.0'
 servers:
+  - url: https://{zone}.{orgName}.api.comodash.io/v2
+    variables:
+      zone:
+        default: 'main'
+        description: Zone for your organisation. Defaults to 'main' if not specified.
+      orgName:
+        default: 'training'
+        description: OrgName for your organisation
   - url: https://{orgName}.api.comodash.io/v2
     variables:
       orgName:
         default: 'training'
         description: OrgName for your organisation
+
 paths:
   /query:
     post:

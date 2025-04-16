@@ -52,14 +52,17 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
         comotion.Auth object holding information about authentication
     """
 
-    def __init__(self, auth: Auth):
+    def __init__(self, auth: Auth, zone: str = None):
         if not(isinstance(auth, Auth)):
             raise TypeError("auth must be of type comotion.Auth")
 
         self.auth = auth
+        self.zone = zone
 
+        host_url = 'https://%s.api.comodash.io/v2' % (auth.orgname) if not zone else 'https://%s.%s.api.comodash.io/v2' % (self.zone, auth.orgname)
+        
         super().__init__(
-            host='https://%s.api.comodash.io/v2' % (auth.orgname),
+            host=host_url,
             access_token=None
         )
 
