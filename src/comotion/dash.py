@@ -896,9 +896,9 @@ class DashBulkUploader():
         uploader.remove_load(table_name = my_lake_table)
     """
     def __init__(self, 
-                 auth_token: Auth) -> None:
+                 config: DashConfig) -> None:
 
-        self.auth_token = auth_token
+        self.config = config
         self.pending_load_statuses = ['OPEN']
         self.uploads = {}
     
@@ -965,8 +965,9 @@ class DashBulkUploader():
             print("WARNING: Dataset will not upload without specifying load_as_service_client_id option unless there is a column in the data source called service_client_id.")
 
         print(f"Creating new load for lake table: {table_name}")
+        self.config._check_and_refresh_token()
         load = Load(
-            config=DashConfig(self.auth_token),
+            config=self.config,
             load_type=load_type,
             table_name=table_name,
             load_as_service_client_id=load_as_service_client_id,
