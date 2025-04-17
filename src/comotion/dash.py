@@ -57,9 +57,10 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
             raise TypeError("auth must be of type comotion.Auth")
 
         self.auth = auth
+        self.orgname = auth.orgname
         self.zone = zone
 
-        host_url = 'https://%s.api.comodash.io/v2' % (auth.orgname) if not zone else 'https://%s.%s.api.comodash.io/v2' % (self.zone, auth.orgname)
+        host_url = 'https://%s.api.comodash.io/v2' % (self.orgname) if not zone else 'https://%s.%s.api.comodash.io/v2' % (self.zone, self.orgname)
         
         super().__init__(
             host=host_url,
@@ -172,6 +173,7 @@ class Query():
                 raise ValueError("One of query_id or query_text must be provided")
 
     def refresh_api_instance(self):
+            zone = self.config.zone
             auth_token = self.config.auth
             orgname = auth_token.orgname
             entity_type = auth_token.entity_type
@@ -189,7 +191,8 @@ class Query():
                     entity_type=entity_type,
                     application_client_id=application_client_id,
                     application_client_secret=application_client_secret
-                )
+                ),
+                zone = zone
             )
             with comodash_api_client_lowlevel.ApiClient(self.config) as api_client:
                 # Create an instance of the API class with provided parameters
@@ -444,12 +447,13 @@ class Load():
         self.path_to_output_for_dryrun = path_to_output_for_dryrun
         self.modify_lambda = modify_lambda
         if not chunksize:
-            self.chunksize = 30000
+            self.chunksize = 100000000 # Very large chunksize to avoid chunking unless required
         else:
             self.chunksize = chunksize
 
     def refresh_api_instance(self):
         auth_token = self.config.auth
+        zone = self.config.zone
         orgname = auth_token.orgname
         entity_type = auth_token.entity_type
 
@@ -466,7 +470,8 @@ class Load():
                 entity_type=entity_type,
                 application_client_id=application_client_id,
                 application_client_secret=application_client_secret
-            )
+            ),
+            zone = zone
         )
         with comodash_api_client_lowlevel.ApiClient(self.config) as api_client:
             # Create an instance of the API class with provided parameters
@@ -568,8 +573,7 @@ class Load():
         if self.modify_lambda:
             self.modify_lambda(data)
 
-        exclude_columns = ['dash$load_id']
-        data.columns = [re.sub(r'\s+', '_', column.lower()) for column in data.columns if column not in exclude_columns] # Replace spaces with underscores in column names
+        data.columns = [re.sub(r'\s+', '_', column.lower()) for column in data.columns] # Replace spaces with underscores in column names
 
         table = pa.Table.from_pandas(data)
 
@@ -695,12 +699,6 @@ class Load():
         if not func_to_use:
             raise ValueError(f"Could not determine file type for datasource with the following file key: {file_key}")
         
-        # Determine the dtype for each column if not provided.  
-        # Not providing dtype can lead to issues with empty columns and chunks where dtype is determined differently to other chunks.
-        if not pd_read_kwargs.get('dtype'):
-            sample_df = func_to_use(data, nrows=self.chunksize, **pd_read_kwargs)
-            pd_read_kwargs['dtype'] = {col: dtype for col, dtype in sample_df.dtypes.items()}
-
         try:
             i = 1
             chunk_futures = []
@@ -779,12 +777,6 @@ class Load():
             print(f"Query completed with state: {data.state()}")
 
             if data.state() == data.SUCCEEDED_STATE:
-                # Determine the dtype for each column if not provided.  
-                # Not providing dtype can lead to issues with empty columns and chunks where dtype is determined differently to other chunks.
-                if not pd_read_kwargs.get('dtype'):
-                    sample_df = pd.read_csv(data.get_csv_for_streaming(), nrows=self.chunksize, **pd_read_kwargs)
-                    pd_read_kwargs['dtype'] = {col: dtype for col, dtype in sample_df.dtypes.items()}
-
                 with ThreadPoolExecutor(max_workers=max_workers) as chunk_ex:  # Using threads for concurrent chunk uploads
 
                     for chunk in pd.read_csv(data.get_csv_for_streaming(), chunksize=self.chunksize, **pd_read_kwargs):
@@ -853,7 +845,8 @@ class Load():
         # Replace non-alphanumeric characters with underscores
         file_key = 'x_' + re.sub(r'[^a-zA-Z0-9]', '_', raw_uid) # Add initial x_ underscore in case uid starts with integer
         return file_key
-    
+
+
 class DashBulkUploader():
     """
     Class to handle multiple loads with utility functions by leveraging the `Load` class.

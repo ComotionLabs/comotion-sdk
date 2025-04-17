@@ -765,20 +765,7 @@ components:
         ErrorMessages:
           type: "array"
           items:
-            type: "object"
-            properties:
-              ErrorType:
-                type: "string"
-                nullable: true
-                description: "type of error for which the message is shown"
-              ErrorMessage:
-                type: "string"
-                nullable: true
-                description: "error message"
-              CheckResult:
-                type: "string"
-                nullable: true
-                description: error state
+            type: "string"
           nullable: true
           description: "Detailed error messages if the load status is FAIL."
       required:
