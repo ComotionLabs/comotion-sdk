@@ -411,6 +411,7 @@ class TestDashModuleLoadClass(unittest.TestCase):
             mock_read.return_value = mock_chunk
             load_instance.upload_file(
             data='valid_file_path',
+            dtype = expected_dtype
             # file_key='test_file_key'
             )
             mock_read.assert_called_with('valid_file_path', chunksize=chunksize, dtype=expected_dtype)
@@ -524,7 +525,8 @@ class TestDashModuleLoadClass(unittest.TestCase):
         # Call the upload_file method with a file key
         load.upload_file(
             data='valid_file_path',
-            file_key='test_file_key'
+            file_key='test_file_key',
+            dtype = expected_dtype
         )
 
         # Assertions
@@ -557,7 +559,8 @@ class TestDashModuleLoadClass(unittest.TestCase):
 
         # Call the upload_file method without a file key
         load.upload_file(
-            data='valid_file_path'
+            data='valid_file_path',
+            dtype = expected_dtype
         )
 
         # Assertions
@@ -593,7 +596,8 @@ class TestDashModuleLoadClass(unittest.TestCase):
         # Call the upload_file method with use_file_name_as_key set to True
         load.upload_file(
             data='valid_file_path.csv',
-            use_file_name_as_key=True
+            use_file_name_as_key=True,
+            dtype = expected_dtype
         )
 
         # Assertions
@@ -1141,9 +1145,10 @@ class TestDashConfig(unittest.TestCase):
 class TestDashBulkUploader(unittest.TestCase):
 
     def setUp(self):
-        self.mock_auth = Mock(spec=Auth)
-        self.mock_auth.orgname = 'test_org'
-        self.uploader = DashBulkUploader(auth_token=self.mock_auth)
+        self.mock_config = Mock(spec=DashConfig)
+        self.mock_config.orgname = 'test_org'
+        self.mock_config.zone = 'test_zone'
+        self.uploader = DashBulkUploader(config = self.mock_config)
 
     @patch('comotion.dash.Load')
     def test_add_load(self, mock_load):

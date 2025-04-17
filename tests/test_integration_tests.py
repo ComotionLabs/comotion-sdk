@@ -684,7 +684,7 @@ finalising file...
                 'response': mock.MagicMock(
                     headers={'header1': "2"},
                     status=200,
-                    data=b'{"presigned_url": "my presigned url", "sts_credentials": {"AccessKeyId": "myaccesskey", "SecretAccessKey": "mysecret", "SessionToken": "mysession"}, "bucket": "mybucket", "path": "mypath"}'
+                    data=b'{"presigned_url": {"data":"..."}, "sts_credentials": {"AccessKeyId": "myaccesskey", "SecretAccessKey": "mysecret", "SessionToken": "mysession"}, "bucket": "mybucket", "path": "mypath"}'
                 )
             }
         ]
@@ -828,13 +828,13 @@ finalising file...
                 'response': mock.MagicMock(
                     headers={'header1': "2"},
                     status=200,
-                    data=b'{"LoadStatus": "FAIL","ErrorType": "my error type", "ErrorMessages": [{"ErrorType": "my error type 2", "ErrorMessage": "my error message 2"}]}'
+                    data=b'{"LoadStatus": "FAIL","ErrorType": "my error type", "ErrorMessages": ["There was an error", "Another error"]}'
                 )
             }
         ]
 
         # Define the expected result/output from the CLI command
-        expected_result = "FAIL\n{'ErrorType': 'my error type 2', 'ErrorMessage': 'my error message 2'}\n"
+        expected_result = "FAIL\nThere was an error\nAnother error\n"
 
         # Call the generic integration test function with the above parameters
         self._generic_integration_test(

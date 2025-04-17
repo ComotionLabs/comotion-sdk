@@ -77,6 +77,18 @@ java -jar \
             generateSourceCodeOnly=True,library=urllib3 \
         -o ./src/
 ```
+
+```powershell
+java -jar `
+  openapi_generator/openapi-generator-cli.jar generate `
+        -i openapi_generator/comodash_api_swagger.yaml `
+        -g python `
+        --package-name comodash_api_client_lowlevel `
+        --additional-properties `
+            "generateSourceCodeOnly=True,library=urllib3" `
+        -o src
+```
+
 We have changed from asyncio to urllib3 to ensure simplicity in coding without requiring "await" and "async"
 
 To generate an html of the api:

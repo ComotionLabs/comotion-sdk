@@ -2,6 +2,7 @@
 
 
 ## Properties
+
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **flash_schema_status** | **str** | Status of the FLASH_SCHEMA process.  | [optional] 
@@ -19,12 +20,12 @@ json = "{}"
 # create an instance of MigrationStatus from a JSON string
 migration_status_instance = MigrationStatus.from_json(json)
 # print the JSON string representation of the object
-print MigrationStatus.to_json()
+print(MigrationStatus.to_json())
 
 # convert the object into a dict
 migration_status_dict = migration_status_instance.to_dict()
 # create an instance of MigrationStatus from a dict
-migration_status_form_dict = migration_status.from_dict(migration_status_dict)
+migration_status_from_dict = MigrationStatus.from_dict(migration_status_dict)
 ```
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

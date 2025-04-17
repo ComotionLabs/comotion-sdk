@@ -17,15 +17,10 @@ import pprint
 import re  # noqa: F401
 import json
 
-
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
-from pydantic import BaseModel, StrictStr, field_validator
-from pydantic import Field
-from comodash_api_client_lowlevel.models.load_meta_data_error_messages_inner import LoadMetaDataErrorMessagesInner
-try:
-    from typing import Self
-except ImportError:
-    from typing_extensions import Self
+from typing import Optional, Set
+from typing_extensions import Self
 
 class LoadMetaData(BaseModel):
     """
@@ -33,20 +28,21 @@ class LoadMetaData(BaseModel):
     """ # noqa: E501
     load_status: StrictStr = Field(description="Current status of the load.", alias="LoadStatus")
     error_type: Optional[StrictStr] = Field(default=None, description="Type of error if the load status is FAIL.", alias="ErrorType")
-    error_messages: Optional[Any] = Field(default=None, description="Detailed error messages if the load status is FAIL.", alias="ErrorMessages")
+    error_messages: Optional[List[StrictStr]] = Field(default=None, description="Detailed error messages if the load status is FAIL.", alias="ErrorMessages")
     __properties: ClassVar[List[str]] = ["LoadStatus", "ErrorType", "ErrorMessages"]
 
     @field_validator('load_status')
     def load_status_validate_enum(cls, value):
         """Validates the enum"""
-        if value not in ('OPEN', 'PROCESSING', 'FAIL', 'SUCCESS'):
+        if value not in set(['OPEN', 'PROCESSING', 'FAIL', 'SUCCESS']):
             raise ValueError("must be one of enum values ('OPEN', 'PROCESSING', 'FAIL', 'SUCCESS')")
         return value
 
-    model_config = {
-        "populate_by_name": True,
-        "validate_assignment": True
-    }
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_assignment=True,
+        protected_namespaces=(),
+    )
 
 
     def to_str(self) -> str:
@@ -59,7 +55,7 @@ class LoadMetaData(BaseModel):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> Self:
+    def from_json(cls, json_str: str) -> Optional[Self]:
         """Create an instance of LoadMetaData from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
@@ -73,19 +69,14 @@ class LoadMetaData(BaseModel):
           were set at model initialization. Other fields with value `None`
           are ignored.
         """
+        excluded_fields: Set[str] = set([
+        ])
+
         _dict = self.model_dump(
             by_alias=True,
-            exclude={
-            },
+            exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each item in error_messages (list)
-        _items = []
-        if self.error_messages:
-            for _item in self.error_messages:
-                if _item:
-                    _items.append(_item.to_dict())
-            _dict['ErrorMessages'] = _items
         # set to None if error_type (nullable) is None
         # and model_fields_set contains the field
         if self.error_type is None and "error_type" in self.model_fields_set:
@@ -99,7 +90,7 @@ class LoadMetaData(BaseModel):
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: Dict) -> Self:
+    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
         """Create an instance of LoadMetaData from a dict"""
         if obj is None:
             return None

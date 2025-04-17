@@ -1,6 +1,6 @@
 # comodash_api_client_lowlevel.QueriesApi
 
-All URIs are relative to *https://training.api.comodash.io/v2*
+All URIs are relative to *https://main.training.api.comodash.io/v2*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
@@ -19,17 +19,16 @@ Download the csv result file of a query
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
+
 ```python
-import time
-import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to https://training.api.comodash.io/v2
+# Defining the host is optional and defaults to https://main.training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
-    host = "https://training.api.comodash.io/v2"
+    host = "https://main.training.api.comodash.io/v2"
 )
 
 # The client must configure the authentication and authorization parameters
@@ -61,6 +60,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query_id** | **str**| Unique Identifier for the query | 
@@ -79,6 +79,7 @@ Name | Type | Description  | Notes
  - **Accept**: binary/octet-stream, application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Successful redirect will result in a 200 from the download endpoint |  -  |
@@ -98,18 +99,17 @@ Get information about a query
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
+
 ```python
-import time
-import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.models.query import Query
 from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to https://training.api.comodash.io/v2
+# Defining the host is optional and defaults to https://main.training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
-    host = "https://training.api.comodash.io/v2"
+    host = "https://main.training.api.comodash.io/v2"
 )
 
 # The client must configure the authentication and authorization parameters
@@ -141,6 +141,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query_id** | **str**| Unique Identifier for the query | 
@@ -159,6 +160,7 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Details of query status |  -  |
@@ -177,18 +179,17 @@ Get paginated results of a query
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
+
 ```python
-import time
-import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.models.query_result import QueryResult
 from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to https://training.api.comodash.io/v2
+# Defining the host is optional and defaults to https://main.training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
-    host = "https://training.api.comodash.io/v2"
+    host = "https://main.training.api.comodash.io/v2"
 )
 
 # The client must configure the authentication and authorization parameters
@@ -221,6 +222,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query_id** | **str**| Unique Identifier for the query | 
@@ -240,6 +242,7 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Query results page |  -  |
@@ -258,19 +261,18 @@ Run a query
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
+
 ```python
-import time
-import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.models.query_id import QueryId
 from comodash_api_client_lowlevel.models.query_text import QueryText
 from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to https://training.api.comodash.io/v2
+# Defining the host is optional and defaults to https://main.training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
-    host = "https://training.api.comodash.io/v2"
+    host = "https://main.training.api.comodash.io/v2"
 )
 
 # The client must configure the authentication and authorization parameters
@@ -302,6 +304,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query_text** | [**QueryText**](QueryText.md)|  | 
@@ -320,6 +323,7 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **202** | Query successfully started |  -  |
@@ -337,17 +341,16 @@ Stop a running query
 ### Example
 
 * Bearer (JWT) Authentication (OAuth2Authorizer):
+
 ```python
-import time
-import os
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to https://training.api.comodash.io/v2
+# Defining the host is optional and defaults to https://main.training.api.comodash.io/v2
 # See configuration.py for a list of all supported configuration parameters.
 configuration = comodash_api_client_lowlevel.Configuration(
-    host = "https://training.api.comodash.io/v2"
+    host = "https://main.training.api.comodash.io/v2"
 )
 
 # The client must configure the authentication and authorization parameters
@@ -377,6 +380,7 @@ with comodash_api_client_lowlevel.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query_id** | **str**| Unique Identifier for the query | 
@@ -395,6 +399,7 @@ void (empty response body)
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Successfully stopped query |  -  |

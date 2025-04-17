@@ -17,29 +17,26 @@ import pprint
 import re  # noqa: F401
 import json
 
-
-from typing import Any, ClassVar, Dict, List, Union
-from pydantic import BaseModel, StrictStr
-from pydantic import Field
-try:
-    from typing import Self
-except ImportError:
-    from typing_extensions import Self
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
+from typing import Any, ClassVar, Dict, List
+from typing import Optional, Set
+from typing_extensions import Self
 
 class FileUploadResponse(BaseModel):
     """
     FileUploadResponse
     """ # noqa: E501
-    presigned_url: Union[str, Any] = Field(description="Presigned URL data for S3 file upload.  The file can be posted to this endpoint using any AWS s3 compatible toolset.  Temporary credentials are included in the url, so no other credentials are required.")
-    sts_credentials: Union[str, Any] = Field(description="Alternatively to the presigned_url, these Temporary AWS STS credentials that can be used to upload the file to the location specified by `path` and `bucket.")
+    presigned_url: Dict[str, Any] = Field(description="Presigned URL data for S3 file upload.  The file can be posted to this endpoint using any AWS s3 compatible toolset.  Temporary credentials are included in the url, so no other credentials are required.")
+    sts_credentials: Dict[str, Any] = Field(description="Alternatively to the presigned_url, these Temporary AWS STS credentials that can be used to upload the file to the location specified by `path` and `bucket.")
     path: StrictStr = Field(description="Path of the file in the S3 bucket.  See description of `sts_credentials`.")
     bucket: StrictStr = Field(description="Name of the S3 bucket.  See description of `sts_credentials`.")
     __properties: ClassVar[List[str]] = ["presigned_url", "sts_credentials", "path", "bucket"]
 
-    model_config = {
-        "populate_by_name": True,
-        "validate_assignment": True
-    }
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_assignment=True,
+        protected_namespaces=(),
+    )
 
 
     def to_str(self) -> str:
@@ -52,7 +49,7 @@ class FileUploadResponse(BaseModel):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> Self:
+    def from_json(cls, json_str: str) -> Optional[Self]:
         """Create an instance of FileUploadResponse from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
@@ -66,16 +63,18 @@ class FileUploadResponse(BaseModel):
           were set at model initialization. Other fields with value `None`
           are ignored.
         """
+        excluded_fields: Set[str] = set([
+        ])
+
         _dict = self.model_dump(
             by_alias=True,
-            exclude={
-            },
+            exclude=excluded_fields,
             exclude_none=True,
         )
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: Dict) -> Self:
+    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
         """Create an instance of FileUploadResponse from a dict"""
         if obj is None:
             return None
