@@ -1503,7 +1503,9 @@ def read_and_upload_file_to_dash(
                       application_client_id=application_client_id,
                       application_client_secret=application_client_secret)
     
-    uploader = DashBulkUploader(auth_token=auth_token)
+    config = DashConfig(auth = auth_token)
+
+    uploader = DashBulkUploader(config = config)
     if not data_model_version or data_model_version not in ['v1', 'v2']:
         print("Determining Data Model Version")
         try:
