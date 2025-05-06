@@ -688,6 +688,7 @@ class Load():
         elif not use_file_name_as_key and not file_key:
             file_key = self.create_file_key()
         
+        func_to_use = None
         for func in try_functions:
             try:
                 func(data, nrows=1, **pd_read_kwargs)
