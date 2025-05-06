@@ -906,7 +906,7 @@ class DashBulkUploader():
         partitions: Optional[List[str]] = None,
         track_rows_uploaded: bool = False,
         path_to_output_for_dryrun: str = None,
-        chunksize: int = 30000
+        chunksize: int = None
     ) -> None:
         """
         Creates a new load for a specified lake table. This function initializes the load
