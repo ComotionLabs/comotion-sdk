@@ -847,7 +847,6 @@ class Load():
         file_key = 'x_' + re.sub(r'[^a-zA-Z0-9]', '_', raw_uid) # Add initial x_ underscore in case uid starts with integer
         return file_key
 
-
 class DashBulkUploader():
     """
     Class to handle multiple loads with utility functions by leveraging the `Load` class.
@@ -857,9 +856,9 @@ class DashBulkUploader():
     
     .. code-block:: python
 
-        auth_token = Auth(orgname = 'my_org_name')
+        config = DashConfig(Auth(orgname = 'my_org_name'))
 
-        uploader = DashBulkUploader(auth_token = auth_token)
+        uploader = DashBulkUploader(config = config)
 
         # A better use would be to loop through a config to run the following below code repeatedly.  A single upload is shown for demonstration purposes.
 
