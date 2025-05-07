@@ -933,6 +933,8 @@ class DashBulkUploader():
         path_to_output_for_dryrun : str, optional
             If specified, no upload will be made to dash, but files
             will be saved to the location specified. This is useful for testing.
+        chunksize: int, optional
+            Data source will be broken into chunks with chunksize rows before uploading.
 
         Raises
         ------
