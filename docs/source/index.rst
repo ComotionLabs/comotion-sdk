@@ -540,6 +540,30 @@ To process the output data further instead of writing to a csv file, load the da
       df = pd.read_csv(data)
       # further processing...
 
+Data Zones
+##########
+
+If an upload or query needs to be run in a specific data zone, the ``zone`` argument can be specified when creating the ``DashConfig`` object.
+
+.. code-block:: python
+
+   from comotion.dash import DashConfig
+   from comotion.auth import Auth
+
+   zone_1_config = DashConfig(Auth("myorgname"), data_zone = 'zone_1')
+   zone_2_config = DashConfig(Auth("myorgname"), data_zone = 'zone_2')
+
+   # This runs the query in zone_1
+   query = Query(query_text="select 1", config=zone_1_config)
+
+   # This creates a load in zone_2
+   load = Load(config = zone_2_config,
+               load_type = 'APPEND_ONLY',
+               table_name = 'v1_inforce_policies',
+               load_as_service_client_id = '0',
+               track_rows_uploaded = True
+               )
+   
 .. _v2_cheat-sheet:
 
 v2 Upload Cheat sheet
@@ -558,7 +582,7 @@ Below is a cheat sheet for the important arguments available for the ``DashBulkU
      - Comments
    * - config
      - Yes
-     - DashConfig object: created by running ``DashConfig(Auth('org_name'))``
+     - :class:`DashConfig <comotion.dash.DashConfig>`
      - :class:`DashBulkUploader <comotion.dash.DashBulkUploader>`
      - :class:`Load <comotion.dash.Load>`
      - 

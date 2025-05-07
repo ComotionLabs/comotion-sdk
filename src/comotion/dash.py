@@ -50,6 +50,8 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
     ----------
     auth : comotion.Auth
         comotion.Auth object holding information about authentication
+    zone: str, optional
+        The zone to use for the API. If not provided, defaults to None, i.e. the main zone.
     """
 
     def __init__(self, auth: Auth, zone: str = None):
