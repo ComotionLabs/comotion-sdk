@@ -1239,7 +1239,7 @@ class DashBulkUploader():
             load = upload['load']
             try:
                 self.uploads[table_name]['load_status'] = load.wait_to_complete()
-                load_info[table_name] = load_info.get_load_info()
+                load_info[table_name] = load.get_load_info()
             except Exception as e:
                 print(f"Error getting load {load.load_id}: {e}")
                 self.uploads[table_name]['load_status'] = f'ERROR: {e}'
