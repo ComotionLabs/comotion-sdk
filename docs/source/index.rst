@@ -128,6 +128,7 @@ Below is a simple example of how to use the ``DashBulkUploader`` class.
       )
 
    # 4. Execute the uploads - this commits the loads.
+   print(uploader.uploads)
    uploader.execute_all_uploads() # You can also execute specific uploads with execute_multiple_uploads() and execute_upload()
 
    # 5. Check the status of the loads
