@@ -75,6 +75,10 @@ The following upload toolsets are available once you are on data model v2. Remem
 
 For more information on migrating, see :ref:`migrate-to-v2`.
 
+.. hint ::
+
+   It is helpful to track the ``load_id`` of the loads you create.  This is a unique identifier for the load, and can be used to re-create the load if needed.
+
 .. _dashbulkuploader:
 
 DashBulkUploader
@@ -102,23 +106,29 @@ Below is a simple example of how to use the ``DashBulkUploader`` class.
    uploader = DashBulkUploader(config = config)
 
    # 2. Add a Load -> essentially creates a Load object and adds it to the uploader
-   my_lake_table = 'v1_policies'
-   uploader.add_load(
-                     table_name = my_lake_table,
-                     load_as_service_client_id = '0',
-                     track_rows_uploaded = True # This automatically creates a check_sum {'count(*)': x} where x is the number of rows in the source data.
-                     # See cheat shee for more options available for the load.
-                   )
-   
-   # 3. Add data source(s) to the Load. At least one data source is required, but multiple can be added to the same load.
-   uploader.add_data_to_load(
-                              table_name = my_lake_table,
-                              data = 'data/inforce_policies' # Can be a path to a csv, parquet or directory, a pandas dataframe or a dash.Query object
-                              # See cheat sheet for more options available for the data source.
-                            )
+   lake_tables_and_sources = [
+       ('v1_policies', 'data/inforce_policies'),
+       ('v1_claims', 'data/claims'),
+       ('v1_customers', 'data/customers')
+   ]
+
+   for my_lake_table, source_data in lake_tables_and_sources:
+      uploader.add_load(
+         table_name=my_lake_table,
+         load_as_service_client_id='0',
+         track_rows_uploaded=True  # This automatically creates a check_sum {'count(*)': x} where x is the number of rows in the source data.
+         # See cheat sheet for more options available for the load.
+      )
+
+      # Add data source(s) to the Load. At least one data source is required, but multiple can be added to the same load.
+      uploader.add_data_to_load(
+         table_name=my_lake_table,
+         data=source_data  # Can be a path to a csv, parquet or directory, a pandas dataframe or a dash.Query object
+         # See cheat sheet for more options available for the data source.
+      )
 
    # 4. Execute the uploads - this commits the loads.
-   uploader.execute_upload(table_name = my_lake_table) # Also see functions execute_multiple_uploads and execute_all_uploads.
+   uploader.execute_all_uploads() # You can also execute specific uploads with execute_multiple_uploads() and execute_upload()
 
    # 5. Check the status of the loads
    print(uploader.get_load_info())
@@ -132,6 +142,8 @@ If your data source has specific read requirements, see :ref:`pandas-usage` for 
       If a path to a directory is specified as a data source, all valid files in the directory will be uploaded to the lake table specified.  
       
       This allows you to chunk files and store them in the same folder for more efficient extract and upload.
+
+      Note this is not an option for the ``Load`` class.
 
 .. admonition::  Obtaining the ``file_key`` to remove data from a load
 
@@ -171,23 +183,26 @@ The ``Load`` class is the most flexible for uploading data to Dash.  The process
                track_rows_uploaded = True
                # See cheat sheet for more options available for the load.
                )
+   print("Load ID: " + load.load_id) # It is helpful to track the load_id
 
    # 2. Upload data sources to the load. At least one data source is required, but multiple can be added to the same load.
-   # Several examples shown for demonstration, but typically only one of these functions will be required.
 
-   load.upload_df( # Uploads a pandas dataframe
+   # Several examples shown for demonstration, but typically only one of these functions will be required.
+   # 2.1: Upload a pandas dataframe. This is useful if your source is not part of the standard data sources supported.
+   df_for_upload = pd.read_sql(query, connection)
+   load.upload_df(
       df = df_for_upload 
    )
-
-   load.upload_file(# Can be a csv, parquet, json or excel file or file .io stream. 
+   # 2.2: Upload a file. This can be a csv, parquet, json or excel file or file .io stream.
+   load.upload_file(
       data = path_to_upload_file
    )
-
+   # 2.3: Uploaed a dash.Query object. This is useful, for example, for moving data from one lake table to another.
    load.upload_dash_query(# Uploads the result of a dash.Query object.
       data = dash_query
    )
 
-   # 3. Commit the load with a valid check sum
+   # 3. Commit the load with a valid check sum.
    load.commit(
       check_sum = {
          'sum(salary)': 12345
@@ -207,9 +222,8 @@ You can also re-create an existing load if you have the correct ``load_id``.
 
    load = Load(config = DashConfig,
                load_id = 'load_id'
+               # The other arguments should not be specified when re-creating a load.
                )
-
-Only provide the config when passing a ``load_id``, or the ``Load`` object will not be created.
 
 .. _data-model-v1-upload:
 
@@ -281,8 +295,8 @@ Instead of uploading, this will output the files that would have been uploaded t
 
 .. _pandas-usage:
 
-Specific source formatting: Pandas Usage
-****************************************
+Pandas Usage
+************
 
 Using this sdk in conjunction with `pandas <https://pandas.pydata.org>`_ provides a powerful toolset to integrate with any source.
 
