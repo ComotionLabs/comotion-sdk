@@ -168,8 +168,9 @@ The ``Load`` class is the most flexible for uploading data to Dash.  The process
 
 .. code-block:: python
 
-   from comotion.dash import Load, Dashconfig, Query
+   from comotion.dash import Load, DashConfig, Query
    from comotion.auth import Auth
+   import pandas as pd
 
    # 1. Create the load object and data source variables
    dashconfig = DashConfig(Auth(orgname = 'my_org_name'))
@@ -177,7 +178,7 @@ The ``Load`` class is the most flexible for uploading data to Dash.  The process
    path_to_upload_file = 'data/inforce_policies.csv'
    df_for_upload = pd.read_csv(path_to_upload_file)
 
-   load = Load(config = DashConfig,
+   load = Load(config = dashconfig,
                load_type = 'APPEND_ONLY',
                table_name = 'v1_inforce_policies',
                load_as_service_client_id = '0',
@@ -192,7 +193,7 @@ The ``Load`` class is the most flexible for uploading data to Dash.  The process
    # 2.1: Upload a pandas dataframe. This is useful if your source is not part of the standard data sources supported.
    df_for_upload = pd.read_sql(query, connection)
    load.upload_df(
-      df = df_for_upload 
+      data = df_for_upload 
    )
    # 2.2: Upload a file. This can be a csv, parquet, json or excel file or file .io stream.
    load.upload_file(
