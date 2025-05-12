@@ -222,7 +222,7 @@ You can also re-create an existing load if you have the correct ``load_id``.
 
 .. code-block:: python 
 
-   load = Load(config = DashConfig,
+   load = Load(config = dashconfig,
                load_id = 'load_id'
                # The other arguments should not be specified when re-creating a load.
                )
