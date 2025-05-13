@@ -623,6 +623,7 @@ To process the output data further instead of writing to a csv file, load the da
 
 .. code-block:: python
    
+      import io
       response = query.get_csv_for_streaming()
       data = io.StringIO(response.data.decode('utf-8'))
       df = pd.read_csv(data)
