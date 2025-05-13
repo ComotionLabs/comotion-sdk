@@ -636,7 +636,7 @@ If an upload or query needs to be run in a specific data zone, the ``zone`` argu
 
 .. code-block:: python
 
-   from comotion.dash import DashConfig
+   from comotion.dash import DashConfig, Query, Load
    from comotion.auth import Auth
 
    zone_1_config = DashConfig(Auth("myorgname"), data_zone = 'zone_1')
