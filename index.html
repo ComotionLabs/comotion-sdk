@@ -220,41 +220,55 @@
               <ul class="md-nav__list">
         <li class="md-nav__item"><a href="#installation" class="md-nav__link">Installation</a>
         </li>
-        <li class="md-nav__item"><a href="#uploading-data-to-dash-data-model-v1" class="md-nav__link">Uploading Data to Dash: Data Model v1</a><nav class="md-nav">
+        <li class="md-nav__item"><a href="#authentication" class="md-nav__link">Authentication</a><nav class="md-nav">
               <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#uploading-a-file-to-dash" class="md-nav__link">Uploading a file to Dash</a>
+        <li class="md-nav__item"><a href="#logging-in" class="md-nav__link">Logging In</a>
         </li>
-        <li class="md-nav__item"><a href="#modifying-a-file-for-upload" class="md-nav__link">Modifying a file for upload</a>
-        </li>
-        <li class="md-nav__item"><a href="#testing-and-debugging-an-upload-script" class="md-nav__link">Testing and debugging an upload script</a>
-        </li>
-        <li class="md-nav__item"><a href="#advanced-usage-with-pandas" class="md-nav__link">Advanced usage with Pandas</a>
+        <li class="md-nav__item"><a href="#org-name-set-up" class="md-nav__link">Org Name Set-up</a>
         </li></ul>
             </nav>
         </li>
         <li class="md-nav__item"><a href="#uploading-data-to-dash-data-model-v2" class="md-nav__link">Uploading Data to Dash: Data Model v2</a><nav class="md-nav">
               <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#read-and-upload-file-to-dash" class="md-nav__link"><code class="docutils literal notranslate"><span class="pre">read_and_upload_file_to_dash</span></code></a>
-        </li>
-        <li class="md-nav__item"><a href="#example-of-etl-change-for-data-model-v2" class="md-nav__link">Example of ETL change for Data Model v2</a>
-        </li>
         <li class="md-nav__item"><a href="#dashbulkuploader" class="md-nav__link">DashBulkUploader</a>
         </li>
         <li class="md-nav__item"><a href="#load" class="md-nav__link">Load</a>
+        </li></ul>
+            </nav>
         </li>
-        <li class="md-nav__item"><a href="#migrating-to-data-model-v2" class="md-nav__link">Migrating to Data Model v2</a>
+        <li class="md-nav__item"><a href="#uploading-data-to-dash-data-model-v1" class="md-nav__link">Uploading Data to Dash: Data Model v1</a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#uploading-a-file-to-dash" class="md-nav__link">Uploading a file to Dash</a>
+        </li></ul>
+            </nav>
+        </li>
+        <li class="md-nav__item"><a href="#custom-upload-usage" class="md-nav__link">Custom Upload Usage</a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#testing-and-debugging-an-upload-script" class="md-nav__link">Testing and debugging an upload script</a>
+        </li>
+        <li class="md-nav__item"><a href="#pandas-usage" class="md-nav__link">Pandas Usage</a>
+        </li></ul>
+            </nav>
+        </li>
+        <li class="md-nav__item"><a href="#migrating-to-data-model-v2" class="md-nav__link">Migrating to Data Model v2</a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#read-and-upload-file-to-dash" class="md-nav__link"><code class="docutils literal notranslate"><span class="pre">read_and_upload_file_to_dash</span></code></a>
+        </li>
+        <li class="md-nav__item"><a href="#example-of-etl-change-for-data-model-v2" class="md-nav__link">Example of ETL change for Data Model v2</a>
         </li></ul>
             </nav>
         </li>
         <li class="md-nav__item"><a href="#running-queries-and-extracting-data" class="md-nav__link">Running Queries and Extracting Data</a><nav class="md-nav">
               <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#logging-in" class="md-nav__link">Logging In</a>
-        </li>
         <li class="md-nav__item"><a href="#running-a-query" class="md-nav__link">Running a query</a>
         </li>
         <li class="md-nav__item"><a href="#authentication-using-client-secret" class="md-nav__link">Authentication Using Client Secret</a>
         </li></ul>
             </nav>
+        </li>
+        <li class="md-nav__item"><a href="#data-zones" class="md-nav__link">Data Zones</a>
+        </li>
+        <li class="md-nav__item"><a href="#v2-upload-cheat-sheet" class="md-nav__link">v2 Upload Cheat sheet</a>
         </li></ul>
             </nav>
         </li>
@@ -291,6 +305,181 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">comotion</span><span class="o">-</span><span class="n">sdk</span>
 </pre></div>
 </div>
+<p>If you have already installed the SDK, ensure it is up to date by running:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">upgrade</span> <span class="n">comotion</span><span class="o">-</span><span class="n">sdk</span>
+</pre></div>
+</div>
+
+
+<h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permalink to this headline">¶</a></h2>
+
+<span id="id1"></span><h3 id="logging-in">Logging In<a class="headerlink" href="#logging-in" title="Permalink to this headline">¶</a></h3>
+<p>The Comotion Dash API is built on v2 of the Comotion API - which uses a new way to authenticate.  You do not need an API key, but can log in with your normal user name and password.</p>
+<p>In order to do this, after you have installed the SDK, you need to authenticate from the command line.  Type in the following from the command line</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">comotion</span> <span class="n">authenticate</span>
+</pre></div>
+</div>
+<p>You will be prompted for your <code class="docutils literal notranslate"><span class="pre">orgname</span></code> which is your orgnisation’s unique name, and then a browser will open for you to login.</p>
+<p>Once this process is complete, the relevant keys will automatically be saved in your computers’s credentials manager.</p>
+
+
+<h3 id="org-name-set-up">Org Name Set-up<a class="headerlink" href="#org-name-set-up" title="Permalink to this headline">¶</a></h3>
+<p>To prevent asking for orgname every time, you can save your orgname as an environment variable <code class="docutils literal notranslate"><span class="pre">COMOTION_ORGNAME</span></code></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">export</span> <span class="n">COMOTION_ORGNAME</span><span class="o">=</span><span class="n">orgname</span>
+<span class="o">&gt;</span> <span class="n">comotion</span> <span class="n">authenticate</span>
+</pre></div>
+</div>
+<p>or, include it directly in the comment line:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">comotion</span> <span class="o">-</span><span class="n">o</span> <span class="n">orgname</span> <span class="n">authenticate</span>
+</pre></div>
+</div>
+
+
+
+<h2 id="uploading-data-to-dash-data-model-v2">Uploading Data to Dash: Data Model v2<a class="headerlink" href="#uploading-data-to-dash-data-model-v2" title="Permalink to this headline">¶</a></h2>
+<p>The following upload toolsets are available once you are on data model v2. Remember to authenticate if you haven’t in a while: <a class="reference internal" href="#logging-in"><span class="std std-ref">Logging In</span></a>.</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#dashbulkuploader"><span class="std std-ref">DashBulkUploader</span></a></p></li>
+<li><p><a class="reference internal" href="#load"><span class="std std-ref">Load</span></a></p></li>
+</ul>
+<p>For more information on migrating, see <a class="reference internal" href="#migrate-to-v2"><span class="std std-ref">Migrating to Data Model v2</span></a>.</p>
+<div class="admonition hint">
+<p class="admonition-title">Hint</p>
+<p>It is helpful to track the <code class="docutils literal notranslate"><span class="pre">load_id</span></code> of the loads you create.</p>
+<p>This is a unique identifier for the load, and can be used to re-create the load if needed.</p>
+<p>Comotion can also provide support easily if the <code class="docutils literal notranslate"><span class="pre">load_id</span></code> is provided.</p>
+</div>
+
+<span id="id2"></span><h3 id="dashbulkuploader">DashBulkUploader<a class="headerlink" href="#dashbulkuploader" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">DashBulkUploader</span></code> class is the recommended way to upload data to Dash.  This uses the <code class="docutils literal notranslate"><span class="pre">Load</span></code> class, but provides some default functionality and the <code class="docutils literal notranslate"><span class="pre">uploads</span></code> attribute to manage multiple loads.</p>
+<p>If more control is needed over the upload process, the <a class="reference internal" href="#load"><span class="std std-ref">Load</span></a> class can be used instead.</p>
+<p>The process can be summarized as follows:</p>
+<ol class="arabic simple">
+<li><p>Create a <code class="docutils literal notranslate"><span class="pre">DashBulkUploader</span></code> object</p></li>
+<li><p>Add loads to the uploader</p></li>
+<li><p>Add data sources to each load</p></li>
+<li><p>Execute the uploads</p></li>
+<li><p>Check the status of the loads</p></li>
+</ol>
+<p>Below is a simple example of how to use the <code class="docutils literal notranslate"><span class="pre">DashBulkUploader</span></code> class.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">comotion.dash</span> <span class="kn">import</span> <span class="n">DashBulkUploader</span><span class="p">,</span> <span class="n">DashConfig</span>
+<span class="kn">from</span> <span class="nn">comotion.auth</span> <span class="kn">import</span> <span class="n">Auth</span>
+
+<span class="c1"># 1. Create the uploader object</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">Auth</span><span class="p">(</span><span class="n">orgname</span> <span class="o">=</span> <span class="s1">'my_org_name'</span><span class="p">))</span>
+<span class="n">uploader</span> <span class="o">=</span> <span class="n">DashBulkUploader</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span><span class="p">)</span>
+
+<span class="c1"># 2. Add a Load -&gt; essentially creates a Load object and adds it to the uploader</span>
+<span class="n">lake_tables_and_sources</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s1">'v1_policies'</span><span class="p">,</span> <span class="s1">'data/inforce_policies'</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">'v1_claims'</span><span class="p">,</span> <span class="s1">'data/claims'</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">'v1_customers'</span><span class="p">,</span> <span class="s1">'data/customers'</span><span class="p">)</span>
+<span class="p">]</span>
+
+<span class="k">for</span> <span class="n">my_lake_table</span><span class="p">,</span> <span class="n">source_data</span> <span class="ow">in</span> <span class="n">lake_tables_and_sources</span><span class="p">:</span>
+   <span class="n">uploader</span><span class="o">.</span><span class="n">add_load</span><span class="p">(</span>
+      <span class="n">table_name</span><span class="o">=</span><span class="n">my_lake_table</span><span class="p">,</span>
+      <span class="n">load_as_service_client_id</span><span class="o">=</span><span class="s1">'0'</span><span class="p">,</span>
+      <span class="n">track_rows_uploaded</span><span class="o">=</span><span class="kc">True</span>  <span class="c1"># This automatically creates a check_sum {'count(*)': x} where x is the number of rows in the source data.</span>
+      <span class="c1"># See cheat sheet for more options available for the load.</span>
+   <span class="p">)</span>
+
+   <span class="c1"># Add data source(s) to the Load. At least one data source is required, but multiple can be added to the same load.</span>
+   <span class="n">uploader</span><span class="o">.</span><span class="n">add_data_to_load</span><span class="p">(</span>
+      <span class="n">table_name</span><span class="o">=</span><span class="n">my_lake_table</span><span class="p">,</span>
+      <span class="n">data</span><span class="o">=</span><span class="n">source_data</span>  <span class="c1"># Can be a path to a csv, parquet or directory, a pandas dataframe or a dash.Query object</span>
+      <span class="c1"># See cheat sheet for more options available for the data source.</span>
+   <span class="p">)</span>
+
+<span class="c1"># 4. Execute the uploads - this commits the loads.</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">uploader</span><span class="o">.</span><span class="n">uploads</span><span class="p">)</span>
+<span class="n">uploader</span><span class="o">.</span><span class="n">execute_all_uploads</span><span class="p">()</span> <span class="c1"># You can also execute specific uploads with execute_multiple_uploads() and execute_upload()</span>
+
+<span class="c1"># 5. Check the status of the loads</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">uploader</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>See the <a class="reference internal" href="#v2-cheat-sheet"><span class="std std-ref">v2 Upload Cheat sheet</span></a> for different configuration options available, and if they should be specified for the load or the data source.</p>
+<p>If your data source has specific read requirements, see <a class="reference internal" href="#pandas-usage"><span class="std std-ref">Pandas Usage</span></a> for more information on how to use pandas arguments to handle your use case.</p>
+<div class="admonition hint">
+<p class="admonition-title">Hint</p>
+<p>If a path to a directory is specified as a data source, all valid files in the directory will be uploaded to the lake table specified.</p>
+<p>This allows you to chunk files and store them in the same folder for more efficient extract and upload.</p>
+<p>Note this is not an option for the <code class="docutils literal notranslate"><span class="pre">Load</span></code> class.</p>
+</div>
+<div class="admonition-obtaining-the-file-key-to-remove-data-from-a-load admonition">
+<p class="admonition-title">Obtaining the <code class="docutils literal notranslate"><span class="pre">file_key</span></code> to remove data from a load</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">file_key</span></code> parameter is used to avoid duplicating a data source within a load.  This is automatically generated if not provided.</p>
+<p>You can also use the <code class="docutils literal notranslate"><span class="pre">uploader.remove_load()</span></code> or <code class="docutils literal notranslate"><span class="pre">uploader.remove_data_from_load()</span></code> functions to remove loads or data sources from the uploader respectively.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">remove_data_from_load</span></code> function requires a file key to be specified, which can be retrieved from the <code class="docutils literal notranslate"><span class="pre">uploader.uploads</span></code> object.</p>
+</div>
+
+
+<span id="id3"></span><h3 id="load">Load<a class="headerlink" href="#load" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">Load</span></code> class is the primary class for uploading data to Dash. The process of using this class can be outlined as follows:</p>
+<ol class="arabic simple">
+<li><p>Create a <code class="docutils literal notranslate"><span class="pre">Load</span></code> object</p></li>
+<li><p>Upload data sources to the load</p></li>
+<li><p>Commit the load with a valid check sum</p></li>
+<li><p>Check the status of the load</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">comotion.dash</span> <span class="kn">import</span> <span class="n">Load</span><span class="p">,</span> <span class="n">DashConfig</span><span class="p">,</span> <span class="n">Query</span>
+<span class="kn">from</span> <span class="nn">comotion.auth</span> <span class="kn">import</span> <span class="n">Auth</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="c1"># 1. Create the load object and data source variables</span>
+<span class="n">dashconfig</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">Auth</span><span class="p">(</span><span class="n">orgname</span> <span class="o">=</span> <span class="s1">'my_org_name'</span><span class="p">))</span>
+
+<span class="n">load</span> <span class="o">=</span> <span class="n">Load</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">dashconfig</span><span class="p">,</span>
+            <span class="n">load_type</span> <span class="o">=</span> <span class="s1">'APPEND_ONLY'</span><span class="p">,</span>
+            <span class="n">table_name</span> <span class="o">=</span> <span class="s1">'v1_inforce_policies'</span><span class="p">,</span>
+            <span class="n">load_as_service_client_id</span> <span class="o">=</span> <span class="s1">'0'</span><span class="p">,</span>
+            <span class="n">track_rows_uploaded</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="c1"># See cheat sheet for more options available for the load.</span>
+            <span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Load ID: "</span> <span class="o">+</span> <span class="n">load</span><span class="o">.</span><span class="n">load_id</span><span class="p">)</span> <span class="c1"># It is helpful to track the load_id</span>
+
+<span class="c1"># 2. Upload data sources to the load. At least one data source is required, but multiple can be added to the same load.</span>
+
+<span class="c1"># Several examples shown for demonstration, but typically only one of these functions will be required.</span>
+<span class="c1"># 2.1: Upload a pandas dataframe. This is useful if your source is not part of the standard data sources supported.</span>
+<span class="n">df_for_upload</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">connection</span><span class="p">)</span>
+<span class="n">load</span><span class="o">.</span><span class="n">upload_df</span><span class="p">(</span>
+   <span class="n">data</span> <span class="o">=</span> <span class="n">df_for_upload</span>
+<span class="p">)</span>
+<span class="c1"># 2.2: Upload a file. This can be a csv, parquet, json or excel file or file .io stream.</span>
+<span class="n">path_to_upload_file</span> <span class="o">=</span> <span class="s1">'data/inforce_policies.csv'</span>
+<span class="n">load</span><span class="o">.</span><span class="n">upload_file</span><span class="p">(</span>
+   <span class="n">data</span> <span class="o">=</span> <span class="n">path_to_upload_file</span>
+<span class="p">)</span>
+<span class="c1"># 2.3: Uploaed a dash.Query object. This is useful, for example, for moving data from one lake table to another.</span>
+<span class="n">dash_query</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="n">query_text</span> <span class="o">=</span> <span class="s1">'select * from orgname_lake_v2.v1_staging_policies'</span><span class="p">,</span> <span class="n">config</span> <span class="o">=</span> <span class="n">dashconfig</span><span class="p">)</span>
+<span class="n">load</span><span class="o">.</span><span class="n">upload_dash_query</span><span class="p">(</span><span class="c1"># Uploads the result of a dash.Query object.</span>
+   <span class="n">data</span> <span class="o">=</span> <span class="n">dash_query</span>
+<span class="p">)</span>
+
+<span class="c1"># 3. Commit the load with a valid check sum.</span>
+<span class="n">load</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span>
+   <span class="n">check_sum</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="s1">'sum(salary)'</span><span class="p">:</span> <span class="mi">12345</span>
+   <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="c1"># 4. Check the status of the load</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">load</span><span class="o">.</span><span class="n">wait_to_complete</span><span class="p">())</span>
+<span class="n">load_info</span> <span class="o">=</span> <span class="n">load</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">load_info</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>See the <a class="reference internal" href="#v2-cheat-sheet"><span class="std std-ref">v2 Upload Cheat sheet</span></a> for different configuration options available.</p>
+<p>You can also re-create an existing load if you have the correct <code class="docutils literal notranslate"><span class="pre">load_id</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">load</span> <span class="o">=</span> <span class="n">Load</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">dashconfig</span><span class="p">,</span>
+            <span class="n">load_id</span> <span class="o">=</span> <span class="s1">'load_id'</span>
+            <span class="c1"># The other arguments should not be specified when re-creating a load.</span>
+            <span class="p">)</span>
+</pre></div>
+</div>
+
 
 
 <span id="data-model-v1-upload"></span><h2 id="uploading-data-to-dash-data-model-v1">Uploading Data to Dash: Data Model v1<a class="headerlink" href="#uploading-data-to-dash-data-model-v1" title="Permalink to this headline">¶</a></h2>
@@ -298,11 +487,6 @@
 <p class="admonition-title">Note</p>
 <p>Comotion has released a new version of our data model in 2025. We refer to the original version as Data Model v1, and the new version as Data Model v2.</p>
 </div>
-<p>In order to use the SDK in your python file, you must first import it.  In these examples we will import the dash module directly as follows</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">dash</span>
-</pre></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">read_and_upload_file_to_dash</span></code> function can be used to upload a csv file or stream to Data Model v1.</p>
 
 <h3 id="uploading-a-file-to-dash">Uploading a file to Dash<a class="headerlink" href="#uploading-a-file-to-dash" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">read_and_upload_file_to_dash</span></code> reads a csv file, breaks it up, gzips the files and pushes them to the Dash API.</p>
@@ -328,41 +512,10 @@
 </div>
 
 
-<h3 id="modifying-a-file-for-upload">Modifying a file for upload<a class="headerlink" href="#modifying-a-file-for-upload" title="Permalink to this headline">¶</a></h3>
-<p>Often you will want to add a column - such as an upload timestamp or batch number - to the csv file to be uploaded.  This can easily be done by using the <code class="docutils literal notranslate"><span class="pre">modify_lambda</span></code> parameter.  It accepts a python function that recieves a <a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html">pandas.dataframe</a>  read from the csv. Here is an example of adding a timestamp as a column called <code class="docutils literal notranslate"><span class="pre">snapshot_timestamp</span></code> to the csv:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Break up and upload file to Dash with Extra Column</span>
 
-<span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">dash</span>
-<span class="kn">from</span> <span class="nn">getpass</span> <span class="kn">import</span> <span class="n">getpass</span>
-<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<h2 id="custom-upload-usage">Custom Upload Usage<a class="headerlink" href="#custom-upload-usage" title="Permalink to this headline">¶</a></h2>
 
-<span class="c1"># define the function used to modify the file</span>
-
-<span class="n">myTimeStamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S.</span><span class="si">%f</span><span class="s2">"</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">addTimeStamp</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
- <span class="n">df</span><span class="p">[</span><span class="s1">'snapshot_timestamp'</span><span class="p">]</span> <span class="o">=</span> <span class="n">myTimeStamp</span>
-
-<span class="c1"># set relevant parameters</span>
-
-<span class="n">dash_orgname</span> <span class="o">=</span> <span class="s1">'my_org_name'</span>
-<span class="n">dash_api_key</span> <span class="o">=</span> <span class="s1">''</span>
-<span class="n">dash_api_key</span> <span class="o">=</span> <span class="n">getpass</span><span class="p">(</span>
-    <span class="n">prompt</span><span class="o">=</span><span class="s1">'Enter your '</span> <span class="o">+</span> <span class="n">dash_orgname</span> <span class="o">+</span> <span class="s1">'.comodash.io api key:'</span>
-<span class="p">)</span> <span class="c1"># this prompts the user to enter the api key</span>
-
-<span class="n">dash</span><span class="o">.</span><span class="n">read_and_upload_file_to_dash</span><span class="p">(</span>
-    <span class="s1">'./path/to/csv/file.csv'</span><span class="p">,</span>
-    <span class="n">dash_table</span><span class="o">=</span><span class="s1">'my_table_name'</span><span class="p">,</span>
-    <span class="n">dash_orgname</span><span class="o">=</span><span class="n">dash_orgname</span><span class="p">,</span>
-    <span class="n">dash_api_key</span><span class="o">=</span><span class="n">dash_api_key</span><span class="p">,</span>
-    <span class="n">modify_lambda</span><span class="o">=</span><span class="n">addTimeStamp</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-
-
-<h3 id="testing-and-debugging-an-upload-script">Testing and debugging an upload script<a class="headerlink" href="#testing-and-debugging-an-upload-script" title="Permalink to this headline">¶</a></h3>
+<span id="testing-and-debugging"></span><h3 id="testing-and-debugging-an-upload-script">Testing and debugging an upload script<a class="headerlink" href="#testing-and-debugging-an-upload-script" title="Permalink to this headline">¶</a></h3>
 <p>In order to check that your script is working, you can run a dry run. This saves the files locally rather than uploading them to dash - so that you can check the result before uploading.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># First test the upload using the dry_run feature</span>
 
@@ -388,64 +541,160 @@
 <p>Instead of uploading, this will output the files that would have been uploaded to <code class="docutils literal notranslate"><span class="pre">./outputpath/</span></code>. If the file to be uplaoded is large, it will break it up and all files would be placed in the output path.</p>
 
 
-<h3 id="advanced-usage-with-pandas">Advanced usage with Pandas<a class="headerlink" href="#advanced-usage-with-pandas" title="Permalink to this headline">¶</a></h3>
+<span id="id4"></span><h3 id="pandas-usage">Pandas Usage<a class="headerlink" href="#pandas-usage" title="Permalink to this headline">¶</a></h3>
 <p>Using this sdk in conjunction with <a class="reference external" href="https://pandas.pydata.org">pandas</a> provides a powerful toolset to integrate with any source.</p>
-<p>Here is an example of reading a table named <code class="docutils literal notranslate"><span class="pre">my_table</span></code> from a postgres database:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># upload a postgres table to dash using Pandas</span>
+<div class="admonition hint">
+<p class="admonition-title">Hint</p>
+<p>Uploads are always converted to a <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code> when uploading with the SDK when using the <code class="docutils literal notranslate"><span class="pre">Load</span></code> and <code class="docutils literal notranslate"><span class="pre">DashBulkUploader</span></code> classes.  This allows you to provide valid pandas arguments in the <code class="docutils literal notranslate"><span class="pre">Load.upload_file()</span></code>, <code class="docutils literal notranslate"><span class="pre">Load.upload_dash_query()</span></code> and <code class="docutils literal notranslate"><span class="pre">DashBulkUploader.add_data_to_load()</span></code> functions.</p>
+<p>For production uploads, the dtype argument is highly recommended: <a class="reference external" href="https://pandas.pydata.org/docs/user_guide/basics.html#dtypes">pandas dtypes</a>.</p>
+<p>The following 3 examples are equivalent ways to upload data into Dash.  Notice how the exact same arguments which can be passed to a <code class="docutils literal notranslate"><span class="pre">pandas</span></code> read function can be passed to the SDK classes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1: Using pandas arguments in the Load class</span>
+<span class="n">load</span><span class="o">.</span><span class="n">upload_file</span><span class="p">(</span>
+   <span class="n">data</span> <span class="o">=</span> <span class="s1">'my_data.csv'</span><span class="p">,</span>
+   <span class="n">dtype</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'column_1'</span><span class="p">:</span> <span class="s1">'int'</span><span class="p">,</span> <span class="s1">'column_2'</span><span class="p">:</span> <span class="s1">'object'</span><span class="p">}</span>
+   <span class="n">sep</span> <span class="o">=</span> <span class="s1">';'</span><span class="p">,</span>
+   <span class="n">encoding</span> <span class="o">=</span> <span class="s1">'utf-16'</span>
+   <span class="c1"># Could add any more valid pandas arguments here</span>
+<span class="p">)</span>
+
+<span class="c1"># 2: Using pandas arguments in the DashBulkUploader class</span>
+<span class="n">uploader</span><span class="o">.</span><span class="n">add_data_to_load</span><span class="p">(</span>
+   <span class="n">table_name</span> <span class="o">=</span> <span class="n">my_lake_table</span><span class="p">,</span>
+   <span class="n">data</span> <span class="o">=</span> <span class="s1">'my_data.csv'</span><span class="p">,</span>
+   <span class="n">dtype</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'column_1'</span><span class="p">:</span> <span class="s1">'int'</span><span class="p">,</span> <span class="s1">'column_2'</span><span class="p">:</span> <span class="s1">'object'</span><span class="p">},</span>
+   <span class="n">sep</span> <span class="o">=</span> <span class="s1">';'</span><span class="p">,</span>
+   <span class="n">encoding</span> <span class="o">=</span> <span class="s1">'utf-16'</span>
+   <span class="c1"># Could add any more valid pandas arguments here</span>
+<span class="p">)</span>
+
+<span class="c1"># 3: Read with pandas and upload df with the SDK</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">'my_data.csv'</span><span class="p">,</span>
+                 <span class="n">dtype</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'column_1'</span><span class="p">:</span> <span class="s1">'int'</span><span class="p">,</span> <span class="s1">'column_2'</span><span class="p">:</span> <span class="s1">'object'</span><span class="p">},</span>
+                 <span class="n">sep</span> <span class="o">=</span> <span class="s1">';'</span><span class="p">,</span>
+                 <span class="n">encoding</span> <span class="o">=</span> <span class="s1">'utf-16'</span><span class="p">)</span>
+
+<span class="c1"># 3.1: Then upload a df with the DashBulkUploader</span>
+<span class="n">uploader</span><span class="o">.</span><span class="n">add_data_to_load</span><span class="p">(</span>
+   <span class="n">table_name</span> <span class="o">=</span> <span class="n">my_lake_table</span><span class="p">,</span>
+   <span class="n">data</span> <span class="o">=</span> <span class="n">df</span>
+<span class="p">)</span>
+
+<span class="c1"># OR 3.2: Upload a df with the Load class</span>
+<span class="n">load</span><span class="o">.</span><span class="n">upload_df</span><span class="p">(</span>
+   <span class="n">data</span> <span class="o">=</span> <span class="n">df</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>But there are many more pandas arguments available to read your source correctly.  Refer to the applicable pandas read function documentation in the table below to see the available arguments for your source data.</p>
+<p>(Almost) All of the arguments available in the applicable read function can be used with the SDK.</p>
+<table id="id5">
+<caption><span class="caption-text">Pandas Read Options for Source Types</span><a class="headerlink" href="#id5" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 50%"/>
+<col style="width: 50%"/>
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Data Source Type</p></th>
+<th class="head"><p>Pandas Read Function Documentation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>CSV</p></td>
+<td><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html">pd.read_csv</a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Excel</p></td>
+<td><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_excel.html">pd.read_excel</a></p></td>
+</tr>
+<tr class="row-even"><td><p>JSON</p></td>
+<td><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_json.html">pd.read_json</a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Parquet</p></td>
+<td><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_parquet.html">pd.read_parquet</a></p></td>
+</tr>
+<tr class="row-even"><td><p>Other</p></td>
+<td><p>See example 3 above. First read the data into a pandas dataframe using the appropriate pandas read function, and then use the <code class="docutils literal notranslate"><span class="pre">Load.upload_df()</span></code> or <code class="docutils literal notranslate"><span class="pre">DashBulkUploader.add_data_to_load()</span></code> function to upload it.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The following pandas arguments should not be provided as they are used by the default functionality of the SDK:
+<code class="docutils literal notranslate"><span class="pre">['filepath_or_buffer',</span> <span class="pre">'chunksize',</span> <span class="pre">'nrows',</span> <span class="pre">'path',</span> <span class="pre">'path_or_buf',</span> <span class="pre">'io']</span></code>.</p>
+</div>
+</div>
+<div class="admonition hint">
+<p class="admonition-title">Hint</p>
+<p>Often you will want to process your source data before uploading. For example, you may want to add metadata to the data, or hash PII before uploading.</p>
+<p>Simple operations on the source data can be applied for the upload using the <code class="docutils literal notranslate"><span class="pre">modify_lambda</span></code> parameter.  It accepts a python function that recieves a <a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html">pandas.dataframe</a>.</p>
+<p>Here is simple example of adding a timestamp as a column called <code class="docutils literal notranslate"><span class="pre">snapshot_timestamp</span></code> to the csv.  The function provided can apply several manipulations to the data if required:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Break up and upload file to Dash with Extra Column</span>
 
 <span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">dash</span>
 <span class="kn">from</span> <span class="nn">getpass</span> <span class="kn">import</span> <span class="n">getpass</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="c1"># define the function used to modify the file</span>
+
+<span class="n">myTimeStamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S.</span><span class="si">%f</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">addTimeStamp</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span> <span class="c1"># Do not need to specify the type of df, but shown for demonstration</span>
+   <span class="n">df</span><span class="p">[</span><span class="s1">'snapshot_timestamp'</span><span class="p">]</span> <span class="o">=</span> <span class="n">myTimeStamp</span>
+   <span class="c1"># Can provide more manipulations in this function if needed</span>
 
 <span class="c1"># set relevant parameters</span>
 
 <span class="n">dash_orgname</span> <span class="o">=</span> <span class="s1">'my_org_name'</span>
 <span class="n">dash_api_key</span> <span class="o">=</span> <span class="s1">''</span>
 <span class="n">dash_api_key</span> <span class="o">=</span> <span class="n">getpass</span><span class="p">(</span>
-    <span class="n">prompt</span><span class="o">=</span><span class="s1">'Enter your '</span> <span class="o">+</span> <span class="n">dash_orgname</span> <span class="o">+</span> <span class="s1">'.comodash.io api key:'</span>
+   <span class="n">prompt</span><span class="o">=</span><span class="s1">'Enter your '</span> <span class="o">+</span> <span class="n">dash_orgname</span> <span class="o">+</span> <span class="s1">'.comodash.io api key:'</span>
 <span class="p">)</span> <span class="c1"># this prompts the user to enter the api key</span>
 
-
-<span class="c1"># set timestamp to use as a snapshot indication</span>
-<span class="n">myTimeStamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S.</span><span class="si">%f</span><span class="s2">"</span><span class="p">)</span>
-
-<span class="c1"># create dataframe from source db:</span>
-<span class="n">df_iterable</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">read_sql_table</span><span class="p">(</span>
-   <span class="n">table_name</span><span class="o">=</span><span class="s1">'my_table'</span><span class="p">,</span>
-   <span class="s1">'postgresql://username:password@address.of.db:5432/mydatabase'</span><span class="p">,</span>
-   <span class="n">chunksize</span><span class="o">=</span><span class="mi">30000</span>
-   <span class="p">)</span>
-
-<span class="c1"># note the use of chunksize which will ensure the whole table is not read at once.</span>
-<span class="c1"># this is also important to ensure that files uploaded to Dash are below the size limit</span>
-
-
-<span class="k">for</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">df_iterable</span><span class="p">:</span>
-   <span class="c1"># add timestamp as a column</span>
-   <span class="n">df</span><span class="p">[</span><span class="s1">'snapshot_timestamp'</span><span class="p">]</span> <span class="o">=</span> <span class="n">myTimeStamp</span>
-
-   <span class="c1"># create a gzipped csv stream from the dataframe</span>
-   <span class="n">csv_stream</span> <span class="o">=</span> <span class="n">dash</span><span class="o">.</span><span class="n">create_gzipped_csv_stream_from_df</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-
-   <span class="c1"># upload the stream to dash</span>
-   <span class="n">dash_response</span> <span class="o">=</span> <span class="n">dash</span><span class="o">.</span><span class="n">upload_csv_to_dash</span><span class="p">(</span>
-       <span class="n">dash_orgname</span><span class="p">,</span>
-       <span class="n">dash_api_key</span><span class="p">,</span>
-       <span class="s1">'my_table_in_dash'</span><span class="p">,</span>
-       <span class="n">csv_stream</span>
-   <span class="p">)</span>
+<span class="n">dash</span><span class="o">.</span><span class="n">read_and_upload_file_to_dash</span><span class="p">(</span>
+   <span class="s1">'./path/to/csv/file.csv'</span><span class="p">,</span>
+   <span class="n">dash_table</span><span class="o">=</span><span class="s1">'my_table_name'</span><span class="p">,</span>
+   <span class="n">dash_orgname</span><span class="o">=</span><span class="n">dash_orgname</span><span class="p">,</span>
+   <span class="n">dash_api_key</span><span class="o">=</span><span class="n">dash_api_key</span><span class="p">,</span>
+   <span class="n">modify_lambda</span><span class="o">=</span><span class="n">addTimeStamp</span>
+<span class="p">)</span>
 </pre></div>
+</div>
 </div>
 
 
 
-<h2 id="uploading-data-to-dash-data-model-v2">Uploading Data to Dash: Data Model v2<a class="headerlink" href="#uploading-data-to-dash-data-model-v2" title="Permalink to this headline">¶</a></h2>
-<p>The following upload toolsets are available after <a class="reference internal" href="#migrate-to-v2"><span class="std std-ref">Migrating to Data Model v2</span></a>:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">read_and_upload_file_to_dash</span></code>: <a class="reference internal" href="#data-model-v1-upload"><span class="std std-ref">Uploading Data to Dash: Data Model v1</span></a></p></li>
-<li><p><a class="reference internal" href="#dashbulkuploader"><span class="std std-ref">DashBulkUploader</span></a></p></li>
-<li><p><a class="reference internal" href="#load"><span class="std std-ref">Load</span></a></p></li>
-</ul>
+<span id="migrate-to-v2"></span><h2 id="migrating-to-data-model-v2">Migrating to Data Model v2<a class="headerlink" href="#migrating-to-data-model-v2" title="Permalink to this headline">¶</a></h2>
+<p>You can migrate to data model v2 with the SDK.  First you will need to run a flash schema migration.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">comotion.dash</span> <span class="kn">import</span> <span class="n">DashConfig</span><span class="p">,</span> <span class="n">Migration</span>
+<span class="kn">from</span> <span class="nn">comotion.auth</span> <span class="kn">import</span> <span class="n">Auth</span>
+
+<span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">Auth</span><span class="p">(</span><span class="s2">"myorgname"</span><span class="p">))</span>
+
+<span class="n">migration</span> <span class="o">=</span> <span class="n">Migration</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span><span class="p">)</span>
+<span class="n">migration</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">migration_type</span> <span class="o">=</span> <span class="s1">'FLASH_SCHEMA'</span><span class="p">)</span> <span class="c1"># This is the default value so it does not need to be specified</span>
+</pre></div>
+</div>
+<p>This copies the schema of all your lake tables from the v1 lake to the v2 lake.</p>
+<p>Now you will be able to test your ETL on the new lake, using the <code class="docutils literal notranslate"><span class="pre">read_and_upload_file_to_dash</span></code> function, <code class="docutils literal notranslate"><span class="pre">DashBulkUploader</span></code> class or <code class="docutils literal notranslate"><span class="pre">Load</span></code> class.</p>
+<p>Once you are happy that your ETL will work with the new lake, you can run a full migration.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">migration</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">migration_type</span> <span class="o">=</span> <span class="s1">'FULL_MIGRATION'</span><span class="p">,</span>
+                <span class="n">clear_out_new_lake</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This clears out the v2 lake and runs the full migration of data.  If <code class="docutils literal notranslate"><span class="pre">clear_out_new_lake</span></code> is false and there is data in the v2 lake, the full migration will fail.</p>
+<p>Good practice when migrating would be:</p>
+<ol class="arabic simple">
+<li><p>Run the flash schema migration</p></li>
+<li><p>Test your ETL on the new lake until satisfied.</p></li>
+<li><p>Stop ETL processes to the old lake.</p></li>
+<li><p>Run the full migration (the length of time for this depends on the amount of data in your lake, but it should not take more than a couple of hours).</p></li>
+<li><p>Deploy your new ETL processes.</p></li>
+</ol>
+<p>Once the full migration is run, you can no longer upload to the v1 lake.</p>
+<p>Check on the migration status at any time.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">migration</span><span class="o">.</span><span class="n">status</span><span class="p">())</span>
+</pre></div>
+</div>
 
 <h3 id="read-and-upload-file-to-dash"><code class="docutils literal notranslate"><span class="pre">read_and_upload_file_to_dash</span></code><a class="headerlink" href="#read-and-upload-file-to-dash" title="Permalink to this headline">¶</a></h3>
 <div class="admonition warning">
@@ -507,200 +756,9 @@
 </div>
 
 
-<span id="id1"></span><h3 id="dashbulkuploader">DashBulkUploader<a class="headerlink" href="#dashbulkuploader" title="Permalink to this headline">¶</a></h3>
-<p>The <code class="docutils literal notranslate"><span class="pre">DashBulkUploader</span></code> class is the recommended way to upload data to Dash. If more control is needed over the upload process, the <a class="reference internal" href="#load"><span class="std std-ref">Load</span></a> class can be used instead.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">comotion.dash</span> <span class="kn">import</span> <span class="n">DashBulkUploader</span>
-<span class="kn">from</span> <span class="nn">comotion.auth</span> <span class="kn">import</span> <span class="n">Auth</span>
-
-<span class="n">auth_token</span> <span class="o">=</span> <span class="n">Auth</span><span class="p">(</span><span class="n">orgname</span> <span class="o">=</span> <span class="s1">'my_org_name'</span><span class="p">)</span>
-<span class="n">my_lake_table</span> <span class="o">=</span> <span class="s1">'v1_policies'</span>
-<span class="n">uploader</span> <span class="o">=</span> <span class="n">DashBulkUploader</span><span class="p">(</span><span class="n">auth_token</span> <span class="o">=</span> <span class="n">auth_token</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>You can now add a load to the uploader.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">uploader</span><span class="o">.</span><span class="n">add_load</span><span class="p">(</span>
-                  <span class="n">table_name</span> <span class="o">=</span> <span class="n">my_lake_table</span><span class="p">,</span>
-                  <span class="n">check_sum</span> <span class="o">=</span> <span class="p">{</span>
-                     <span class="c1"># SQL aggregation: expected result</span>
-                     <span class="s1">'sum(salary)'</span><span class="p">:</span> <span class="mi">12345</span>
-                  <span class="p">},</span> <span class="c1"># Alternatively, provide the track_rows_uploaded arg as true</span>
-                  <span class="n">load_as_service_client_id</span> <span class="o">=</span> <span class="s1">'0'</span>
-                <span class="p">)</span>
-</pre></div>
-</div>
-<p>This creates a Load and adds it to the <code class="docutils literal notranslate"><span class="pre">uploader.uploads</span></code> object.  Note that <code class="docutils literal notranslate"><span class="pre">modify_lambda</span></code>, <code class="docutils literal notranslate"><span class="pre">path_to_output_for_dryrun</span></code> and <code class="docutils literal notranslate"><span class="pre">chunksize</span></code> can also be specified and will behave the same as for the <code class="docutils literal notranslate"><span class="pre">read_and_upload_file_to_dash</span></code> function.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">check_sum</span></code> parameter can be used to verify a load before it is pushed to the lake.  Specify a dictionary of valid check sums as in the example above to ensure data quality and completeness. Any valid SQL aggregation can be provided in the keys, and a scalar value should be provided for the values.  You will need to calculate these check sums at source and then provide the expected result as the value.</p>
-<p>If this is not required, you can set <code class="docutils literal notranslate"><span class="pre">track_rows_uploaded</span> <span class="pre">=</span> <span class="pre">True</span></code>, which will automatically create the check_sum <code class="docutils literal notranslate"><span class="pre">{'count(*)':</span> <span class="pre">x}</span></code>, where <code class="docutils literal notranslate"><span class="pre">x</span></code> is the number of rows in the source data.</p>
-<p>Now we need to add a data source to the load</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">uploader</span><span class="o">.</span><span class="n">add_data_to_load</span><span class="p">(</span>
-                           <span class="n">table_name</span> <span class="o">=</span> <span class="n">my_lake_table</span><span class="p">,</span>
-                           <span class="n">data</span> <span class="o">=</span> <span class="s1">'data/inforce_policies'</span><span class="p">,</span> <span class="c1"># Can be a path to a csv, parquet or directory, a pandas dataframe or a dash.Query object</span>
-                           <span class="n">dtype</span><span class="o">=</span><span class="p">{</span><span class="s1">'id'</span><span class="p">:</span> <span class="s1">'int32'</span><span class="p">,</span> <span class="s1">'name'</span><span class="p">:</span> <span class="s1">'string'</span><span class="p">,</span> <span class="s1">'age'</span><span class="p">:</span> <span class="s1">'int32'</span><span class="p">,</span> <span class="s1">'salary'</span><span class="p">:</span> <span class="s1">'float64'</span><span class="p">}</span> <span class="c1"># The dtype parameter is recommended (but optional), as it allows control of lake schema from source and improves upload data quality.</span>
-                         <span class="p">)</span>
-
-<span class="nb">print</span><span class="p">(</span><span class="n">uploader</span><span class="o">.</span><span class="n">uploads</span><span class="p">)</span> <span class="c1"># Will print the dictionary containing loads and data sources added to the uploader.</span>
-</pre></div>
-</div>
-<p>This function will add the datasource to the applicable load.  You can add multiple data sources to 1 load.  We recommend using the <code class="docutils literal notranslate"><span class="pre">dtype</span></code> parameter, which should be compatible with the pandas <code class="docutils literal notranslate"><span class="pre">dtype</span></code> argument.</p>
-<div class="admonition hint">
-<p class="admonition-title">Hint</p>
-<p>If a path to a directory is specified, all valid files in the directory will be uploaded to the lake table specified.</p>
-<p>This allows you to chunk files and store them in the same folder for more efficient extract and upload.</p>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">file_key</span></code> parameter is used to avoid duplicating a data source within a load.  This is automatically generated if not provided.</p>
-<p>You can also use the <code class="docutils literal notranslate"><span class="pre">uploader.remove_load()</span></code> or <code class="docutils literal notranslate"><span class="pre">uploader.remove_data_from_load()</span></code> functions to remove loads or data sources from the uploader respectively.</p>
-<div class="admonition-obtaining-the-file-key-to-remove-data-from-a-load admonition">
-<p class="admonition-title">Obtaining the <code class="docutils literal notranslate"><span class="pre">file_key</span></code> to remove data from a load</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">remove_data_from_load</span></code> function requires a file key to be specified, which you can get from the <code class="docutils literal notranslate"><span class="pre">uploader.uploads</span></code> object.</p>
-</div>
-<p>Finally, we can execute the upload.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">uploader</span><span class="o">.</span><span class="n">execute_upload</span><span class="p">(</span><span class="n">table_name</span> <span class="o">=</span> <span class="n">my_lake_table</span><span class="p">)</span> <span class="c1"># Also see functions execute_multiple_uploads and execute_all_uploads.</span>
-</pre></div>
-</div>
-<p>This will execute the upload.</p>
-<p>You can also check on the load statuses at any time.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">uploader</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">()</span>
-</pre></div>
-</div>
-
-
-<span id="id2"></span><h3 id="load">Load<a class="headerlink" href="#load" title="Permalink to this headline">¶</a></h3>
-<p>The <code class="docutils literal notranslate"><span class="pre">Load</span></code> class is the most flexible for uploading data to Dash.  The process can be outlined as follows:</p>
-<ol class="arabic simple">
-<li><p>Create a <code class="docutils literal notranslate"><span class="pre">Load</span></code> object</p></li>
-<li><p>Upload data sources to the load</p></li>
-<li><p>Commit the load with a valid check sum</p></li>
-</ol>
-<p>Creating the <code class="docutils literal notranslate"><span class="pre">Load</span></code> object is simple.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">comotion.dash</span> <span class="kn">import</span> <span class="n">Load</span><span class="p">,</span> <span class="n">Dashconfig</span>
-<span class="kn">from</span> <span class="nn">comotion.auth</span> <span class="kn">import</span> <span class="n">Auth</span>
-
-<span class="n">dashconfig</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">Auth</span><span class="p">(</span><span class="n">orgname</span> <span class="o">=</span> <span class="s1">'my_org_name'</span><span class="p">))</span>
-<span class="n">load</span> <span class="o">=</span> <span class="n">Load</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">,</span>
-            <span class="n">load_type</span> <span class="o">=</span> <span class="s1">'APPEND_ONLY'</span><span class="p">,</span>
-            <span class="n">table_name</span> <span class="o">=</span> <span class="s1">'v1_inforce_policies'</span><span class="p">,</span>
-            <span class="n">load_as_service_client_id</span> <span class="o">=</span> <span class="s1">'0'</span><span class="p">,</span>
-            <span class="n">track_rows_uploaded</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="c1"># Note modify_lambda, chunksize and path_to_output_for_dryrun are also options</span>
-            <span class="p">)</span>
-</pre></div>
-</div>
-<p>This creates a <code class="docutils literal notranslate"><span class="pre">Load</span></code> object.  The <code class="docutils literal notranslate"><span class="pre">load_type</span></code> currently only supports <code class="docutils literal notranslate"><span class="pre">APPEND_ONLY</span></code>, which means the data sources is added to the existing data in the lake table.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">load_as_service_client_id</span></code> parameter is not required if the <code class="docutils literal notranslate"><span class="pre">service_client_id</span></code> column exists in the data already. You will receive a warning when this is not specified, but it can be ignored if the <code class="docutils literal notranslate"><span class="pre">service_client_id</span></code> column exists in the data source.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">modify_lambda</span></code>, <code class="docutils literal notranslate"><span class="pre">path_to_output_for_dryrun</span></code> and <code class="docutils literal notranslate"><span class="pre">chunksize</span></code> arguments are also available.</p>
-<p>You can also re-create an existing load if you have the correct <code class="docutils literal notranslate"><span class="pre">load_id</span></code>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">load</span> <span class="o">=</span> <span class="n">Load</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">,</span>
-            <span class="n">load_id</span> <span class="o">=</span> <span class="s1">'load_id'</span>
-            <span class="p">)</span>
-</pre></div>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Do not specify <code class="docutils literal notranslate"><span class="pre">load_type</span></code>, <code class="docutils literal notranslate"><span class="pre">table_name</span></code>, <code class="docutils literal notranslate"><span class="pre">load_as_service_client_id</span></code> or <code class="docutils literal notranslate"><span class="pre">partitions</span></code> if the <code class="docutils literal notranslate"><span class="pre">load_id</span></code> is provided. The Load object will not be created.</p>
-</div>
-<p>Now we can add data sources to the load.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Several examples shown for demonstration, but typically only one of these functions will be required.</span>
-
-<span class="n">dtype</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'id'</span><span class="p">:</span> <span class="s1">'int32'</span><span class="p">,</span> <span class="s1">'name'</span><span class="p">:</span> <span class="s1">'string'</span><span class="p">,</span> <span class="s1">'age'</span><span class="p">:</span> <span class="s1">'int32'</span><span class="p">,</span> <span class="s1">'salary'</span><span class="p">:</span> <span class="s1">'float64'</span><span class="p">}</span>
-<span class="n">load</span><span class="o">.</span><span class="n">upload_df</span><span class="p">(</span> <span class="c1"># Uploads a pandas dataframe</span>
-   <span class="n">df</span> <span class="o">=</span> <span class="n">df_for_upload</span>
-<span class="p">)</span>
-
-<span class="n">load</span><span class="o">.</span><span class="n">upload_file</span><span class="p">(</span><span class="c1"># Uploads a csv, parquet, json or excel file or file .io stream. Note a file directory will not work here in the same was as for the DashBulkUploader.</span>
-   <span class="n">data</span> <span class="o">=</span> <span class="n">path_to_upload_file</span><span class="p">,</span>
-   <span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span> <span class="c1"># Recommended usage</span>
-<span class="p">)</span>
-
-<span class="n">load</span><span class="o">.</span><span class="n">upload_dash_query</span><span class="p">(</span><span class="c1"># Uploads the result of a dash.Query object.</span>
-   <span class="n">data</span> <span class="o">=</span> <span class="n">dash_query_object</span><span class="p">,</span>
-   <span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span> <span class="c1"># Recommended usage</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-<p>Note that a file key can be specified, but a valid file key will be generated if not provided.</p>
-<p>Uploads are always converted to a <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code> before uploading the data.  This allows you to provide valid pandas arguments in the <code class="docutils literal notranslate"><span class="pre">upload_file</span></code> and <code class="docutils literal notranslate"><span class="pre">upload_dash_query</span></code> functions as well, e.g. for an excel spreadsheet:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">load</span><span class="o">.</span><span class="n">upload_file</span><span class="p">(</span>
-   <span class="n">data</span> <span class="o">=</span> <span class="n">path_to_upload_file</span><span class="p">,</span>
-   <span class="n">sheet_name</span> <span class="o">=</span> <span class="s1">'inforce_book'</span><span class="p">,</span>
-   <span class="n">skiprows</span> <span class="o">=</span> <span class="mi">2</span>
-   <span class="c1"># Add any more valid pandas arguments here</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-<p>The following pandas arguments should not be provided: <code class="docutils literal notranslate"><span class="pre">['filepath_or_buffer',</span> <span class="pre">'chunksize',</span> <span class="pre">'nrows',</span> <span class="pre">'path',</span> <span class="pre">'path_or_buf',</span> <span class="pre">'io']</span></code></p>
-<p>Once all your data sources are added, you can commit the load.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">load</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span>
-   <span class="n">check_sum</span> <span class="o">=</span> <span class="p">{</span>
-      <span class="s1">'sum(salary)'</span><span class="p">:</span> <span class="mi">12345</span>
-   <span class="p">}</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">check_sum</span></code> parameter is used to verify a load before it is pushed to the lake.  Specify a dictionary of valid check sums as in the example above to ensure data quality and completeness. Any valid SQL aggregation can be provided in the keys, and a scalar value should be provided for the values.  You will need to calculate these check sums at source and then provide the expected result as the value.</p>
-<p>Note that in this example, a check sum is not necessarily required because we specified <code class="docutils literal notranslate"><span class="pre">track_rows_uploaded</span> <span class="pre">=</span> <span class="pre">True</span></code> when creating the load.  If the load had been created with <code class="docutils literal notranslate"><span class="pre">track_rows_uploaded</span> <span class="pre">=</span> <span class="pre">False</span></code>, a check sum is required on commit.</p>
-<p>You can check the status of your load at any time.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">load_info</span> <span class="o">=</span> <span class="n">load</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">load_info</span><span class="p">)</span>
-</pre></div>
-</div>
-
-
-<span id="migrate-to-v2"></span><h3 id="migrating-to-data-model-v2">Migrating to Data Model v2<a class="headerlink" href="#migrating-to-data-model-v2" title="Permalink to this headline">¶</a></h3>
-<p>You can migrate to data model v2 with the SDK.  First you will need to run a flash schema migration.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">comotion.dash</span> <span class="kn">import</span> <span class="n">DashConfig</span><span class="p">,</span> <span class="n">Migration</span>
-<span class="kn">from</span> <span class="nn">comotion.auth</span> <span class="kn">import</span> <span class="n">Auth</span>
-
-<span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">Auth</span><span class="p">(</span><span class="s2">"myorgname"</span><span class="p">))</span>
-
-<span class="n">migration</span> <span class="o">=</span> <span class="n">Migration</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span><span class="p">)</span>
-<span class="n">migration</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">migration_type</span> <span class="o">=</span> <span class="s1">'FLASH_SCHEMA'</span><span class="p">)</span> <span class="c1"># This is the default value so it does not need to be specified</span>
-</pre></div>
-</div>
-<p>This copies the schema of all your lake tables from the v1 lake to the v2 lake.</p>
-<p>Now you will be able to test your ETL on the new lake, using the <code class="docutils literal notranslate"><span class="pre">read_and_upload_file_to_dash</span></code> function, <code class="docutils literal notranslate"><span class="pre">DashBulkUploader</span></code> class or <code class="docutils literal notranslate"><span class="pre">Load</span></code> class.</p>
-<p>Once you are happy that your ETL will work with the new lake, you can run a full migration.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">migration</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">migration_type</span> <span class="o">=</span> <span class="s1">'FULL_MIGRATION'</span><span class="p">,</span>
-                <span class="n">clear_out_new_lake</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>This clears out the v2 lake and runs the full migration of data.  If <code class="docutils literal notranslate"><span class="pre">clear_out_new_lake</span></code> is false and there is data in the v2 lake, the full migration will fail.</p>
-<p>Good practice when migrating would be:</p>
-<ol class="arabic simple">
-<li><p>Run the flash schema migration</p></li>
-<li><p>Test your ETL on the new lake until satisfied.</p></li>
-<li><p>Stop ETL processes to the old lake.</p></li>
-<li><p>Run the full migration (the length of time for this depends on the amount of data in your lake, but it should not take more than a couple of hours).</p></li>
-<li><p>Deploy your new ETL processes.</p></li>
-</ol>
-<p>Once the full migration is run, you can no longer upload to the v1 lake.</p>
-<p>Check on the migration status at any time.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">migration</span><span class="o">.</span><span class="n">status</span><span class="p">())</span>
-</pre></div>
-</div>
-
-
 
 <h2 id="running-queries-and-extracting-data">Running Queries and Extracting Data<a class="headerlink" href="#running-queries-and-extracting-data" title="Permalink to this headline">¶</a></h2>
 <p>You can use the sdk to run queries on Dash, as well as download the results in csv format.</p>
-
-<h3 id="logging-in">Logging In<a class="headerlink" href="#logging-in" title="Permalink to this headline">¶</a></h3>
-<p>The query API is built on v2 of the Comotion API - which uses a new way to authenticate.  You do not need an API key, but can log in with your normal user name and password.</p>
-<p>In order to do this, after you have installed the SDK, you need to authenticate from the command line.  Type in the following from the command line</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">comotion</span> <span class="n">authenticate</span>
-</pre></div>
-</div>
-<p>You will be prompted for your <code class="docutils literal notranslate"><span class="pre">orgname</span></code> which is your orgnisation’s unique name, and then a browser will open for you to login.</p>
-<p>Once this process is complete, the relevant keys will automatically be saved in your computers’s credentials manager.</p>
-<p>To prevent asking for orgname every time, you can save your orgname as an environment variable <code class="docutils literal notranslate"><span class="pre">COMOTION_ORGNAME</span></code></p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">export</span> <span class="n">COMOTION_ORGNAME</span><span class="o">=</span><span class="n">orgname</span>
-<span class="o">&gt;</span> <span class="n">comotion</span> <span class="n">authenticate</span>
-</pre></div>
-</div>
-<p>or, include it directly in the comment line:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">comotion</span> <span class="o">-</span><span class="n">o</span> <span class="n">orgname</span> <span class="n">authenticate</span>
-</pre></div>
-</div>
-
 
 <h3 id="running-a-query">Running a query<a class="headerlink" href="#running-a-query" title="Permalink to this headline">¶</a></h3>
 <p>You can then use the query object in the <a class="reference internal" href="comotion.dash.html"><span class="doc">comotion.dash module</span></a> to create  a query and download the results.  Here is an example code snippet.  You do not need to authenticate in your code - the Auth class takes care of that.</p>
@@ -772,13 +830,160 @@
 </pre></div>
 </div>
 <p>To process the output data further instead of writing to a csv file, load the data into a dataframe:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">response</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">get_csv_for_streaming</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">io</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">get_csv_for_streaming</span><span class="p">()</span>
 <span class="n">data</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">'utf-8'</span><span class="p">))</span>
 <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 <span class="c1"># further processing...</span>
 </pre></div>
 </div>
 
+
+
+<h2 id="data-zones">Data Zones<a class="headerlink" href="#data-zones" title="Permalink to this headline">¶</a></h2>
+<p>If an upload or query needs to be run in a specific data zone, the <code class="docutils literal notranslate"><span class="pre">zone</span></code> argument can be specified when creating the <code class="docutils literal notranslate"><span class="pre">DashConfig</span></code> object.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">comotion.dash</span> <span class="kn">import</span> <span class="n">DashConfig</span><span class="p">,</span> <span class="n">Query</span><span class="p">,</span> <span class="n">Load</span>
+<span class="kn">from</span> <span class="nn">comotion.auth</span> <span class="kn">import</span> <span class="n">Auth</span>
+
+<span class="n">zone_1_config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">Auth</span><span class="p">(</span><span class="s2">"myorgname"</span><span class="p">),</span> <span class="n">zone</span> <span class="o">=</span> <span class="s1">'zone_1'</span><span class="p">)</span>
+<span class="n">zone_2_config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">Auth</span><span class="p">(</span><span class="s2">"myorgname"</span><span class="p">),</span> <span class="n">zone</span> <span class="o">=</span> <span class="s1">'zone_2'</span><span class="p">)</span>
+
+<span class="c1"># This runs the query in zone_1</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="n">query_text</span><span class="o">=</span><span class="s2">"select 1"</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">zone_1_config</span><span class="p">)</span>
+
+<span class="c1"># This creates a load in zone_2</span>
+<span class="n">load</span> <span class="o">=</span> <span class="n">Load</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">zone_2_config</span><span class="p">,</span>
+            <span class="n">load_type</span> <span class="o">=</span> <span class="s1">'APPEND_ONLY'</span><span class="p">,</span>
+            <span class="n">table_name</span> <span class="o">=</span> <span class="s1">'v1_inforce_policies'</span><span class="p">,</span>
+            <span class="n">load_as_service_client_id</span> <span class="o">=</span> <span class="s1">'0'</span><span class="p">,</span>
+            <span class="n">track_rows_uploaded</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="p">)</span>
+</pre></div>
+</div>
+
+
+<span id="v2-cheat-sheet"></span><h2 id="v2-upload-cheat-sheet">v2 Upload Cheat sheet<a class="headerlink" href="#v2-upload-cheat-sheet" title="Permalink to this headline">¶</a></h2>
+<p>Below is a cheat sheet for the important arguments available for the <code class="docutils literal notranslate"><span class="pre">DashBulkUploader</span></code> and <code class="docutils literal notranslate"><span class="pre">Load</span></code> classes.</p>
+<table id="id6">
+<caption><span class="caption-text">Argument Cheat Sheet</span><a class="headerlink" href="#id6" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 17%"/>
+<col style="width: 17%"/>
+<col style="width: 17%"/>
+<col style="width: 17%"/>
+<col style="width: 17%"/>
+<col style="width: 17%"/>
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Arg</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>DashBulkUploader: Use when calling</p></th>
+<th class="head"><p>Load: Use when calling</p></th>
+<th class="head"><p>Comments</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>config</p></td>
+<td><p>Yes</p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DashConfig</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DashBulkUploader</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Load</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>table_name</p></td>
+<td><p>Yes</p></td>
+<td><p>Name of the lake table to upload to.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_load</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Load</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>load_type</p></td>
+<td><p>Yes for <code class="docutils literal notranslate"><span class="pre">Load</span></code>, No for <code class="docutils literal notranslate"><span class="pre">DashBulkUploader</span></code></p></td>
+<td><p>Type of load to create.  Currently only ‘APPEND_ONLY’ is supported.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_load</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Load</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>load_as_service_client_id</p></td>
+<td><p>No if service_client_id field is created in data source, otherwise Yes.</p></td>
+<td><p>Service client id to add to each row of data in the Load.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_load</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Load</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>partitions</p></td>
+<td><p>No</p></td>
+<td><p>List of fields to partition on</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_load</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Load</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>load_id</p></td>
+<td><p>No</p></td>
+<td><p>Load id to use when re-creating a load.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_load</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Load</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>track_rows_uploaded</p></td>
+<td><p>No</p></td>
+<td><p>Indicate if row count check sum should be created for the load automatically.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_load</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Load</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>path_to_output_for_dryrun</p></td>
+<td><p>No</p></td>
+<td><p>Path to the directory to save the files to when running a test run, i.e. not uploading to Dash.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_load</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Load</span></code></p></td>
+<td><p><a class="reference internal" href="#testing-and-debugging"><span class="std std-ref">Testing and debugging an upload script</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>modify_lambda</p></td>
+<td><p>No</p></td>
+<td><p>Function to modify the data before uploading.  This function should take a pandas dataframe as input and manipulate the dataframe in-place as needed.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_load</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Load</span></code></p></td>
+<td><p><a class="reference internal" href="#pandas-usage"><span class="std std-ref">Pandas Usage</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>chunksize</p></td>
+<td><p>No</p></td>
+<td><p>Size of the chunks to break the data into for uploading.  This is a legacy argument, but smaller chunksize can be specified if required.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_load</span></code></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Load</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>check_sum</p></td>
+<td><p>Yes (or <code class="docutils literal notranslate"><span class="pre">specify</span> <span class="pre">track_rows_uploaded</span> <span class="pre">=</span> <span class="pre">True</span></code>)</p></td>
+<td><p>Check sum to use for the load.  This is a dictionary of SQL aggregations and expected values. The sql aggregation is run on unioned combined data sources, and if the result does not match the expected value, the load is rejected.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_load</span></code></p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">Load.commit</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>data</p></td>
+<td><p>Yes</p></td>
+<td><p>Specification of data source to be uploaded.  Exact type depends on the function used to upload the data and the source data format.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_data_to_load</span></code></p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">Load.upload_df</span></code> ; <code class="xref py py-meth docutils literal notranslate"><span class="pre">Load.upload_file</span></code> ; <code class="xref py py-meth docutils literal notranslate"><span class="pre">Load.upload_dash_query</span></code></p></td>
+<td><p>A directory can only be specified as a data source using the <code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_data_to_load</span></code> function.</p></td>
+</tr>
+<tr class="row-even"><td><p>file_key</p></td>
+<td><p>No</p></td>
+<td><p>Unique key to identify the data source.  This is automatically generated if not provided.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_data_to_load</span></code></p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">Load.upload_df</span></code> ; <code class="xref py py-meth docutils literal notranslate"><span class="pre">Load.upload_file</span></code> ; <code class="xref py py-meth docutils literal notranslate"><span class="pre">Load.upload_dash_query</span></code></p></td>
+<td><p>This is used to avoid duplicating a data source within a load, as well as to remove data sources from a load in the <code class="docutils literal notranslate"><span class="pre">DashBulkUploader</span></code> class.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">**pd_read_kwargs</span></code></p></td>
+<td><p>No</p></td>
+<td><p>Placeholder for additional arguments to pass to the pandas read function. E.g. dtype, sep, sheet_name, skiprows etc.</p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">DashBulkUploader.add_data_to_load</span></code></p></td>
+<td><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">Load.upload_file</span></code> ; <code class="xref py py-meth docutils literal notranslate"><span class="pre">Load.upload_dash_query</span></code></p></td>
+<td><p><a class="reference internal" href="#pandas-usage"><span class="std std-ref">Pandas Usage</span></a></p></td>
+</tr>
+</tbody>
+</table>
 
 
 
