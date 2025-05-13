@@ -50,6 +50,8 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
     ----------
     auth : comotion.Auth
         comotion.Auth object holding information about authentication
+    zone: str, optional
+        The zone to use for the API. If not provided, defaults to None, i.e. the main zone.
     """
 
     def __init__(self, auth: Auth, zone: str = None):
@@ -688,6 +690,7 @@ class Load():
         elif not use_file_name_as_key and not file_key:
             file_key = self.create_file_key()
         
+        func_to_use = None
         for func in try_functions:
             try:
                 func(data, nrows=1, **pd_read_kwargs)
@@ -846,6 +849,19 @@ class Load():
         file_key = 'x_' + re.sub(r'[^a-zA-Z0-9]', '_', raw_uid) # Add initial x_ underscore in case uid starts with integer
         return file_key
 
+    def wait_to_complete(self):
+        """Blocks until the load is in a complete state.
+
+        Returns
+        -------
+        str
+            State of the load, after processing  completed.
+        """
+        while True:
+            load_info = self.get_load_info()
+            if load_info.load_status != 'PROCESSING':
+                return load_info.load_status
+            time.sleep(5)
 
 class DashBulkUploader():
     """
@@ -856,9 +872,9 @@ class DashBulkUploader():
     
     .. code-block:: python
 
-        auth_token = Auth(orgname = 'my_org_name')
+        config = DashConfig(Auth(orgname = 'my_org_name'))
 
-        uploader = DashBulkUploader(auth_token = auth_token)
+        uploader = DashBulkUploader(config = config)
 
         # A better use would be to loop through a config to run the following below code repeatedly.  A single upload is shown for demonstration purposes.
 
@@ -905,7 +921,7 @@ class DashBulkUploader():
         partitions: Optional[List[str]] = None,
         track_rows_uploaded: bool = False,
         path_to_output_for_dryrun: str = None,
-        chunksize: int = 30000
+        chunksize: int = None
     ) -> None:
         """
         Creates a new load for a specified lake table. This function initializes the load
@@ -933,6 +949,8 @@ class DashBulkUploader():
         path_to_output_for_dryrun : str, optional
             If specified, no upload will be made to dash, but files
             will be saved to the location specified. This is useful for testing.
+        chunksize: int, optional
+            Data source will be broken into chunks with chunksize rows before uploading.
 
         Raises
         ------
@@ -985,7 +1003,7 @@ class DashBulkUploader():
         data: Union[str, pd.DataFrame, Query],
         file_key: str = None,
         source_type: str = None,
-        dtype: Any = None
+        **pd_read_kwargs
     ) -> None:
         """
         Adds data to an existing load for a specified lake table. This function supports adding data
@@ -1006,10 +1024,8 @@ class DashBulkUploader():
             The type of data source. Can be 'df' for DataFrame, 'dir' for directory, or 'file' for file.
             If not specified, the function will attempt to infer the source type.
             If a directory is provided, loop through the paths in the directory from `listdir()` and add valid files as datasources for the lake table.
-        dtype : 
-            Will be passed into the pandas read function for the data source.  
-            If not provided, dtype will be determined automatically from the first chunk of data.
-            This is ignored if the source_type is 'df', as the dtype can be fixed in the dataframe before upload.
+        pd_read_kwargs : dict, optional
+            Additional keyword arguments to pass to the pandas read function (one of [pd.read_csv, pd.read_parquet, pd.read_json, pd.read_excel]).
 
         Raises
         ------
@@ -1056,14 +1072,14 @@ class DashBulkUploader():
                         data=file,
                         file_key=None,  # File keys can't be applied to directories - individual files should be specified if this is required
                         source_type='file',
-                        dtype = dtype
+                        **pd_read_kwargs
                     )
         else:
             
             data_source = {
                 'data': data,
                 'source_type': source_type,
-                'dtype': dtype
+                'pd_read_kwargs': pd_read_kwargs
             }
 
             upload['data_sources'][file_key] = data_source
@@ -1134,7 +1150,7 @@ class DashBulkUploader():
                 for file_key, data_source in data_sources.items():
                     data = data_source['data']
                     source_type = data_source['source_type']
-                    dtype = data_source['dtype']
+                    pd_read_kwargs = data_source['pd_read_kwargs']
                     
                     print(f"Uploading data source with file key: {file_key}")
                     if source_type == 'df':
@@ -1148,13 +1164,13 @@ class DashBulkUploader():
                                                         load.upload_dash_query,
                                                         data=data,
                                                         file_key=file_key,
-                                                        dtype = dtype
+                                                        **pd_read_kwargs
                                                         )
                     elif source_type == 'file':
                         future = upload_executor.submit(load.upload_file, 
                                                         data=data,
                                                         file_key=file_key,
-                                                        dtype = dtype
+                                                        **pd_read_kwargs
                                                         )
                     
                     upload_futures.append(future)
@@ -1168,7 +1184,11 @@ class DashBulkUploader():
 
             # Commit load
             if not load.path_to_output_for_dryrun:
-                print(f"All uploads completed. Committing load with the following checksums: {check_sum}")
+                print(f"All uploads completed.")
+                if check_sum:
+                    print(f"Committing load with the following checksums: {check_sum}")
+                else:
+                    print("Committing load.")
                 load.commit(check_sum=check_sum)
                 
             self.uploads[table_name]['load_status'] =  load.get_load_info().load_status
@@ -1216,11 +1236,12 @@ class DashBulkUploader():
         """
         load_info = {}
         for table_name, upload in self.uploads.items():
+            load = upload['load']
             try:
-                self.uploads[table_name]['load_status'] = upload['load'].get_load_info().load_status
-                load_info[table_name] = upload['load'].get_load_info()
+                self.uploads[table_name]['load_status'] = load.wait_to_complete()
+                load_info[table_name] = load.get_load_info()
             except Exception as e:
-                print(f"Error getting load {self.uploads[table_name]['load'].load_id}: {e}")
+                print(f"Error getting load {load.load_id}: {e}")
                 self.uploads[table_name]['load_status'] = f'ERROR: {e}'
                 
         return load_info
