@@ -353,7 +353,7 @@ Using this sdk in conjunction with `pandas <https://pandas.pydata.org>`_ provide
 
       # OR 3.2: Upload a df with the Load class
       load.upload_df(
-         df = df
+         data = df
       )
 
    But there are many more pandas arguments available to read your source correctly.  Refer to the applicable pandas read function documentation in the table below to see the available arguments for your source data.
