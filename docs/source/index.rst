@@ -52,6 +52,9 @@ You will be prompted for your ``orgname`` which is your orgnisation's unique nam
 
 Once this process is complete, the relevant keys will automatically be saved in your computers's credentials manager.
 
+Org Name Set-up
+***************
+
 To prevent asking for orgname every time, you can save your orgname as an environment variable ``COMOTION_ORGNAME``
 
 ::
@@ -77,14 +80,20 @@ For more information on migrating, see :ref:`migrate-to-v2`.
 
 .. hint ::
 
-   It is helpful to track the ``load_id`` of the loads you create.  This is a unique identifier for the load, and can be used to re-create the load if needed.
+   It is helpful to track the ``load_id`` of the loads you create.  
+   
+   This is a unique identifier for the load, and can be used to re-create the load if needed.
+
+   Comotion can also provide support easily if the ``load_id`` is provided.
 
 .. _dashbulkuploader:
 
 DashBulkUploader
 ****************
 
-The ``DashBulkUploader`` class is the recommended way to upload data to Dash. If more control is needed over the upload process, the :ref:`load` class can be used instead.
+The ``DashBulkUploader`` class is the recommended way to upload data to Dash.  This uses the ``Load`` class, but provides some default functionality and the ``uploads`` attribute to manage multiple loads.
+
+If more control is needed over the upload process, the :ref:`load` class can be used instead.
 
 The process can be summarized as follows: 
 
@@ -152,14 +161,14 @@ If your data source has specific read requirements, see :ref:`pandas-usage` for 
 
    You can also use the ``uploader.remove_load()`` or ``uploader.remove_data_from_load()`` functions to remove loads or data sources from the uploader respectively.
    
-   The ``remove_data_from_load`` function requires a file key to be specified, which you can get from the ``uploader.uploads`` object.
+   The ``remove_data_from_load`` function requires a file key to be specified, which can be retrieved from the ``uploader.uploads`` object.
 
 .. _load:
 
 Load
 ****
 
-The ``Load`` class is the most flexible for uploading data to Dash.  The process can be outlined as follows:
+The ``Load`` class is the primary class for uploading data to Dash. The process of using this class can be outlined as follows:
 
 1. Create a ``Load`` object
 2. Upload data sources to the load 
@@ -174,9 +183,6 @@ The ``Load`` class is the most flexible for uploading data to Dash.  The process
 
    # 1. Create the load object and data source variables
    dashconfig = DashConfig(Auth(orgname = 'my_org_name'))
-   dash_query = Query(query_text = 'select * from orgname_lake_v2.v1_staging_policies', config = dashconfig)
-   path_to_upload_file = 'data/inforce_policies.csv'
-   df_for_upload = pd.read_csv(path_to_upload_file)
 
    load = Load(config = dashconfig,
                load_type = 'APPEND_ONLY',
@@ -196,10 +202,12 @@ The ``Load`` class is the most flexible for uploading data to Dash.  The process
       data = df_for_upload 
    )
    # 2.2: Upload a file. This can be a csv, parquet, json or excel file or file .io stream.
+   path_to_upload_file = 'data/inforce_policies.csv'
    load.upload_file(
       data = path_to_upload_file
    )
    # 2.3: Uploaed a dash.Query object. This is useful, for example, for moving data from one lake table to another.
+   dash_query = Query(query_text = 'select * from orgname_lake_v2.v1_staging_policies', config = dashconfig)
    load.upload_dash_query(# Uploads the result of a dash.Query object.
       data = dash_query
    )
@@ -308,39 +316,47 @@ Using this sdk in conjunction with `pandas <https://pandas.pydata.org>`_ provide
 
    For production uploads, the dtype argument is highly recommended: `pandas dtypes <https://pandas.pydata.org/docs/user_guide/basics.html#dtypes>`_.
 
-   Here is an example of how using the dtype argument would be used with the Comotion SDK (this is how it would be used with Pandas as well):
+   The following 3 examples are equivalent ways to upload data into Dash.  Notice how the exact same arguments which can be passed to a ``pandas`` read function can be passed to the SDK classes:
    
    .. code-block:: python
 
-      # 1: Using dtype with load
+      # 1: Using pandas arguments in the Load class
       load.upload_file(
          data = 'my_data.csv',
          dtype = {'column_1': 'int', 'column_2': 'object'}
-         # Add any more valid pandas arguments here
+         sep = ';',
+         encoding = 'utf-16'
+         # Could add any more valid pandas arguments here
       )
 
-      # 2: Using dtype with DashBulkUploader
+      # 2: Using pandas arguments in the DashBulkUploader class
       uploader.add_data_to_load(
          table_name = my_lake_table,
          data = 'my_data.csv',
-         dtype = {'column_1': 'int', 'column_2': 'object'}
+         dtype = {'column_1': 'int', 'column_2': 'object'},
+         sep = ';',
+         encoding = 'utf-16'
+         # Could add any more valid pandas arguments here
       )
 
-      # 3: Read with pandas and upload with the SDK
-      df = pd.read_csv('my_data.csv', dtype = {'column_1': 'int', 'column_2': 'object'})
+      # 3: Read with pandas and upload df with the SDK
+      df = pd.read_csv('my_data.csv', 
+                       dtype = {'column_1': 'int', 'column_2': 'object'},         
+                       sep = ';',
+                       encoding = 'utf-16')
 
-      # 3.1: Uploading a df with the DashBulkUploader
+      # 3.1: Then upload a df with the DashBulkUploader
       uploader.add_data_to_load(
          table_name = my_lake_table,
          data = df
       )
 
-      # 3.2: Uploading a df with the Load class
+      # OR 3.2: Upload a df with the Load class
       load.upload_df(
          df = df
       )
 
-   But there are many more options available, not just dtype.  Refer to the applicable pandas read function documentation in the table below to see the available arguments for your source data.
+   But there are many more pandas arguments available to read your source correctly.  Refer to the applicable pandas read function documentation in the table below to see the available arguments for your source data.
 
    (Almost) All of the arguments available in the applicable read function can be used with the SDK.
 
@@ -362,14 +378,16 @@ Using this sdk in conjunction with `pandas <https://pandas.pydata.org>`_ provide
 
    .. note::
 
-      The following pandas arguments should not be provided as they are used internally by the SDK: 
+      The following pandas arguments should not be provided as they are used by the default functionality of the SDK: 
       ``['filepath_or_buffer', 'chunksize', 'nrows', 'path', 'path_or_buf', 'io']``.
 
 .. hint::
 
-   Often you will want to add a column - such as an upload timestamp or batch number - to the csv file to be uploaded.  
+   Often you will want to process your source data before uploading. For example, you may want to add metadata to the data, or hash PII before uploading.
 
-   This can easily be done by using the ``modify_lambda`` parameter.  It accepts a python function that recieves a `pandas.dataframe <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html>`_  read from the csv. Here is an example of adding a timestamp as a column called ``snapshot_timestamp`` to the csv:
+   Simple operations on the source data can be applied for the upload using the ``modify_lambda`` parameter.  It accepts a python function that recieves a `pandas.dataframe <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html>`_.
+   
+   Here is simple example of adding a timestamp as a column called ``snapshot_timestamp`` to the csv.  The function provided can apply several manipulations to the data if required:
 
    .. code-block:: python
 
@@ -378,13 +396,15 @@ Using this sdk in conjunction with `pandas <https://pandas.pydata.org>`_ provide
       from comotion import dash
       from getpass import getpass
       from datetime import datetime
+      import pandas as pd
 
       # define the function used to modify the file
 
       myTimeStamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
 
-      def addTimeStamp(df):
+      def addTimeStamp(df: pd.DataFrame): # Do not need to specify the type of df, but shown for demonstration
          df['snapshot_timestamp'] = myTimeStamp
+         # Can provide more manipulations in this function if needed
 
       # set relevant parameters
 
@@ -726,9 +746,9 @@ Below is a cheat sheet for the important arguments available for the ``DashBulkU
      - :meth:`DashBulkUploader.add_data_to_load <comotion.dash.DashBulkUploader.add_data_to_load>`
      - :meth:`Load.upload_df <comotion.dash.Load.upload_df>` ; :meth:`Load.upload_file <comotion.dash.Load.upload_file>` ; :meth:`Load.upload_dash_query <comotion.dash.Load.upload_dash_query>`
      - This is used to avoid duplicating a data source within a load, as well as to remove data sources from a load in the ``DashBulkUploader`` class.
-   * - pd_read_kwargs 
+   * - ``**pd_read_kwargs``
      - No
-     - Dictionary of additional arguments to pass to the pandas read function. E.g. dtype, csv_sep, sheet_name, skiprows etc.
+     - Placeholder for additional arguments to pass to the pandas read function. E.g. dtype, sep, sheet_name, skiprows etc.
      - :meth:`DashBulkUploader.add_data_to_load <comotion.dash.DashBulkUploader.add_data_to_load>`
      - :meth:`Load.upload_file <comotion.dash.Load.upload_file>` ; :meth:`Load.upload_dash_query <comotion.dash.Load.upload_dash_query>`
      - :ref:`pandas-usage`
