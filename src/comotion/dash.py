@@ -116,7 +116,7 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
 
 class Query():
     """
-    The query object starts and tracks a query on Comotion Dash.
+    The query object starts and tracks a query on Comotion Dash. It also returns a query status.
 
     Initialising this class runs a query on Comotion Dash and stores the
     resulting query id in `query_id`
@@ -124,6 +124,7 @@ class Query():
     """
 
     COMPLETED_STATES = ['SUCCEEDED', 'CANCELLED', 'FAILED']
+    
     SUCCEEDED_STATE = 'SUCCEEDED'
 
     def __init__(
