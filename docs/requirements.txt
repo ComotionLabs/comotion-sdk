@@ -3,3 +3,4 @@ pandas
 setuptools_scm
 jwt
 pyarrow
+boto3
