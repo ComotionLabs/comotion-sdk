@@ -7,20 +7,43 @@ import time
 from typing import Union, Callable, List, Optional, Dict, Any
 from os.path import join, basename, isdir, isfile, splitext
 from os import listdir
-import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
 import logging
-import boto3
-import awswrangler as wr
+logger = logging.getLogger(__name__)
+import pandas as pd
+try:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+except ImportError:
+    pa = None
+    pq = None
+    logger.warning("Optional dependency 'pyarrow' is not installed; Arrow/Parquet features are unavailable.")
+try:
+    import boto3
+except ImportError:
+    boto3 = None
+    logger.warning("Optional dependency 'boto3' is not installed; AWS features are unavailable.")
+try:
+    import awswrangler as wr
+except ImportError:
+    wr = None
+    logger.warning("Optional dependency 'awswrangler' is not installed; AWS Wrangler features are unavailable.")
 import re
 import uuid
 try:
     import cx_Oracle
+except ImportError:
+    cx_Oracle = None
+    logger.warning("Optional dependency 'cx_Oracle' is not installed; Oracle-related features are unavailable.")
+try:
     import sqlalchemy
+except ImportError:
+    sqlalchemy = None
+    logger.warning("Optional dependency 'sqlalchemy' is not installed; SQLAlchemy-related features are unavailable.")
+try:
     from tqdm import tqdm
 except ImportError:
-    pass
+    tqdm = None
+    logger.warning("Optional dependency 'tqdm' is not installed; progress bars are unavailable.")
 from datetime import datetime, timedelta
 from comotion import Auth
 import comodash_api_client_lowlevel
