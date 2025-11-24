@@ -231,27 +231,70 @@
   <h1 id="modules-comotion-dash--page-root">Source code for comotion.dash</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">io</span>
 <span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">requests</span>
 <span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span>
-<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">join</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">join</span><span class="p">,</span> <span class="n">basename</span><span class="p">,</span> <span class="n">isdir</span><span class="p">,</span> <span class="n">isfile</span><span class="p">,</span> <span class="n">splitext</span>
+<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">listdir</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
+    <span class="kn">import</span> <span class="nn">pyarrow.parquet</span> <span class="k">as</span> <span class="nn">pq</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">pa</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">pq</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Optional dependency 'pyarrow' is not installed; Arrow/Parquet features are unavailable."</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">boto3</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">boto3</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Optional dependency 'boto3' is not installed; AWS features are unavailable."</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">awswrangler</span> <span class="k">as</span> <span class="nn">wr</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">wr</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Optional dependency 'awswrangler' is not installed; AWS Wrangler features are unavailable."</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">cx_Oracle</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">cx_Oracle</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Optional dependency 'cx_Oracle' is not installed; Oracle-related features are unavailable."</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">sqlalchemy</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">sqlalchemy</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Optional dependency 'sqlalchemy' is not installed; SQLAlchemy-related features are unavailable."</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-    <span class="k">pass</span>
-<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+    <span class="n">tqdm</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Optional dependency 'tqdm' is not installed; progress bars are unavailable."</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
 <span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">Auth</span>
-<span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">comodash_api_client_lowlevel</span>
-<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.comodash_api</span> <span class="kn">import</span> <span class="n">queries_api</span>
-<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.model.query_text</span> <span class="kn">import</span> <span class="n">QueryText</span>
+<span class="kn">import</span> <span class="nn">comodash_api_client_lowlevel</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel</span> <span class="kn">import</span> <span class="n">QueriesApi</span><span class="p">,</span> <span class="n">LoadsApi</span><span class="p">,</span> <span class="n">MigrationsApi</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.query_text</span> <span class="kn">import</span> <span class="n">QueryText</span>
 <span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">IncompleteRead</span>
 <span class="kn">from</span> <span class="nn">urllib3.response</span> <span class="kn">import</span> <span class="n">HTTPResponse</span>
-<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.model.query</span> <span class="kn">import</span> <span class="n">Query</span> <span class="k">as</span> <span class="n">QueryInfo</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel</span> <span class="kn">import</span> <span class="n">Load</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.query</span> <span class="kn">import</span> <span class="n">Query</span> <span class="k">as</span> <span class="n">QueryInfo</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.load</span> <span class="kn">import</span> <span class="n">Load</span> <span class="k">as</span> <span class="n">LoadInfo</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.file_upload_request</span> <span class="kn">import</span> <span class="n">FileUploadRequest</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.file_upload_response</span> <span class="kn">import</span> <span class="n">FileUploadResponse</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.load_commit</span> <span class="kn">import</span> <span class="n">LoadCommit</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.load</span> <span class="kn">import</span> <span class="n">Load</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.query_id</span> <span class="kn">import</span> <span class="n">QueryId</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.rest</span> <span class="kn">import</span> <span class="n">ApiException</span>
+<span class="kn">from</span> <span class="nn">concurrent.futures</span> <span class="kn">import</span> <span class="n">ThreadPoolExecutor</span><span class="p">,</span> <span class="n">as_completed</span>
+<span class="kn">import</span> <span class="nn">random</span> 
+<span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">signature</span><span class="p">,</span> <span class="n">Parameter</span>
 
 <div class="viewcode-block" id="DashConfig"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashConfig">[docs]</a><span class="k">class</span> <span class="nc">DashConfig</span><span class="p">(</span><span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">Configuration</span><span class="p">):</span>
     <span class="sd">"""</span>
@@ -261,21 +304,69 @@
 <span class="sd">    ----------</span>
 <span class="sd">    auth : comotion.Auth</span>
 <span class="sd">        comotion.Auth object holding information about authentication</span>
+<span class="sd">    zone: str, optional</span>
+<span class="sd">        The zone to use for the API. If not provided, defaults to None, i.e. the main zone.</span>
 <span class="sd">    """</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">auth</span><span class="p">:</span> <span class="n">Auth</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">auth</span><span class="p">:</span> <span class="n">Auth</span><span class="p">,</span> <span class="n">zone</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">Auth</span><span class="p">)):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"auth must be of type comotion.Auth"</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">auth</span> <span class="o">=</span> <span class="n">auth</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orgname</span> <span class="o">=</span> <span class="n">auth</span><span class="o">.</span><span class="n">orgname</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zone</span> <span class="o">=</span> <span class="n">zone</span>
 
+        <span class="n">host_url</span> <span class="o">=</span> <span class="s1">'https://</span><span class="si">%s</span><span class="s1">.api.comodash.io/v2'</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orgname</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">zone</span> <span class="k">else</span> <span class="s1">'https://</span><span class="si">%s</span><span class="s1">.</span><span class="si">%s</span><span class="s1">.api.comodash.io/v2'</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">orgname</span><span class="p">)</span>
+        
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="n">host</span><span class="o">=</span><span class="s1">'https://</span><span class="si">%s</span><span class="s1">.api.comodash.io/v2'</span> <span class="o">%</span> <span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">orgname</span><span class="p">),</span>
-            <span class="n">access_token</span><span class="o">=</span><span class="n">auth</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
-        <span class="p">)</span></div>
+            <span class="n">host</span><span class="o">=</span><span class="n">host_url</span><span class="p">,</span>
+            <span class="n">access_token</span><span class="o">=</span><span class="kc">None</span>
+        <span class="p">)</span>
 
         <span class="c1"># comodash_api_client_lowlevel.Configuration.set_default(config)</span>
 
+    <span class="k">def</span> <span class="nf">_check_and_refresh_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        checks whether the access token is still valid otherwise refreshes it</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span> <span class="nn">jwt</span>
+        <span class="c1"># If there's no token, get one</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">access_token</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">access_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Decode the token payload without verification (unsafe for actual use, see below)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">payload</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">access_token</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s2">"verify_signature"</span><span class="p">:</span> <span class="kc">False</span><span class="p">})</span>
+
+            <span class="c1"># Get the current time and expiration time from the token</span>
+            <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+            <span class="n">exp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">payload</span><span class="p">[</span><span class="s1">'exp'</span><span class="p">])</span>
+
+            <span class="c1"># If the token has expired, refresh it</span>
+            <span class="k">if</span> <span class="n">now</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="n">exp</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">30</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">access_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
+
+        <span class="k">except</span> <span class="n">jwt</span><span class="o">.</span><span class="n">ExpiredSignatureError</span><span class="p">:</span>
+            <span class="c1"># If the token is expired, refresh it</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">access_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">jwt</span><span class="o">.</span><span class="n">DecodeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Handle cases for invalid token</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">access_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="c1"># Handle cases for tokens with unexpected payload</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">access_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">()</span>
+
+    
+<div class="viewcode-block" id="DashConfig.auth_settings"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashConfig.auth_settings">[docs]</a>    <span class="k">def</span> <span class="nf">auth_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""Gets Auth Settings dict for api client.</span>
+
+<span class="sd">        :return: The Auth Settings information dict.</span>
+<span class="sd">        """</span>
+        <span class="c1"># This overrides the lowlevel configuration object to allow for automatic refresh of access token</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_and_refresh_token</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">auth_settings</span><span class="p">()</span></div></div>
 
 <div class="viewcode-block" id="Query"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query">[docs]</a><span class="k">class</span> <span class="nc">Query</span><span class="p">():</span>
     <span class="sd">"""</span>
@@ -287,6 +378,7 @@
 <span class="sd">    """</span>
 
     <span class="n">COMPLETED_STATES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'SUCCEEDED'</span><span class="p">,</span> <span class="s1">'CANCELLED'</span><span class="p">,</span> <span class="s1">'FAILED'</span><span class="p">]</span>
+    <span class="n">SUCCEEDED_STATE</span> <span class="o">=</span> <span class="s1">'SUCCEEDED'</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -316,20 +408,51 @@
 
         <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">DashConfig</span><span class="p">)):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"config must be of type comotion.dash.DashConfig"</span><span class="p">)</span>
-
-        <span class="k">with</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">ApiClient</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">api_client</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span> <span class="o">=</span> <span class="n">queries_api</span><span class="o">.</span><span class="n">QueriesApi</span><span class="p">(</span><span class="n">api_client</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+        <span class="k">with</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">ApiClient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">api_client</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span> <span class="o">=</span> <span class="n">QueriesApi</span><span class="p">(</span><span class="n">api_client</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">query_id</span><span class="p">:</span>
-                <span class="n">query_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">get_query</span><span class="p">(</span><span class="n">query_id</span><span class="p">)</span>
+                <span class="c1"># query_info = self.query_api_instance.get_query(query_id)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">query_id</span> <span class="o">=</span> <span class="n">query_id</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">query_text</span> <span class="o">=</span> <span class="n">query_info</span><span class="o">.</span><span class="n">query</span>
+                <span class="c1"># self.query_text = query_info.query</span>
             <span class="k">elif</span> <span class="n">query_text</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">query_text</span> <span class="o">=</span> <span class="n">query_text</span>
                 <span class="n">query_text_model</span> <span class="o">=</span> <span class="n">QueryText</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">query_text</span><span class="p">)</span>
-                <span class="n">query_id_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">run_query</span><span class="p">(</span><span class="n">query_text_model</span><span class="p">)</span> <span class="c1"># noqa</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">query_id</span> <span class="o">=</span> <span class="n">query_id_model</span><span class="p">[</span><span class="s1">'query_id'</span><span class="p">]</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">query_id_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">run_query</span><span class="p">(</span><span class="n">query_text_model</span><span class="p">)</span> <span class="c1"># noqa</span>
+                <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">BadRequestException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">exp</span><span class="o">.</span><span class="n">body</span><span class="p">)[</span><span class="s1">'message'</span><span class="p">])</span>
+                    
+                <span class="bp">self</span><span class="o">.</span><span class="n">query_id</span> <span class="o">=</span> <span class="n">query_id_model</span><span class="o">.</span><span class="n">query_id</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"One of query_id or query_text must be provided"</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Query.refresh_api_instance"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.refresh_api_instance">[docs]</a>    <span class="k">def</span> <span class="nf">refresh_api_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="n">zone</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">zone</span>
+            <span class="n">auth_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">auth</span>
+            <span class="n">orgname</span> <span class="o">=</span> <span class="n">auth_token</span><span class="o">.</span><span class="n">orgname</span>
+            <span class="n">entity_type</span> <span class="o">=</span> <span class="n">auth_token</span><span class="o">.</span><span class="n">entity_type</span>
+
+            <span class="k">if</span> <span class="n">entity_type</span> <span class="o">==</span> <span class="n">Auth</span><span class="o">.</span><span class="n">APPLICATION</span><span class="p">:</span>
+                <span class="n">application_client_id</span> <span class="o">=</span> <span class="n">auth_token</span><span class="o">.</span><span class="n">application_client_id</span>
+                <span class="n">application_client_secret</span> <span class="o">=</span> <span class="n">auth_token</span><span class="o">.</span><span class="n">application_client_secret</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">application_client_id</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">application_client_secret</span> <span class="o">=</span> <span class="kc">None</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span>
+                <span class="n">Auth</span><span class="p">(</span>
+                    <span class="n">orgname</span><span class="o">=</span><span class="n">orgname</span><span class="p">,</span>
+                    <span class="n">entity_type</span><span class="o">=</span><span class="n">entity_type</span><span class="p">,</span>
+                    <span class="n">application_client_id</span><span class="o">=</span><span class="n">application_client_id</span><span class="p">,</span>
+                    <span class="n">application_client_secret</span><span class="o">=</span><span class="n">application_client_secret</span>
+                <span class="p">),</span>
+                <span class="n">zone</span> <span class="o">=</span> <span class="n">zone</span>
+            <span class="p">)</span>
+            <span class="k">with</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">ApiClient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">api_client</span><span class="p">:</span>
+                <span class="c1"># Create an instance of the API class with provided parameters</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span> <span class="o">=</span> <span class="n">QueriesApi</span><span class="p">(</span><span class="n">api_client</span><span class="p">)</span>  </div>
 
 <div class="viewcode-block" id="Query.get_query_info"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.get_query_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_query_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QueryInfo</span><span class="p">:</span>
         <span class="sd">"""Gets the state of the query.</span>
@@ -354,7 +477,11 @@
 <span class="sd">                    GMT submission time</span>
 
 <span class="sd">        """</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">get_query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">)</span></div>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">refresh_api_instance</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">get_query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">NotFoundException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"query_id cannot be found"</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Query.state"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.state">[docs]</a>    <span class="k">def</span> <span class="nf">state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="sd">"""Gets the state of the query.</span>
@@ -407,15 +534,14 @@
 
 <span class="sd">            This can be achieved using the `with` notation e.g.::</span>
 
-<span class="sd">                with query.get_csv_for_streaming().stream() as stream:</span>
+<span class="sd">                with query.get_csv_for3_streaming().stream() as stream:</span>
 <span class="sd">                  for chunk in stream:</span>
 <span class="sd">                      # do somthing with chunk</span>
 <span class="sd">                      # chunk is a byte array ``</span>
 <span class="sd">        """</span>
-
-        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">download_csv</span><span class="p">(</span>
-            <span class="n">query_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">,</span>
-            <span class="n">_preload_content</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh_api_instance</span><span class="p">()</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">download_csv_without_preload_content</span><span class="p">(</span>
+            <span class="n">query_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">)</span>
         <span class="n">response</span><span class="o">.</span><span class="n">autoclose</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="n">response</span></div>
 
@@ -446,7 +572,6 @@
                 <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span><span class="mi">1048576</span><span class="p">):</span>
                     <span class="n">size</span> <span class="o">=</span> <span class="n">size</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
                     <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
-
                 <span class="k">if</span> <span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">!=</span> <span class="nb">int</span><span class="p">(</span><span class="n">content_length</span><span class="p">)):</span>
                     <span class="k">raise</span> <span class="n">IncompleteRead</span><span class="p">(</span>
                         <span class="n">response</span><span class="o">.</span><span class="n">tell</span><span class="p">(),</span>
@@ -455,8 +580,1032 @@
 
 <div class="viewcode-block" id="Query.stop"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">""" Stop the query"""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh_api_instance</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">stop_query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">)</span></div></div>
 
+<div class="viewcode-block" id="Load"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load">[docs]</a><span class="k">class</span> <span class="nc">Load</span><span class="p">():</span>
+    <span class="sd">"""</span>
+<span class="sd">    The Load object starts and tracks a multi-file load to a single lake table on Comotion Dash</span>
+
+<span class="sd">    Initialising this class starts a Load on Comotion Dash and stores the</span>
+<span class="sd">    resulting `load_id`.</span>
+
+<span class="sd">    The load then needs to be committed with valid checksums to be pushed to the lake.</span>
+
+<span class="sd">    If you wish to work with an existing load, then supply only the `load_id` parameter</span>
+
+<span class="sd">    Example of upload with a Load instance:</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        load = Load(config = DashConfig(Auth('orgname')), </span>
+<span class="sd">                    table_name = 'v1_inforce_policies', </span>
+<span class="sd">                    load_as_service_client_id = '0') # Create the load</span>
+<span class="sd">        </span>
+<span class="sd">        print(load.load_id) # It can be useful to track these to fix </span>
+<span class="sd">        for file, file_key in zip(file_path_list, file_keys): # Upload files with Load object</span>
+<span class="sd">            load.upload_file(</span>
+<span class="sd">                data = file,</span>
+<span class="sd">                file_key = file_key</span>
+<span class="sd">            )</span>
+
+<span class="sd">        load.commit( # Commit the load - this validates the files and pushes to the table_name specified</span>
+<span class="sd">            check_sum = { # Check that data uploaded matches what you expected before pushing to the lake.  *Also see track_rows_uploaded option</span>
+<span class="sd">                'sum(face_amount)': 20000,</span>
+<span class="sd">                'count(distinct policy_number)': 1000</span>
+<span class="sd">            }</span>
+<span class="sd">        )</span>
+
+<span class="sd">        print(load.get_load_info()) # Run this at any time to get the latest information on the load</span>
+
+<span class="sd">    """</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">config</span><span class="p">:</span> <span class="n">DashConfig</span><span class="p">,</span>
+            <span class="n">load_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">load_as_service_client_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">partitions</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">load_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">track_rows_uploaded</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">path_to_output_for_dryrun</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">modify_lambda</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">chunksize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        config : DashConfig</span>
+<span class="sd">            Object of type DashConfig including configuration details.</span>
+<span class="sd">        load_type : str</span>
+<span class="sd">            Load Type, initially only APPEND_ONLY supported. APPEND_ONLY means that data is appended to the lake table.</span>
+<span class="sd">        table_name : str</span>
+<span class="sd">            Name of lake table to be created and / or uploaded to.</span>
+<span class="sd">        load_as_service_client_id : str, optional</span>
+<span class="sd">            If provided, the upload is performed as if run by the service_client specified.</span>
+<span class="sd">        partitions : list[str], optional</span>
+<span class="sd">            Only applies if table does not already exist and is created. The created table will have these partitions. This must be a list of iceberg compatible partitions. Note that any load can only allow for up to 100 partitions, otherwise it will error out. If the table already exists, then this is ignored.</span>
+<span class="sd">        load_id : str, optional</span>
+<span class="sd">            In the case where you want to work with an existing load on dash, supply this parameter, and no other parameter (other than config) will be required.</span>
+<span class="sd">        track_rows_uploaded: bool, optional</span>
+<span class="sd">            If True, track the number of rows uploaded with the current Load instance.  This can be used to automatically create a checksum on commit (see Load.commit), however is not recommended for </span>
+<span class="sd">            large files as this may increase the duration of upload significantly.</span>
+<span class="sd">        path_to_output_for_dryrun: str, optional</span>
+<span class="sd">            if specified, no upload will be made to dash, but files</span>
+<span class="sd">            will be saved to the location specified. This is useful for testing.</span>
+<span class="sd">        modify_lambda: Callable, optional</span>
+<span class="sd">            Callable which takes a pandas.DataFrame as the first arg.</span>
+<span class="sd">            Can be used to add/modify columns in the data before upload to the lake.</span>
+<span class="sd">        chunksize: int, default 30000</span>
+<span class="sd">            If a file is uploaded, it will be broken into chunks with chunksize rows before uploading.  Note an index is added to the end of the file key to uniquely identify chunks.</span>
+<span class="sd">        """</span>
+        <span class="n">load_data</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">()</span>
+        <span class="n">lowerlevel_load_sig</span> <span class="o">=</span> <span class="n">signature</span><span class="p">(</span><span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">Load</span><span class="p">)</span>
+        <span class="n">lowerlevel_load_keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">lowerlevel_load_sig</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">DashConfig</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"config must be of type comotion.dash.DashConfig"</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+        
+        <span class="k">with</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">ApiClient</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">api_client</span><span class="p">:</span>
+            <span class="c1"># Create an instance of the API class with provided parameters</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_api_instance</span> <span class="o">=</span> <span class="n">LoadsApi</span><span class="p">(</span><span class="n">api_client</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">load_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="c1"># if load_id provided, then initialise this object with the provided load_id</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_id</span> <span class="o">=</span> <span class="n">load_id</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span><span class="n">value</span> <span class="ow">in</span> <span class="n">load_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span>  <span class="p">[</span><span class="s1">'load_id'</span><span class="p">,</span> <span class="s1">'config'</span><span class="p">,</span> <span class="s1">'self'</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"if load_id is supplied, then only the config parameter and no others should be supplied."</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Enter a context with an instance of the API client</span>
+            <span class="n">lowerlevel_load_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
+                    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">load_data</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">lowerlevel_load_keys</span>
+            <span class="p">}</span>
+
+            <span class="n">load</span> <span class="o">=</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="o">**</span><span class="n">lowerlevel_load_kwargs</span><span class="p">)</span>
+
+            <span class="c1"># Create a new load</span>
+            <span class="n">load_id_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_api_instance</span><span class="o">.</span><span class="n">create_load</span><span class="p">(</span><span class="n">load</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_id</span> <span class="o">=</span> <span class="n">load_id_model</span><span class="o">.</span><span class="n">load_id</span>
+
+        <span class="k">if</span> <span class="n">track_rows_uploaded</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">track_rows_uploaded</span> <span class="o">=</span> <span class="n">track_rows_uploaded</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">track_rows_uploaded</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rows_uploaded</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_to_output_for_dryrun</span> <span class="o">=</span> <span class="n">path_to_output_for_dryrun</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modify_lambda</span> <span class="o">=</span> <span class="n">modify_lambda</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">chunksize</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">chunksize</span> <span class="o">=</span> <span class="mi">100000000</span> <span class="c1"># Very large chunksize to avoid chunking unless required</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">chunksize</span> <span class="o">=</span> <span class="n">chunksize</span>
+
+<div class="viewcode-block" id="Load.refresh_api_instance"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load.refresh_api_instance">[docs]</a>    <span class="k">def</span> <span class="nf">refresh_api_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">auth_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">auth</span>
+        <span class="n">zone</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">zone</span>
+        <span class="n">orgname</span> <span class="o">=</span> <span class="n">auth_token</span><span class="o">.</span><span class="n">orgname</span>
+        <span class="n">entity_type</span> <span class="o">=</span> <span class="n">auth_token</span><span class="o">.</span><span class="n">entity_type</span>
+
+        <span class="k">if</span> <span class="n">entity_type</span> <span class="o">==</span> <span class="n">Auth</span><span class="o">.</span><span class="n">APPLICATION</span><span class="p">:</span>
+            <span class="n">application_client_id</span> <span class="o">=</span> <span class="n">auth_token</span><span class="o">.</span><span class="n">application_client_id</span>
+            <span class="n">application_client_secret</span> <span class="o">=</span> <span class="n">auth_token</span><span class="o">.</span><span class="n">application_client_secret</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">application_client_id</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">application_client_secret</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span>
+            <span class="n">Auth</span><span class="p">(</span>
+                <span class="n">orgname</span><span class="o">=</span><span class="n">orgname</span><span class="p">,</span>
+                <span class="n">entity_type</span><span class="o">=</span><span class="n">entity_type</span><span class="p">,</span>
+                <span class="n">application_client_id</span><span class="o">=</span><span class="n">application_client_id</span><span class="p">,</span>
+                <span class="n">application_client_secret</span><span class="o">=</span><span class="n">application_client_secret</span>
+            <span class="p">),</span>
+            <span class="n">zone</span> <span class="o">=</span> <span class="n">zone</span>
+        <span class="p">)</span>
+        <span class="k">with</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">ApiClient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">api_client</span><span class="p">:</span>
+            <span class="c1"># Create an instance of the API class with provided parameters</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_api_instance</span> <span class="o">=</span> <span class="n">LoadsApi</span><span class="p">(</span><span class="n">api_client</span><span class="p">)</span>  </div>
+
+<div class="viewcode-block" id="Load.get_load_info"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load.get_load_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_load_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoadInfo</span><span class="p">:</span>
+        <span class="sd">"""Gets the state of the load</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        LoadInfo</span>
+<span class="sd">            Model containing all the load info, with the following attributes</span>
+<span class="sd">            </span>
+<span class="sd">            `load_status`</span>
+<span class="sd">                Status of the load, one of OPEN, PROCESSING, FAIL or SUCCESS</span>
+<span class="sd">            `error_type`</span>
+<span class="sd">                Type of error if the load status is FAIL.</span>
+<span class="sd">            `error_messages`</span>
+<span class="sd">                Detailed error messages if the load status is FAIL.</span>
+
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh_api_instance</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_api_instance</span><span class="o">.</span><span class="n">get_load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Load.generate_presigned_url_for_file_upload"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load.generate_presigned_url_for_file_upload">[docs]</a>    <span class="k">def</span> <span class="nf">generate_presigned_url_for_file_upload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FileUploadResponse</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Generates presigned URLs and STS credentials for a new file upload.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        file_key : str, optional</span>
+<span class="sd">            Optional custom key for the file. This will ensure idempotence.</span>
+<span class="sd">            If multiple files are uploaded to the same load with the same file_key,</span>
+<span class="sd">            only the last one will be loaded. Must be lowercase and can include underscores.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        FileUploadResponse</span>
+<span class="sd">            Model containing all the relevant credentials to be able to upload a file to S3 as part of the load. This includes the following attributes:</span>
+
+<span class="sd">            - presigned_url : str</span>
+<span class="sd">                Presigned URL data for S3 file upload. The file can be posted to this endpoint using any AWS S3 compatible toolset.</span>
+<span class="sd">                Temporary credentials are included in the URL, so no other credentials are required.</span>
+<span class="sd">            - sts_credentials : dict</span>
+<span class="sd">                Alternatively to the presigned_url, these Temporary AWS STS credentials can be used to upload the file to the location specified by `path` and `bucket`.</span>
+<span class="sd">                This is required for various advanced toolsets, including AWS Wrangler.</span>
+<span class="sd">            - path : str</span>
+<span class="sd">                Path of the file in the S3 bucket. See the description of `sts_credentials`.</span>
+<span class="sd">            - bucket : str</span>
+<span class="sd">                Name of the S3 bucket. See the description of `sts_credentials`.</span>
+
+<span class="sd">        """</span>
+        <span class="n">file_upload_request</span> <span class="o">=</span> <span class="n">FileUploadRequest</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">file_key</span><span class="p">:</span>
+            <span class="n">file_upload_request</span> <span class="o">=</span> <span class="n">FileUploadRequest</span><span class="p">(</span><span class="n">file_key</span><span class="o">=</span><span class="n">file_key</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh_api_instance</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_api_instance</span><span class="o">.</span><span class="n">generate_presigned_url_for_file_upload</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_id</span><span class="p">,</span> <span class="n">file_upload_request</span><span class="o">=</span><span class="n">file_upload_request</span><span class="p">)</span></div>
+        
+<div class="viewcode-block" id="Load.upload_df"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load.upload_df">[docs]</a>    <span class="k">def</span> <span class="nf">upload_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                <span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> 
+                <span class="n">file_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Uploads a `pandas.DataFrame` as a parquet file to an S3 bucket using a presigned URL.</span>
+<span class="sd">        If `path_to_output_for_dryrun` is specified for the load, write the file to a local directory instead.</span>
+<span class="sd">        Before uploading, `modify_lambda` is applied.  Then, column names are forced to be lowercase and spaces are replaced with underscores.</span>
+<span class="sd">        This is to prevent potential schema issues in the Dash lake.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">        -----------</span>
+<span class="sd">        data : pandas.DataFrame</span>
+<span class="sd">            The DataFrame to be uploaded. This should be a pandas.DataFrame object.</span>
+<span class="sd">        file_key : str, optional</span>
+<span class="sd">            Optional custom key for the file to be. If not provided, a random file key is created.  See Load.create_file_key().</span>
+<span class="sd">            This will ensure idempotence. If multiple files are uploaded to the same load with the same `file_key`, only the last one will be pushed to the lake. </span>
+<span class="sd">            Must be lowercase and can include underscores.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">        --------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">        --------</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import pandas as pd</span>
+<span class="sd">            load = Load(dashconfig)</span>
+<span class="sd">            df = pd.read_parquet('path/to/file.parquet')</span>
+<span class="sd">            load.upload_df(data = df, file_key='my_file_id')</span>
+
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"data should be a valid pandas.DataFrame object"</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">file_key</span><span class="p">:</span>
+            <span class="n">file_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_file_key</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">modify_lambda</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">modify_lambda</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="n">data</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">'\s+'</span><span class="p">,</span> <span class="s1">'_'</span><span class="p">,</span> <span class="n">column</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span> <span class="c1"># Replace spaces with underscores in column names</span>
+
+        <span class="n">table</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="n">parquet_buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span> 
+        <span class="n">pq</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">parquet_buffer</span><span class="p">)</span>
+        <span class="n">parquet_buffer</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">file_upload_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_presigned_url_for_file_upload</span><span class="p">(</span><span class="n">file_key</span><span class="o">=</span><span class="n">file_key</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">file_upload_response</span><span class="p">,</span> <span class="n">FileUploadResponse</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"file_upload_response should be a valid instance of FileUploadResponse."</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">bucket</span> <span class="o">=</span> <span class="n">file_upload_response</span><span class="o">.</span><span class="n">bucket</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">file_upload_response</span><span class="o">.</span><span class="n">path</span> 
+            <span class="c1"># Upload to s3 if not a dry-run</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_to_output_for_dryrun</span><span class="p">:</span>
+                <span class="n">s3_file_name</span> <span class="o">=</span> <span class="n">basename</span><span class="p">(</span><span class="n">file_upload_response</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+                
+                <span class="c1"># Create a session with AWS credentials from the presigned URL</span>
+                <span class="n">my_session</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">Session</span><span class="p">(</span>
+                    <span class="n">aws_access_key_id</span><span class="o">=</span><span class="n">file_upload_response</span><span class="o">.</span><span class="n">sts_credentials</span><span class="p">[</span><span class="s1">'AccessKeyId'</span><span class="p">],</span>
+                    <span class="n">aws_secret_access_key</span><span class="o">=</span><span class="n">file_upload_response</span><span class="o">.</span><span class="n">sts_credentials</span><span class="p">[</span><span class="s1">'SecretAccessKey'</span><span class="p">],</span>
+                    <span class="n">aws_session_token</span><span class="o">=</span><span class="n">file_upload_response</span><span class="o">.</span><span class="n">sts_credentials</span><span class="p">[</span><span class="s1">'SessionToken'</span><span class="p">]</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Upload the Parquet buffer as a chunk to S3</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploading to S3: </span><span class="si">{s3_file_name}</span><span class="s2">"</span><span class="p">)</span>
+
+                <span class="n">upload_reponse</span> <span class="o">=</span> <span class="n">wr</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">upload</span><span class="p">(</span>
+                    <span class="n">local_file</span><span class="o">=</span><span class="n">parquet_buffer</span><span class="p">,</span> 
+                    <span class="n">path</span><span class="o">=</span><span class="sa">f</span><span class="s2">"s3://</span><span class="si">{bucket}</span><span class="s2">/</span><span class="si">{key}</span><span class="s2">"</span><span class="p">,</span> 
+                    <span class="n">boto3_session</span><span class="o">=</span><span class="n">my_session</span><span class="p">,</span>
+                    <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Commence dry run</span>
+                <span class="n">local_path</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_to_output_for_dryrun</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"{basename(key)}.parquet"</span><span class="p">)</span>
+                <span class="n">table</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="n">pq</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">local_path</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"File written locally to: </span><span class="si">{local_path}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="n">upload_reponse</span> <span class="o">=</span> <span class="s1">'DRYRUN_COMPLETE'</span> <span class="c1"># Arbitrary reponse as file write has no return</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_rows_uploaded</span><span class="p">:</span>
+                <span class="c1"># Count the rows in the Parquet file</span>
+                <span class="n">rows_uploaded</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rows_uploaded</span> <span class="o">+=</span> <span class="n">rows_uploaded</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Successfully uploaded </span><span class="si">{key}</span><span class="s2">: </span><span class="si">{rows_uploaded}</span><span class="s2"> rows"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Total rows uploaded for load </span><span class="si">{self.load_id}</span><span class="s2">: </span><span class="si">{self.rows_uploaded}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Upload completed: </span><span class="si">{key}</span><span class="s2">"</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">upload_reponse</span></div>
+        
+<div class="viewcode-block" id="Load.upload_file"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load.upload_file">[docs]</a>    <span class="k">def</span> <span class="nf">upload_file</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">,</span>
+        <span class="n">file_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">use_file_name_as_key</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">pd_read_kwargs</span>
+    <span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Uploads a file to the lake table specified in the load, or a local file if `path_to_output_for_dryrun` was specified.</span>
+<span class="sd">        The file provided is read into a `pandas.DataFrame` using `pd_read_kwargs` with an appropriate pandas function.</span>
+<span class="sd">        Note an index is added to the end of the file key to uniquely identify chunks uploaded.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : Any</span>
+<span class="sd">            The file to be uploaded.  This should be readable by `pandas.read_csv`, `pandas.read_parquet`, `pandas.read_json` or `pandas.read_excel`.</span>
+<span class="sd">        file_key : str, optional</span>
+<span class="sd">            A unique key for the file being uploaded. If not provided, a key will be generated.</span>
+<span class="sd">        use_file_name_as_key : bool, optional</span>
+<span class="sd">            If True, the file name will be used as the file key. If False, a random key will be generated. Will throw an error when this is True and a file key is provided.</span>
+<span class="sd">        max_workers : int, optional</span>
+<span class="sd">            The maximum number of threads to use for concurrent uploads (passed to concurrent.futures.ThreadPoolExecutor)</span>
+<span class="sd">        **pd_read_kwargs</span>
+<span class="sd">            Additional keyword arguments to pass to the pandas read function (one of [pd.read_csv, pd.read_parquet, pd.read_json, pd.read_excel]).</span>
+<span class="sd">            You should not pass the variable pointing to the file here (e.g. filepath_or_buffer in pandas.read_csv), as this is passed in the data parameter.</span>
+<span class="sd">            Chunksize and nrows should also not be provided as extra parameters.</span>
+<span class="sd">            If you do not provide dtype, dtype will be determined automatically from the first chunk of data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List[Any]</span>
+<span class="sd">            A list of responses from the load upload API call for each chunk.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the file type cannot be determined or if an error occurs during the upload of any chunk.</span>
+<span class="sd">        """</span>
+        <span class="n">responses</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">invalid_keys</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'filepath_or_buffer'</span><span class="p">,</span> <span class="s1">'chunksize'</span><span class="p">,</span> <span class="s1">'nrows'</span><span class="p">,</span> <span class="s1">'path'</span><span class="p">,</span> <span class="s1">'path_or_buf'</span><span class="p">,</span> <span class="s1">'io'</span><span class="p">}</span>
+        <span class="n">provided_invalid_keys</span> <span class="o">=</span> <span class="n">invalid_keys</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">pd_read_kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        
+        <span class="k">if</span> <span class="n">provided_invalid_keys</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Do not provide the following keys: {', '.join(provided_invalid_keys)}"</span><span class="p">)</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploading file: </span><span class="si">{data}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="c1"># Reading CSV in chunks, converting each to Parquet, and uploading</span>
+        <span class="n">try_functions</span> <span class="o">=</span> <span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_json</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_excel</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">file_key</span> <span class="ow">and</span> <span class="n">use_file_name_as_key</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">"Cannot provide a file key when use_file_name_as_key is True"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">file_key</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">use_file_name_as_key</span><span class="p">:</span>
+            <span class="k">pass</span> <span class="c1"># To be explicit only</span>
+        <span class="k">elif</span> <span class="n">use_file_name_as_key</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">file_key</span><span class="p">:</span>
+            <span class="n">file_key</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">'.'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># Remove file extension</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">use_file_name_as_key</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">file_key</span><span class="p">:</span>
+            <span class="n">file_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_file_key</span><span class="p">()</span>
+        
+        <span class="n">func_to_use</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">try_functions</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">func</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">pd_read_kwargs</span><span class="p">)</span>
+                <span class="n">func_to_use</span> <span class="o">=</span> <span class="n">func</span>
+                <span class="k">break</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">pass</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">func_to_use</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not determine file type for datasource with the following file key: </span><span class="si">{file_key}</span><span class="s2">"</span><span class="p">)</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">chunk_futures</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">max_workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">chunk_ex</span><span class="p">:</span>  <span class="c1"># Using threads for concurrent chunk uploads</span>
+
+                <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">func_to_use</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">chunksize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunksize</span><span class="p">,</span> <span class="o">**</span><span class="n">pd_read_kwargs</span><span class="p">):</span>
+                    <span class="n">file_key_to_use</span> <span class="o">=</span> <span class="n">file_key</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"_</span><span class="si">{i}</span><span class="s2">"</span>
+                    <span class="n">future</span> <span class="o">=</span> <span class="n">chunk_ex</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upload_df</span><span class="p">,</span>
+                                            <span class="n">data</span><span class="o">=</span><span class="n">chunk</span><span class="p">,</span>
+                                            <span class="n">file_key</span><span class="o">=</span><span class="n">file_key_to_use</span><span class="p">)</span>
+                    <span class="n">chunk_futures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">future</span><span class="p">)</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+                <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">as_completed</span><span class="p">(</span><span class="n">chunk_futures</span><span class="p">):</span>
+                    <span class="n">responses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error when uploading chunk: </span><span class="si">{e}</span><span class="s2">"</span><span class="p">)</span>
+            
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"All chunks uploaded successfully"</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">responses</span></div>
+    
+<div class="viewcode-block" id="Load.upload_dash_query"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load.upload_dash_query">[docs]</a>    <span class="k">def</span> <span class="nf">upload_dash_query</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">Query</span><span class="p">,</span>
+        <span class="n">file_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">pd_read_kwargs</span>
+    <span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Uploads the result of a `dash.Query` object to the specified lake table, or a local file if `path_to_output_for_dryrun` was specified.</span>
+<span class="sd">        The result is read into a `pandas.DataFrame` and uploaded with the `Load.upload_df()` function.</span>
+<span class="sd">        Note an index is added to the end of the file key to uniquely identify chunks uploaded.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : Query</span>
+<span class="sd">            The Query whose result is to be uploaded.</span>
+<span class="sd">        file_key : str, optional</span>
+<span class="sd">            A unique key for the file being uploaded. If not provided, a key will be generated.</span>
+<span class="sd">        max_workers : int, optional</span>
+<span class="sd">            The maximum number of threads to use for concurrent uploads (passed to `concurrent.futures.ThreadPoolExecutor`)</span>
+<span class="sd">        **pd_read_kwargs</span>
+<span class="sd">            Additional keyword arguments to pass to the pandas function.</span>
+<span class="sd">            Note that filepath_or_buffer, chunksize and dtype are passed by default and so duplicating those here could cause issues.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List[Any]</span>
+<span class="sd">            A list of responses from the load upload API call for each chunk.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If an error occurs during the upload of any chunk or during the Query.</span>
+<span class="sd">        """</span>
+        <span class="n">responses</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploading Query with ID: </span><span class="si">{data.query_id}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">file_key</span><span class="p">:</span>
+            <span class="n">file_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_file_key</span><span class="p">()</span>
+
+        <span class="n">invalid_keys</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'filepath_or_buffer'</span><span class="p">,</span> <span class="s1">'chunksize'</span><span class="p">,</span> <span class="s1">'nrows'</span><span class="p">,</span> <span class="s1">'path'</span><span class="p">,</span> <span class="s1">'path_or_buf'</span><span class="p">,</span> <span class="s1">'io'</span><span class="p">}</span>
+        <span class="n">provided_invalid_keys</span> <span class="o">=</span> <span class="n">invalid_keys</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">pd_read_kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        
+        <span class="k">if</span> <span class="n">provided_invalid_keys</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Do not provide the following keys: {', '.join(provided_invalid_keys)}"</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">chunk_futures</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">wait_to_complete</span><span class="p">()</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Query completed with state: {data.state()}"</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">state</span><span class="p">()</span> <span class="o">==</span> <span class="n">data</span><span class="o">.</span><span class="n">SUCCEEDED_STATE</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">max_workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">chunk_ex</span><span class="p">:</span>  <span class="c1"># Using threads for concurrent chunk uploads</span>
+
+                    <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get_csv_for_streaming</span><span class="p">(),</span> <span class="n">chunksize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunksize</span><span class="p">,</span> <span class="o">**</span><span class="n">pd_read_kwargs</span><span class="p">):</span>
+                        <span class="n">file_key_to_use</span> <span class="o">=</span> <span class="n">file_key</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"_</span><span class="si">{i}</span><span class="s2">"</span>
+                        <span class="n">future</span> <span class="o">=</span> <span class="n">chunk_ex</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upload_df</span><span class="p">,</span>
+                                                <span class="n">data</span><span class="o">=</span><span class="n">chunk</span><span class="p">,</span>
+                                                <span class="n">file_key</span><span class="o">=</span><span class="n">file_key_to_use</span><span class="p">)</span>
+                        <span class="n">chunk_futures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">future</span><span class="p">)</span>
+                        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                    
+                    <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">as_completed</span><span class="p">(</span><span class="n">chunk_futures</span><span class="p">):</span>
+                        <span class="n">responses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Query Status: {data.get_query_info().status}"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"Please resolve query before re-attempting the upload."</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error when uploading chunk: </span><span class="si">{e}</span><span class="s2">"</span><span class="p">)</span>
+            
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"All chunks uploaded successfully"</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">responses</span></div>
+             
+<div class="viewcode-block" id="Load.commit"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load.commit">[docs]</a>    <span class="k">def</span> <span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">check_sum</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Kicks off the commit of the load. A checksum must be provided</span>
+<span class="sd">        which is checked on the server side to ensure that the data provided</span>
+<span class="sd">        has integrity.  This is automatically created if you specify `track_rows_uploaded = True` when creating the load.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        check_sum : Dict[str, Union[int, float, str]] (optional)</span>
+<span class="sd">            Checksum data for the files to be committed.</span>
+<span class="sd">            Checksums must be in the form of a dictionary, with presto / trino expressions</span>
+<span class="sd">            as the key, and the expected result as the value. </span>
+
+<span class="sd">            A check sum is not required if `track_rows_uploaded` was set to true for the load.  </span>
+<span class="sd">            This essentially builds the checksum `{'count(*)': nrows_uploads}` and adds it as an extrac checksum.</span>
+
+<span class="sd">            Example:</span>
+
+<span class="sd">            .. code-block:: python</span>
+
+<span class="sd">                {</span>
+<span class="sd">                    "count(*)" : 53,</span>
+<span class="sd">                    "sum(my_value)": 123.3</span>
+<span class="sd">                }</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">check_sum</span><span class="p">:</span>
+            <span class="n">check_sum</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_rows_uploaded</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s2">"check_sum must be provided for this load as track_rows_uploaded was specified as False."</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_rows_uploaded</span><span class="p">:</span>
+            <span class="n">check_sum</span><span class="p">[</span><span class="s2">"count(*)"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rows_uploaded</span>
+            
+        <span class="n">load_commit</span> <span class="o">=</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">LoadCommit</span><span class="p">(</span><span class="n">check_sum</span><span class="o">=</span><span class="n">check_sum</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refresh_api_instance</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_api_instance</span><span class="o">.</span><span class="n">commit_load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_id</span><span class="p">,</span> <span class="n">load_commit</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Load.create_file_key"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load.create_file_key">[docs]</a>    <span class="k">def</span> <span class="nf">create_file_key</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">"""Used to create a random, valid file key with specified length."""</span>
+            <span class="c1"># Generate a UUID</span>
+        <span class="n">raw_uid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+        
+        <span class="c1"># Replace non-alphanumeric characters with underscores</span>
+        <span class="n">file_key</span> <span class="o">=</span> <span class="s1">'x_'</span> <span class="o">+</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">'[^a-zA-Z0-9]'</span><span class="p">,</span> <span class="s1">'_'</span><span class="p">,</span> <span class="n">raw_uid</span><span class="p">)</span> <span class="c1"># Add initial x_ underscore in case uid starts with integer</span>
+        <span class="k">return</span> <span class="n">file_key</span></div>
+
+<div class="viewcode-block" id="Load.wait_to_complete"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load.wait_to_complete">[docs]</a>    <span class="k">def</span> <span class="nf">wait_to_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""Blocks until the load is in a complete state.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            State of the load, after processing  completed.</span>
+<span class="sd">        """</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">load_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">load_info</span><span class="o">.</span><span class="n">load_status</span> <span class="o">!=</span> <span class="s1">'PROCESSING'</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">load_info</span><span class="o">.</span><span class="n">load_status</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="DashBulkUploader"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashBulkUploader">[docs]</a><span class="k">class</span> <span class="nc">DashBulkUploader</span><span class="p">():</span>
+    <span class="sd">"""</span>
+<span class="sd">    Class to handle multiple loads with utility functions by leveraging the `Load` class.</span>
+<span class="sd">    Since a `Load` creates an upload to a lake table, `DashBulkUploader` helps to manage uploads to several lake tables with 1 object.</span>
+<span class="sd">       </span>
+<span class="sd">    Example of upload with a `DashBulkUploader` instance:</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        config = DashConfig(Auth(orgname = 'my_org_name'))</span>
+
+<span class="sd">        uploader = DashBulkUploader(config = config)</span>
+
+<span class="sd">        # A better use would be to loop through a config to run the following below code repeatedly.  A single upload is shown for demonstration purposes.</span>
+
+<span class="sd">        my_lake_table = 'v1_inforce_policies'</span>
+
+<span class="sd">        # Create the load in the uploader</span>
+<span class="sd">        uploader.add_load(</span>
+<span class="sd">                            table_name = my_lake_table,</span>
+<span class="sd">                            check_sum = {</span>
+<span class="sd">                                'count(*)': 50000 </span>
+<span class="sd">                            }, # Alternatively, provide the track_rows_uploaded arg as true</span>
+<span class="sd">                            load_as_service_client_id = '0'</span>
+<span class="sd">                          )</span>
+
+<span class="sd">        # Add the relevant datasources to the load. This can point to a directory to upload all contained files</span>
+<span class="sd">        uploader.add_data_to_load(</span>
+<span class="sd">                                    table_name = my_lake_table,</span>
+<span class="sd">                                    data = 'data/inforce_policies'</span>
+<span class="sd">                                  )</span>
+<span class="sd">        # View uploads added</span>
+<span class="sd">        print(uploader.uploads)</span>
+
+<span class="sd">        uploader.execute_all_uploads() # Use execute_upload or execute_multiple_uploads if only certain uploads should be kicked off.</span>
+
+<span class="sd">        print(uploader.get_load_info()) # View status of uploads.  This also refreshes uploader.uploads </span>
+
+<span class="sd">        # Remove uploads/datasources if you want to re-use the same instance</span>
+<span class="sd">        uploader.remove_load(table_name = my_lake_table)</span>
+<span class="sd">    """</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                 <span class="n">config</span><span class="p">:</span> <span class="n">DashConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pending_load_statuses</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'OPEN'</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span> <span class="o">=</span> <span class="p">{}</span>
+    
+<div class="viewcode-block" id="DashBulkUploader.add_load"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashBulkUploader.add_load">[docs]</a>    <span class="k">def</span> <span class="nf">add_load</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">check_sum</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+        <span class="n">modify_lambda</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">load_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'APPEND_ONLY'</span><span class="p">,</span>
+        <span class="n">load_as_service_client_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">partitions</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">track_rows_uploaded</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">path_to_output_for_dryrun</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">chunksize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Creates a new load for a specified lake table. This function initializes the load</span>
+<span class="sd">        process, ensuring that the table name is in lowercase and that a checksum or row tracking</span>
+<span class="sd">        is provided for data integrity. Created loads can be fetched using the `DashBulkUploader.uploads` class variable.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        table_name : str</span>
+<span class="sd">            The name of the lake table. Must be in lowercase.</span>
+<span class="sd">        check_sum : Optional[Dict[str, Union[int, float, str]]]</span>
+<span class="sd">            Checksum data for the files to be committed. The checksum should be a dictionary</span>
+<span class="sd">            with Presto/Trino expressions as keys and their expected results as values.</span>
+<span class="sd">        modify_lambda : Callable, optional</span>
+<span class="sd">            A lambda function to modify the data before loading.</span>
+<span class="sd">        load_type : str, default 'APPEND_ONLY'</span>
+<span class="sd">            The type of load operation. Default is 'APPEND_ONLY'.</span>
+<span class="sd">        load_as_service_client_id : str, optional</span>
+<span class="sd">            The service client ID to use for the load. </span>
+<span class="sd">            If service_client is not a field in the source data added to the load, this must be provided or the load will fail on commit.</span>
+<span class="sd">        partitions : Optional[List[str]], optional</span>
+<span class="sd">            List of partitions for the load to improve query efficiency from the Dash lake.</span>
+<span class="sd">        track_rows_uploaded : bool, default False</span>
+<span class="sd">            Whether to track the number of rows uploaded for the load.</span>
+<span class="sd">        path_to_output_for_dryrun : str, optional</span>
+<span class="sd">            If specified, no upload will be made to dash, but files</span>
+<span class="sd">            will be saved to the location specified. This is useful for testing.</span>
+<span class="sd">        chunksize: int, optional</span>
+<span class="sd">            Data source will be broken into chunks with chunksize rows before uploading.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the table name contains uppercase characters or if a load has already been created for the table.</span>
+<span class="sd">        KeyError</span>
+<span class="sd">            If neither `check_sum` nor `track_rows_uploaded` is provided.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">table_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="n">table_name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Only lowercase characters allowed for table_name.'</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">table_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'A load has been created for the lake table already: </span><span class="si">{table_name}</span><span class="s1">. Call DashBulkUploader().remove_load(</span><span class="si">{table_name}</span><span class="s1">) if you want to re-start this load.'</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">check_sum</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">track_rows_uploaded</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s2">"Invalid arguments: Either provide a check_sum value or set track_rows_uploaded to True."</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">load_as_service_client_id</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"WARNING: Dataset will not upload without specifying load_as_service_client_id option unless there is a column in the data source called service_client_id."</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Creating new load for lake table: </span><span class="si">{table_name}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">_check_and_refresh_token</span><span class="p">()</span>
+        <span class="n">load</span> <span class="o">=</span> <span class="n">Load</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">load_type</span><span class="o">=</span><span class="n">load_type</span><span class="p">,</span>
+            <span class="n">table_name</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span>
+            <span class="n">load_as_service_client_id</span><span class="o">=</span><span class="n">load_as_service_client_id</span><span class="p">,</span>
+            <span class="n">partitions</span><span class="o">=</span><span class="n">partitions</span><span class="p">,</span>
+            <span class="n">track_rows_uploaded</span><span class="o">=</span><span class="n">track_rows_uploaded</span><span class="p">,</span>
+            <span class="n">path_to_output_for_dryrun</span><span class="o">=</span><span class="n">path_to_output_for_dryrun</span><span class="p">,</span>
+            <span class="n">modify_lambda</span><span class="o">=</span><span class="n">modify_lambda</span><span class="p">,</span>
+            <span class="n">chunksize</span><span class="o">=</span><span class="n">chunksize</span>
+        <span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Load ID: </span><span class="si">{load.load_id}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="p">[</span><span class="n">table_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'load'</span><span class="p">:</span> <span class="n">load</span><span class="p">,</span>
+            <span class="s1">'data_sources'</span><span class="p">:</span> <span class="p">{},</span> 
+            <span class="s1">'check_sum'</span><span class="p">:</span> <span class="n">check_sum</span><span class="p">,</span>
+            <span class="s1">'load_status'</span><span class="p">:</span> <span class="n">load</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">()</span><span class="o">.</span><span class="n">load_status</span>
+        <span class="p">}</span></div>
+    
+<div class="viewcode-block" id="DashBulkUploader.add_data_to_load"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashBulkUploader.add_data_to_load">[docs]</a>    <span class="k">def</span> <span class="nf">add_data_to_load</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">Query</span><span class="p">],</span>
+        <span class="n">file_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">source_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">pd_read_kwargs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Adds data to an existing load for a specified lake table. This function supports adding data</span>
+<span class="sd">        from various sources including dataframes, directories, and files.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        table_name : str</span>
+<span class="sd">            The name of the lake table to which data will be added.  A load should already be added for this table_name.</span>
+<span class="sd">        data : Union[str, pd.DataFrame, Query]</span>
+<span class="sd">            The data to be added. Can be a path to a file or directory, a `pandas.DataFrame` or a `dash.Query`.  See `Load` for how different upload types will be executed.</span>
+<span class="sd">        file_key : str, optional</span>
+<span class="sd">            Optional custom key for the file. This will ensure idempotence. Must be lowercase and can include underscores.</span>
+<span class="sd">            If not provided, a random file key will be generated using `DashBulkUploader.create_file_key()`.</span>
+<span class="sd">            If a directory is provided as the source of data, `file_key` is ignored and a random file key is generated for each file in the directory.</span>
+<span class="sd">            If multiple files are uploaded to the same load with the same `file_key`, only the last one will be pushed to the lake. </span>
+<span class="sd">        source_type : str, optional</span>
+<span class="sd">            The type of data source. Can be 'df' for DataFrame, 'dir' for directory, or 'file' for file.</span>
+<span class="sd">            If not specified, the function will attempt to infer the source type.</span>
+<span class="sd">            If a directory is provided, loop through the paths in the directory from `listdir()` and add valid files as datasources for the lake table.</span>
+<span class="sd">        pd_read_kwargs : dict, optional</span>
+<span class="sd">            Additional keyword arguments to pass to the pandas read function (one of [pd.read_csv, pd.read_parquet, pd.read_json, pd.read_excel]).</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If no existing load is found for the specified table, if the table name is not lowercase,</span>
+<span class="sd">            or if the source type cannot be identified.</span>
+<span class="sd">        KeyError</span>
+<span class="sd">            If neither `check_sum` nor `track_rows_uploaded` is provided.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+<span class="sd">        """</span>
+        <span class="n">upload</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">table_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">upload</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No existing load for lake table: </span><span class="si">{table_name}</span><span class="s2">. First run add_load with the table_name specified before adding data to the load."</span><span class="p">)</span>
+        <span class="n">load</span> <span class="o">=</span> <span class="n">upload</span><span class="p">[</span><span class="s1">'load'</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">file_key</span><span class="p">:</span>
+            <span class="n">file_key</span> <span class="o">=</span> <span class="n">load</span><span class="o">.</span><span class="n">create_file_key</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">source_type</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+                <span class="n">source_type</span> <span class="o">=</span> <span class="s1">'df'</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Query</span><span class="p">):</span>
+                <span class="n">source_type</span> <span class="o">=</span> <span class="s1">'query'</span>
+            <span class="k">elif</span> <span class="n">isdir</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+                <span class="n">source_type</span> <span class="o">=</span> <span class="s1">'dir'</span>
+            <span class="k">elif</span> <span class="n">isfile</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+                <span class="n">source_type</span> <span class="o">=</span> <span class="s1">'file'</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Source type could not be identified. Please fix datasource or specify the source_type as ['df', 'dir', 'file', 'query']"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">source_type</span> <span class="o">==</span> <span class="s1">'dir'</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unpacking data sources in directory: </span><span class="si">{data}</span><span class="s2">"</span><span class="p">)</span>
+
+            <span class="n">data_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">join</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span> <span class="k">for</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span>
+            <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">data_files</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">isfile</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">file</span><span class="p">)):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The following path in the directory provided is not a file and so will not be added as a datasource: </span><span class="si">{file}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_data_to_load</span><span class="p">(</span>
+                        <span class="n">table_name</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span> 
+                        <span class="n">data</span><span class="o">=</span><span class="n">file</span><span class="p">,</span>
+                        <span class="n">file_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># File keys can't be applied to directories - individual files should be specified if this is required</span>
+                        <span class="n">source_type</span><span class="o">=</span><span class="s1">'file'</span><span class="p">,</span>
+                        <span class="o">**</span><span class="n">pd_read_kwargs</span>
+                    <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            
+            <span class="n">data_source</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">'data'</span><span class="p">:</span> <span class="n">data</span><span class="p">,</span>
+                <span class="s1">'source_type'</span><span class="p">:</span> <span class="n">source_type</span><span class="p">,</span>
+                <span class="s1">'pd_read_kwargs'</span><span class="p">:</span> <span class="n">pd_read_kwargs</span>
+            <span class="p">}</span>
+
+            <span class="n">upload</span><span class="p">[</span><span class="s1">'data_sources'</span><span class="p">][</span><span class="n">file_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_source</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="p">[</span><span class="n">table_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">upload</span></div>
+
+<div class="viewcode-block" id="DashBulkUploader.remove_data_from_load"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashBulkUploader.remove_data_from_load">[docs]</a>    <span class="k">def</span> <span class="nf">remove_data_from_load</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">table_name</span><span class="p">,</span>
+        <span class="n">file_key</span>
+    <span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">            Deletes data source with specified file key for table_name from uploads class variable if the load has not been comitted yet.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="p">[</span><span class="n">table_name</span><span class="p">][</span><span class="s1">'load_status'</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pending_load_statuses</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Removing </span><span class="si">{file_key}</span><span class="s2"> from load for </span><span class="si">{table_name}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="p">[</span><span class="n">table_name</span><span class="p">][</span><span class="s1">'data_sources'</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">file_key</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">"Load has already been committed.  First run remove_load and attempt to re-upload."</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DashBulkUploader.remove_load"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashBulkUploader.remove_load">[docs]</a>    <span class="k">def</span> <span class="nf">remove_load</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">table_name</span>
+    <span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">            Deletes load for specified table_name from uploads class variable.</span>
+<span class="sd">        """</span> 
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Removing </span><span class="si">{table_name}</span><span class="s2"> from uploads"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">table_name</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="DashBulkUploader.execute_upload"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashBulkUploader.execute_upload">[docs]</a>    <span class="k">def</span> <span class="nf">execute_upload</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Executes the upload process for a specified lake table. This function uses multi-threading</span>
+<span class="sd">        to upload data sources concurrently and commits the load upon completion.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        table_name : str</span>
+<span class="sd">            The name of the lake table to which data will be uploaded.</span>
+<span class="sd">        max_workers : int</span>
+<span class="sd">            The maximum number of threads to use for concurrent uploads (passed to `concurrent.futures.ThreadPoolExecutor`)</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If no existing load is found for the specified table.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+<span class="sd">        """</span>       
+        <span class="n">upload</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="p">[</span><span class="n">table_name</span><span class="p">]</span>
+        <span class="n">load</span> <span class="o">=</span> <span class="n">upload</span><span class="p">[</span><span class="s1">'load'</span><span class="p">]</span>
+        <span class="c1"># Refresh load status</span>
+        <span class="n">load_status</span> <span class="o">=</span> <span class="n">load</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">()</span><span class="o">.</span><span class="n">load_status</span>
+
+        <span class="k">if</span> <span class="n">load_status</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pending_load_statuses</span><span class="p">:</span>  <span class="c1"># Only perform upload on pending loads</span>
+            <span class="n">data_sources</span> <span class="o">=</span> <span class="n">upload</span><span class="p">[</span><span class="s1">'data_sources'</span><span class="p">]</span>
+            <span class="n">check_sum</span> <span class="o">=</span> <span class="n">upload</span><span class="p">[</span><span class="s1">'check_sum'</span><span class="p">]</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploading datasources to lake table: </span><span class="si">{table_name}</span><span class="s2">"</span><span class="p">)</span>
+
+            <span class="n">upload_futures</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">max_workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">upload_executor</span><span class="p">:</span>  <span class="c1"># Use multi-threading to speed up uploads</span>
+                <span class="k">for</span> <span class="n">file_key</span><span class="p">,</span> <span class="n">data_source</span> <span class="ow">in</span> <span class="n">data_sources</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s1">'data'</span><span class="p">]</span>
+                    <span class="n">source_type</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s1">'source_type'</span><span class="p">]</span>
+                    <span class="n">pd_read_kwargs</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s1">'pd_read_kwargs'</span><span class="p">]</span>
+                    
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploading data source with file key: </span><span class="si">{file_key}</span><span class="s2">"</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">source_type</span> <span class="o">==</span> <span class="s1">'df'</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">"Uploading from DataFrame"</span><span class="p">)</span>
+                        <span class="n">future</span> <span class="o">=</span> <span class="n">upload_executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">load</span><span class="o">.</span><span class="n">upload_df</span><span class="p">,</span> 
+                                                        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> 
+                                                        <span class="n">file_key</span><span class="o">=</span><span class="n">file_key</span>
+                                                        <span class="p">)</span>
+                    <span class="k">elif</span> <span class="n">source_type</span> <span class="o">==</span> <span class="s1">'query'</span><span class="p">:</span>
+                        <span class="n">future</span> <span class="o">=</span> <span class="n">upload_executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
+                                                        <span class="n">load</span><span class="o">.</span><span class="n">upload_dash_query</span><span class="p">,</span>
+                                                        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                                                        <span class="n">file_key</span><span class="o">=</span><span class="n">file_key</span><span class="p">,</span>
+                                                        <span class="o">**</span><span class="n">pd_read_kwargs</span>
+                                                        <span class="p">)</span>
+                    <span class="k">elif</span> <span class="n">source_type</span> <span class="o">==</span> <span class="s1">'file'</span><span class="p">:</span>
+                        <span class="n">future</span> <span class="o">=</span> <span class="n">upload_executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">load</span><span class="o">.</span><span class="n">upload_file</span><span class="p">,</span> 
+                                                        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                                                        <span class="n">file_key</span><span class="o">=</span><span class="n">file_key</span><span class="p">,</span>
+                                                        <span class="o">**</span><span class="n">pd_read_kwargs</span>
+                                                        <span class="p">)</span>
+                    
+                    <span class="n">upload_futures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">future</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">as_completed</span><span class="p">(</span><span class="n">upload_futures</span><span class="p">):</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error uploading data source: </span><span class="si">{e}</span><span class="s2">.  Load not yet committed."</span><span class="p">)</span>
+                    <span class="c1"># End of uploads </span>
+
+            <span class="c1"># Commit load</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">load</span><span class="o">.</span><span class="n">path_to_output_for_dryrun</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"All uploads completed."</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">check_sum</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Committing load with the following checksums: </span><span class="si">{check_sum}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">"Committing load."</span><span class="p">)</span>
+                <span class="n">load</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span><span class="n">check_sum</span><span class="o">=</span><span class="n">check_sum</span><span class="p">)</span>
+                
+            <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="p">[</span><span class="n">table_name</span><span class="p">][</span><span class="s1">'load_status'</span><span class="p">]</span> <span class="o">=</span>  <span class="n">load</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">()</span><span class="o">.</span><span class="n">load_status</span></div>
+
+<div class="viewcode-block" id="DashBulkUploader.execute_multiple_uploads"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashBulkUploader.execute_multiple_uploads">[docs]</a>    <span class="k">def</span> <span class="nf">execute_multiple_uploads</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">table_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">            Uses execute_upload function for each table name in the list provided.</span>
+<span class="sd">        """</span>
+        <span class="k">for</span> <span class="n">table_name</span> <span class="ow">in</span> <span class="n">table_names</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">execute_upload</span><span class="p">(</span>
+                    <span class="n">table_name</span> <span class="o">=</span> <span class="n">table_name</span><span class="p">,</span>
+                    <span class="n">max_workers</span> <span class="o">=</span> <span class="n">max_workers</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error executing upload to lake table </span><span class="si">{table_name}</span><span class="s2">: </span><span class="si">{e}</span><span class="s2">"</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DashBulkUploader.execute_all_uploads"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashBulkUploader.execute_all_uploads">[docs]</a>    <span class="k">def</span> <span class="nf">execute_all_uploads</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">            Uses execute_upload function for all loads created with the DashBulkUploader.</span>
+<span class="sd">        """</span>
+        <span class="n">table_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">table_name</span> <span class="k">for</span> <span class="n">table_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">execute_multiple_uploads</span><span class="p">(</span><span class="n">table_names</span> <span class="o">=</span> <span class="n">table_names</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DashBulkUploader.get_load_info"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashBulkUploader.get_load_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_load_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Retrieves the load information for all loads created. This also updates the load status for each </span>
+<span class="sd">        Load created by the `DashBulkUploader`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        load_info : dict</span>
+<span class="sd">            A dictionary containing the load information for each table, with table names as keys</span>
+<span class="sd">            and their respective load statuses as values.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        Exception</span>
+<span class="sd">            If an error occurs while retrieving the load information for any table, it is caught</span>
+<span class="sd">            and printed, but the function continues to retrieve the remaining load statuses.</span>
+<span class="sd">        """</span>
+        <span class="n">load_info</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">table_name</span><span class="p">,</span> <span class="n">upload</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">load</span> <span class="o">=</span> <span class="n">upload</span><span class="p">[</span><span class="s1">'load'</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="p">[</span><span class="n">table_name</span><span class="p">][</span><span class="s1">'load_status'</span><span class="p">]</span> <span class="o">=</span> <span class="n">load</span><span class="o">.</span><span class="n">wait_to_complete</span><span class="p">()</span>
+                <span class="n">load_info</span><span class="p">[</span><span class="n">table_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">load</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error getting load </span><span class="si">{load.load_id}</span><span class="s2">: </span><span class="si">{e}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">uploads</span><span class="p">[</span><span class="n">table_name</span><span class="p">][</span><span class="s1">'load_status'</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'ERROR: </span><span class="si">{e}</span><span class="s1">'</span>
+                
+        <span class="k">return</span> <span class="n">load_info</span></div></div>
+
+<div class="viewcode-block" id="v1_upload_csv"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.v1_upload_csv">[docs]</a><span class="k">def</span> <span class="nf">v1_upload_csv</span><span class="p">(</span>
+        <span class="n">file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">io</span><span class="o">.</span><span class="n">FileIO</span><span class="p">],</span>
+        <span class="n">dash_table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">dash_orgname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">dash_api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'utf-8'</span><span class="p">,</span>
+        <span class="n">chunksize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30000</span><span class="p">,</span>
+        <span class="n">modify_lambda</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">path_to_output_for_dryrun</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">service_client_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'0'</span>
+    <span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        .. Warning::</span>
+<span class="sd">            This function is deprecated.  Use `read_and_upload_file_to_dash` instead.</span>
+
+<span class="sd">        Reads a file and uploads it to Dash.</span>
+
+<span class="sd">        This function will:</span>
+<span class="sd">        - Read a csv file</span>
+<span class="sd">        - Break it up into multiple csv's</span>
+<span class="sd">        - each with a maximum number of lines defined by chunksize</span>
+<span class="sd">        - upload them to dash</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        file : Union[str, io.FileIO]</span>
+<span class="sd">            Either a path to the file to be uploaded,</span>
+<span class="sd">            or a FileIO stream representing the file to be uploaded</span>
+<span class="sd">            Should be an unencrypted, uncompressed CSV file</span>
+<span class="sd">        dash_table: str</span>
+<span class="sd">            name of Dash table to upload the file to</span>
+<span class="sd">        dash_orgname: str</span>
+<span class="sd">            orgname of your Dash instance</span>
+<span class="sd">        dash_api_key: str</span>
+<span class="sd">            valid api key for Dash API</span>
+<span class="sd">        encoding: str</span>
+<span class="sd">            the encoding of the source file.  defaults to utf-8.</span>
+<span class="sd">        chunksize: int</span>
+<span class="sd">            (optional)</span>
+<span class="sd">            the maximum number of lines to be included in each file.</span>
+<span class="sd">            Note that this should be low enough that the zipped file is less</span>
+<span class="sd">            than Dash maximum gzipped file size. Defaults to 30000.</span>
+<span class="sd">        modify_lambda:</span>
+<span class="sd">            (optional)</span>
+<span class="sd">            a callable that recieves the pandas dataframe read from the</span>
+<span class="sd">            csv.  Gives the opportunity to modify - such as adding a timestamp</span>
+<span class="sd">            column.</span>
+<span class="sd">            Is not required.</span>
+<span class="sd">        path_to_output_for_dryrun: str</span>
+<span class="sd">            (optional)</span>
+<span class="sd">            if specified, no upload will be made to dash, but files</span>
+<span class="sd">            will be saved to the location specified. This is useful for</span>
+<span class="sd">            testing.</span>
+<span class="sd">            multiple files will be created: [table_name].[i].csv.gz where i</span>
+<span class="sd">            represents multiple file parts</span>
+<span class="sd">        service_client_id: str</span>
+<span class="sd">            (optional)</span>
+<span class="sd">            if specified, specifies the service client for the upload. See the dash documentation for an explanation of service client.</span>
+<span class="sd">            https://docs.comotion.us/Comotion%20Dash/Analysts/How%20To/Prepare%20Your%20Data%20Model/Y%20Service%20Client%20and%20Row%20Level%20Security.html#service-client-and-row-level-security</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List</span>
+<span class="sd">            List of http responses</span>
+<span class="sd">        """</span>
+        <span class="n">file_reader</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+            <span class="n">file</span><span class="p">,</span>
+            <span class="n">chunksize</span><span class="o">=</span><span class="n">chunksize</span><span class="p">,</span>
+            <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span>  <span class="c1"># Set all columns to strings.  Dash will still infer the type, but this makes sure it doesnt mess with the contents of the csv before upload</span>
+        <span class="p">)</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">responses</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">file_df</span> <span class="ow">in</span> <span class="n">file_reader</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="n">modify_lambda</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">modify_lambda</span><span class="p">(</span><span class="n">file_df</span><span class="p">)</span>
+
+
+            <span class="n">csv_stream</span> <span class="o">=</span> <span class="n">create_gzipped_csv_stream_from_df</span><span class="p">(</span><span class="n">file_df</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">path_to_output_for_dryrun</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+
+                <span class="n">response</span> <span class="o">=</span> <span class="n">upload_csv_to_dash</span><span class="p">(</span>
+                    <span class="n">dash_orgname</span><span class="o">=</span><span class="n">dash_orgname</span><span class="p">,</span>
+                    <span class="n">dash_api_key</span><span class="o">=</span><span class="n">dash_api_key</span><span class="p">,</span>
+                    <span class="n">dash_table</span><span class="o">=</span><span class="n">dash_table</span><span class="p">,</span>
+                    <span class="n">csv_gz_stream</span><span class="o">=</span><span class="n">csv_stream</span><span class="p">,</span>
+                    <span class="n">service_client_id</span><span class="o">=</span><span class="n">service_client_id</span>
+                <span class="p">)</span>
+
+                <span class="n">responses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span>
+                    <span class="n">join</span><span class="p">(</span>
+                        <span class="n">path_to_output_for_dryrun</span><span class="p">,</span>
+                        <span class="n">dash_table</span> <span class="o">+</span> <span class="s2">"."</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">".csv.gz"</span>
+                    <span class="p">),</span>
+                    <span class="s2">"wb"</span>
+                <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">csv_stream</span><span class="o">.</span><span class="n">getvalue</span><span class="p">())</span>
+
+            <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">responses</span></div>
 
 <div class="viewcode-block" id="upload_csv_to_dash"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.upload_csv_to_dash">[docs]</a><span class="k">def</span> <span class="nf">upload_csv_to_dash</span><span class="p">(</span>
     <span class="n">dash_orgname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="c1"># noqa</span>
@@ -537,109 +1686,244 @@
 
     <span class="k">return</span> <span class="n">csv_stream</span></div>
 
-
 <div class="viewcode-block" id="read_and_upload_file_to_dash"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.read_and_upload_file_to_dash">[docs]</a><span class="k">def</span> <span class="nf">read_and_upload_file_to_dash</span><span class="p">(</span>
     <span class="n">file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">io</span><span class="o">.</span><span class="n">FileIO</span><span class="p">],</span>
     <span class="n">dash_table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">dash_orgname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">dash_api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">file_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dash_api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check_sum</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'utf-8'</span><span class="p">,</span>
     <span class="n">chunksize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30000</span><span class="p">,</span>
     <span class="n">modify_lambda</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">path_to_output_for_dryrun</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">service_client_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'0'</span>
-<span class="p">):</span>
-    <span class="sd">"""Reads a file and uploads to dash.</span>
+    <span class="n">service_client_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'0'</span><span class="p">,</span>
+    <span class="n">partitions</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">load_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'APPEND_ONLY'</span><span class="p">,</span>
+    <span class="n">data_model_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">entity_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Auth</span><span class="o">.</span><span class="n">USER</span><span class="p">,</span>
+    <span class="n">application_client_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">application_client_secret</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">DashBulkUploader</span><span class="p">]:</span>
+    <span class="sd">"""</span>
+<span class="sd">    .. Warning::</span>
+<span class="sd">        This function will be deprecated on 1 December 2025.  Please Migrate and move to the Load/DashBulkUploader class before then.</span>
+
+<span class="sd">    Reads a file and uploads it to Dash.</span>
 
 <span class="sd">    This function will:</span>
-<span class="sd">    - Read a csv file</span>
-<span class="sd">    - Break it up into multiple csv's</span>
-<span class="sd">    - each with a maximum number of lines defined by chunksize</span>
-<span class="sd">    - upload them to dash</span>
+<span class="sd">    - Read a CSV file</span>
+<span class="sd">    - Break it up into multiple CSVs, each with a maximum number of lines defined by `chunksize`</span>
+<span class="sd">    - Upload them to Dash</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    file : Union[str, io.FileIO]</span>
-<span class="sd">        Either a path to the file to be uploaded,</span>
-<span class="sd">        or a FileIO stream representing the file to be uploaded</span>
-<span class="sd">        Should be an unencrypted, uncompressed CSV file</span>
-<span class="sd">    dash_table: str</span>
-<span class="sd">        name of Dash table to upload the file to</span>
-<span class="sd">    dash_orgname: str</span>
-<span class="sd">        orgname of your Dash instance</span>
-<span class="sd">    dash_api_key: str</span>
-<span class="sd">        valid api key for Dash API</span>
-<span class="sd">    encoding: str</span>
-<span class="sd">        the encoding of the source file.  defaults to utf-8.</span>
-<span class="sd">    chunksize: int</span>
-<span class="sd">        (optional)</span>
-<span class="sd">        the maximum number of lines to be included in each file.</span>
-<span class="sd">        Note that this should be low enough that the zipped file is less</span>
-<span class="sd">        than Dash maximum gzipped file size. Defaults to 30000.</span>
-<span class="sd">    modify_lambda:</span>
-<span class="sd">        (optional)</span>
-<span class="sd">        a callable that recieves the pandas dataframe read from the</span>
-<span class="sd">        csv.  Gives the opportunity to modify - such as adding a timestamp</span>
-<span class="sd">        column.</span>
-<span class="sd">        Is not required.</span>
-<span class="sd">    path_to_output_for_dryrun: str</span>
-<span class="sd">        (optional)</span>
-<span class="sd">        if specified, no upload will be made to dash, but files</span>
-<span class="sd">        will be saved to the location specified. This is useful for</span>
-<span class="sd">        testing.</span>
-<span class="sd">        multiple files will be created: [table_name].[i].csv.gz where i</span>
-<span class="sd">        represents multiple file parts</span>
-<span class="sd">    service_client_id: str</span>
-<span class="sd">        (optional)</span>
-<span class="sd">        if specified, specifies the service client for the upload. See the dash documentation for an explanation of service client.</span>
+<span class="sd">        Either a path to the file to be uploaded, or a FileIO stream representing the file to be uploaded.</span>
+<span class="sd">        Should be an unencrypted, uncompressed CSV file.</span>
+<span class="sd">    dash_table : str</span>
+<span class="sd">        Name of the Dash table to upload the file to.</span>
+<span class="sd">    dash_orgname : str</span>
+<span class="sd">        Orgname of your Dash instance.</span>
+<span class="sd">    file_key : str, optional</span>
+<span class="sd">        A unique key for the file being uploaded. If not provided, a key will be generated.</span>
+<span class="sd">    dash_api_key : str, optional</span>
+<span class="sd">        Valid API key for Dash API. Required for v1 data model uploads.</span>
+<span class="sd">    check_sum : Optional[Dict[str, Union[int, float, str]]], optional</span>
+<span class="sd">        Checksum data for the files to be committed. The checksum should be a dictionary</span>
+<span class="sd">        with Presto/Trino expressions as keys and their expected results as values.</span>
+<span class="sd">    encoding : str, default 'utf-8'</span>
+<span class="sd">        The encoding of the source file.</span>
+<span class="sd">    chunksize : int, default 30000</span>
+<span class="sd">        The maximum number of lines to be included in each file. Note that this should be low enough</span>
+<span class="sd">        that the zipped file is less than Dash's maximum gzipped file size.</span>
+<span class="sd">    modify_lambda : Callable, optional</span>
+<span class="sd">        A callable that receives the pandas DataFrame read from the CSV. Provides the opportunity to modify</span>
+<span class="sd">        the DataFrame, such as adding a timestamp column.</span>
+<span class="sd">    path_to_output_for_dryrun : str, optional</span>
+<span class="sd">        If specified, no upload will be made to Dash, but files will be saved to the location specified.</span>
+<span class="sd">        This is useful for testing. Multiple files will be created (1 per chunk)</span>
+<span class="sd">    service_client_id : str, optional</span>
+<span class="sd">        If specified, specifies the service client for the upload. See the Dash documentation for an explanation</span>
+<span class="sd">        of the service client.</span>
+<span class="sd">        https://docs.comotion.us/Comotion%20Dash/Analysts/How%20To/Prepare%20Your%20Data%20Model/Y%20Service%20Client%20and%20Row%20Level%20Security.html#service-client-and-row-level-security</span>
+<span class="sd">    partitions : Optional[List[str]], optional</span>
+<span class="sd">        List of partitions for the load.</span>
+<span class="sd">    load_type : str, default 'APPEND_ONLY'</span>
+<span class="sd">        The type of load operation. Default is 'APPEND_ONLY'.</span>
+<span class="sd">    data_model_version : str, optional</span>
+<span class="sd">        The data model version to use for the upload. If not specified, the function will determine the version.</span>
+<span class="sd">        If the migration status for the org is 'Completed', v2 is the model version.  Otherwise, v1 is the model version.</span>
+<span class="sd">        data_model_version only needs be specified in exceptional circumstances where there are issues determining the migration status.</span>
+<span class="sd">    entity_type : str, default Auth.USER</span>
+<span class="sd">        The entity type for authentication.  Use Auth.USER if uploading as a user.  Use Auth.APPLICATION if uploading with application credentials.</span>
+<span class="sd">    application_client_id : str, optional</span>
+<span class="sd">        The application client ID for authentication.</span>
+<span class="sd">    application_client_secret : str, optional</span>
+<span class="sd">        The application client secret for authentication.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    List</span>
-<span class="sd">        List of http responses</span>
+<span class="sd">    Union[List[Any], DashBulkUploader]</span>
+<span class="sd">        For v1 data model uploads, returns a list of HTTP responses.</span>
+<span class="sd">        For v2 data model uploads, returns the DashBulkUploader instance.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the API key is not specified for v1 lake upload or if the file type cannot be determined.</span>
 <span class="sd">    """</span>
-    <span class="n">file_reader</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
-        <span class="n">file</span><span class="p">,</span>
-        <span class="n">chunksize</span><span class="o">=</span><span class="n">chunksize</span><span class="p">,</span>
-        <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span>
-        <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span>  <span class="c1"># Set all columns to strings.  Dash will still infer the type, but this makes sure it doesnt mess with the contents of the csv before upload</span>
-    <span class="p">)</span>
+    <span class="n">auth_token</span> <span class="o">=</span> <span class="n">Auth</span><span class="p">(</span><span class="n">orgname</span><span class="o">=</span><span class="n">dash_orgname</span><span class="p">,</span>
+                      <span class="n">entity_type</span><span class="o">=</span><span class="n">entity_type</span><span class="p">,</span>
+                      <span class="n">application_client_id</span><span class="o">=</span><span class="n">application_client_id</span><span class="p">,</span>
+                      <span class="n">application_client_secret</span><span class="o">=</span><span class="n">application_client_secret</span><span class="p">)</span>
+    
+    <span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">auth</span> <span class="o">=</span> <span class="n">auth_token</span><span class="p">)</span>
 
-    <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="n">responses</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">file_df</span> <span class="ow">in</span> <span class="n">file_reader</span><span class="p">:</span>
+    <span class="n">uploader</span> <span class="o">=</span> <span class="n">DashBulkUploader</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">data_model_version</span> <span class="ow">or</span> <span class="n">data_model_version</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'v1'</span><span class="p">,</span> <span class="s1">'v2'</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Determining Data Model Version"</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">auth_token</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">modify_lambda</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">modify_lambda</span><span class="p">(</span><span class="n">file_df</span><span class="p">)</span>
+            <span class="c1"># Get migration status</span>
+            <span class="n">migration</span> <span class="o">=</span> <span class="n">Migration</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+            <span class="n">migration_status</span> <span class="o">=</span> <span class="n">migration</span><span class="o">.</span><span class="n">status</span><span class="p">()</span><span class="o">.</span><span class="n">full_migration_status</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">'Migration Status: '</span> <span class="o">+</span> <span class="n">migration_status</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">migration_status</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'Completed'</span><span class="p">,</span> <span class="s1">'Complete'</span><span class="p">]:</span>
+                <span class="n">data_model_version</span> <span class="o">=</span> <span class="s1">'v2'</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data_model_version</span> <span class="o">=</span> <span class="s1">'v1'</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> 
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Error determining data model version: </span><span class="si">{e}</span><span class="s1">'</span><span class="p">)</span>
+            <span class="n">data_model_version</span> <span class="o">=</span> <span class="s1">'v1'</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">auth_token</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploading to data model </span><span class="si">{data_model_version}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">data_model_version</span> <span class="o">==</span> <span class="s1">'v1'</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dash_api_key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"API Key needs to be specified for v1 lake upload."</span><span class="p">)</span>
+
+        <span class="n">responses</span> <span class="o">=</span> <span class="n">v1_upload_csv</span><span class="p">(</span>
+            <span class="n">file</span><span class="o">=</span><span class="n">file</span><span class="p">,</span>
+            <span class="n">dash_table</span><span class="o">=</span><span class="n">dash_table</span><span class="p">,</span>
+            <span class="n">dash_orgname</span><span class="o">=</span><span class="n">dash_orgname</span><span class="p">,</span>
+            <span class="n">dash_api_key</span><span class="o">=</span><span class="n">dash_api_key</span><span class="p">,</span>
+            <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span>
+            <span class="n">chunksize</span><span class="o">=</span><span class="n">chunksize</span><span class="p">,</span>
+            <span class="n">modify_lambda</span><span class="o">=</span><span class="n">modify_lambda</span><span class="p">,</span>
+            <span class="n">path_to_output_for_dryrun</span><span class="o">=</span><span class="n">path_to_output_for_dryrun</span><span class="p">,</span>
+            <span class="n">service_client_id</span><span class="o">=</span><span class="n">service_client_id</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">responses</span>
+    
+    <span class="k">elif</span> <span class="n">data_model_version</span> <span class="o">==</span> <span class="s1">'v2'</span><span class="p">:</span>
+        <span class="n">track_rows_uploaded</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">check_sum</span>
+            
+        <span class="n">uploader</span><span class="o">.</span><span class="n">add_load</span><span class="p">(</span>
+            <span class="n">table_name</span><span class="o">=</span><span class="n">dash_table</span><span class="p">,</span>
+            <span class="n">check_sum</span><span class="o">=</span><span class="n">check_sum</span><span class="p">,</span> 
+            <span class="n">modify_lambda</span><span class="o">=</span><span class="n">modify_lambda</span><span class="p">,</span>
+            <span class="n">load_type</span><span class="o">=</span><span class="n">load_type</span><span class="p">,</span>
+            <span class="n">load_as_service_client_id</span><span class="o">=</span><span class="n">service_client_id</span><span class="p">,</span>
+            <span class="n">partitions</span><span class="o">=</span><span class="n">partitions</span><span class="p">,</span>
+            <span class="n">track_rows_uploaded</span><span class="o">=</span><span class="n">track_rows_uploaded</span><span class="p">,</span>
+            <span class="n">path_to_output_for_dryrun</span><span class="o">=</span><span class="n">path_to_output_for_dryrun</span><span class="p">,</span>
+            <span class="n">chunksize</span><span class="o">=</span><span class="n">chunksize</span>
+        <span class="p">)</span>
+        
+        <span class="n">uploader</span><span class="o">.</span><span class="n">add_data_to_load</span><span class="p">(</span>
+            <span class="n">table_name</span><span class="o">=</span><span class="n">dash_table</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">file</span><span class="p">,</span>
+            <span class="n">file_key</span><span class="o">=</span><span class="n">file_key</span>
+        <span class="p">)</span>
+
+        <span class="n">uploader</span><span class="o">.</span><span class="n">execute_upload</span><span class="p">(</span><span class="n">table_name</span><span class="o">=</span><span class="n">dash_table</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">uploader</span></div>
 
 
-        <span class="n">csv_stream</span> <span class="o">=</span> <span class="n">create_gzipped_csv_stream_from_df</span><span class="p">(</span><span class="n">file_df</span><span class="p">)</span>
+<div class="viewcode-block" id="Migration"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Migration">[docs]</a><span class="k">class</span> <span class="nc">Migration</span><span class="p">():</span>
+    <span class="sd">"""</span>
+<span class="sd">    The Migration object starts and tracks a migration from lake v1 to lake v2. It can only be run once, after which the old lake will be disabled.</span>
 
-        <span class="k">if</span> <span class="n">path_to_output_for_dryrun</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
 
-            <span class="n">response</span> <span class="o">=</span> <span class="n">upload_csv_to_dash</span><span class="p">(</span>
-                <span class="n">dash_orgname</span><span class="o">=</span><span class="n">dash_orgname</span><span class="p">,</span>
-                <span class="n">dash_api_key</span><span class="o">=</span><span class="n">dash_api_key</span><span class="p">,</span>
-                <span class="n">dash_table</span><span class="o">=</span><span class="n">dash_table</span><span class="p">,</span>
-                <span class="n">csv_gz_stream</span><span class="o">=</span><span class="n">csv_stream</span><span class="p">,</span>
-                <span class="n">service_client_id</span><span class="o">=</span><span class="n">service_client_id</span>
-            <span class="p">)</span>
+<span class="sd">    """</span>
 
-            <span class="n">responses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">config</span><span class="p">:</span> <span class="n">DashConfig</span>
+    <span class="p">):</span>
+        
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">DashConfig</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"config must be of type comotion.dash.DashConfig"</span><span class="p">)</span>
 
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span>
-                <span class="n">join</span><span class="p">(</span>
-                    <span class="n">path_to_output_for_dryrun</span><span class="p">,</span>
-                    <span class="n">dash_table</span> <span class="o">+</span> <span class="s2">"."</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">".csv.gz"</span>
-                <span class="p">),</span>
-                <span class="s2">"wb"</span>
-            <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">csv_stream</span><span class="o">.</span><span class="n">getvalue</span><span class="p">())</span>
+        <span class="k">with</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">ApiClient</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">api_client</span><span class="p">:</span>
+            <span class="c1"># Create an instance of the API class with provided parameters</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">migration_api_instance</span> <span class="o">=</span> <span class="n">MigrationsApi</span><span class="p">(</span><span class="n">api_client</span><span class="p">)</span>
 
-        <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
 
-    <span class="k">return</span> <span class="n">responses</span></div>
+<div class="viewcode-block" id="Migration.start"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Migration.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">migration_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"FLASH_SCHEMA"</span><span class="p">,</span>
+            <span class="n">clear_out_new_lake</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Starts a migration.</span>
+
+<span class="sd">        Migrations can take a number of hours to complete. So get a cup of coffee.</span>
+
+<span class="sd">        Initialising this class starts the migration on Comotion Dash.  If a migration is already in progress, initialisation will monitor the active load.</span>
+
+<span class="sd">        There are two types of migraiton, set by `migration_type`:</span>
+<span class="sd">        - `FULL_MIGRATION`:  runs a full migration by copying all the data across, updating the insights tables and deactivating data loads to the old lake.</span>
+<span class="sd">        - `FLASH_SCHEMA`: copies the schema and one line of data per table to the new lake.  this is useful to dev and test ETL scripts</span>
+
+<span class="sd">        There is an option to clear out the new lake on migration, set by the boolean parameters `clear_out_new_lake`. This is useful when testing has taken place, and data needs to be cleared.</span>
+<span class="sd">        If `clear_out_new_lake` is set to False, the migration will fail if there is data in the new lake.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        config : DashConfig</span>
+<span class="sd">            Object of type DashConfig including configuration details</span>
+<span class="sd">        migration_type : str</span>
+<span class="sd">            whether to run a full migration ("FULL_MIGRATION") or only copy the schema of the lake across to the new lake ("FLASH_SCHEMA")</span>
+<span class="sd">        clear_out_new_lake : bool</span>
+<span class="sd">            whether to clear out the new lake on migration.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        """</span>
+        
+        <span class="k">if</span> <span class="n">migration_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'FLASH_SCHEMA'</span><span class="p">,</span><span class="s1">'FULL_MIGRATION'</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'`migration_type` must be one of FLASH_SCHEMA or FULL_MIGRATION'</span><span class="p">)</span>
+
+        <span class="n">migration_data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'migration_type'</span><span class="p">:</span> <span class="n">migration_type</span><span class="p">,</span>
+            <span class="s1">'clear_out_new_lake'</span><span class="p">:</span> <span class="s1">'CLEAR_OUT'</span> <span class="k">if</span> <span class="n">clear_out_new_lake</span> <span class="k">else</span> <span class="s1">'DO_NOT_CLEAR_OUT'</span>
+        <span class="p">}</span>
+        
+            <span class="c1"># Create an instance of the API class with provided parameters</span>
+        <span class="n">migration</span> <span class="o">=</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">Migration</span><span class="p">(</span><span class="o">**</span><span class="n">migration_data</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">migration_api_instance</span><span class="o">.</span><span class="n">start_migration</span><span class="p">(</span><span class="n">migration</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">BadRequestException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">exp</span><span class="o">.</span><span class="n">body</span><span class="p">)[</span><span class="s1">'message'</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ApiException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">body</span><span class="p">)[</span><span class="s1">'message'</span><span class="p">])</span></div>
+    
+<div class="viewcode-block" id="Migration.status"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Migration.status">[docs]</a>    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">migration_status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">migration_api_instance</span><span class="o">.</span><span class="n">get_migration</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">migration_status</span>
+        <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">BadRequestException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">exp</span><span class="o">.</span><span class="n">body</span><span class="p">)[</span><span class="s1">'message'</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ApiException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">body</span><span class="p">)[</span><span class="s1">'message'</span><span class="p">])</span></div></div>
+        
 
 <div class="viewcode-block" id="upload_from_oracle"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.upload_from_oracle">[docs]</a><span class="k">def</span> <span class="nf">upload_from_oracle</span><span class="p">(</span> 
     <span class="n">sql_host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 

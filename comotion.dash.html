@@ -231,7 +231,809 @@
           <article class="md-content__inner md-typeset" role="main">
             
   
-<h1 id="comotion-dash--page-root">comotion.dash module<a class="headerlink" href="#comotion-dash--page-root" title="Permalink to this headline">¶</a></h1>
+<span id="comotion-dash-module"></span><h1 id="comotion-dash--page-root">comotion.dash module<a class="headerlink" href="#comotion-dash--page-root" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="comotion.dash.DashBulkUploader">
+<em class="property">class </em><code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">DashBulkUploader</code><span class="sig-paren">(</span><em class="sig-param">config: comotion.dash.DashConfig</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#DashBulkUploader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashBulkUploader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to handle multiple loads with utility functions by leveraging the <cite>Load</cite> class.
+Since a <cite>Load</cite> creates an upload to a lake table, <cite>DashBulkUploader</cite> helps to manage uploads to several lake tables with 1 object.</p>
+<p>Example of upload with a <cite>DashBulkUploader</cite> instance:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">Auth</span><span class="p">(</span><span class="n">orgname</span> <span class="o">=</span> <span class="s1">'my_org_name'</span><span class="p">))</span>
+
+<span class="n">uploader</span> <span class="o">=</span> <span class="n">DashBulkUploader</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span><span class="p">)</span>
+
+<span class="c1"># A better use would be to loop through a config to run the following below code repeatedly.  A single upload is shown for demonstration purposes.</span>
+
+<span class="n">my_lake_table</span> <span class="o">=</span> <span class="s1">'v1_inforce_policies'</span>
+
+<span class="c1"># Create the load in the uploader</span>
+<span class="n">uploader</span><span class="o">.</span><span class="n">add_load</span><span class="p">(</span>
+                    <span class="n">table_name</span> <span class="o">=</span> <span class="n">my_lake_table</span><span class="p">,</span>
+                    <span class="n">check_sum</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">'count(*)'</span><span class="p">:</span> <span class="mi">50000</span>
+                    <span class="p">},</span> <span class="c1"># Alternatively, provide the track_rows_uploaded arg as true</span>
+                    <span class="n">load_as_service_client_id</span> <span class="o">=</span> <span class="s1">'0'</span>
+                  <span class="p">)</span>
+
+<span class="c1"># Add the relevant datasources to the load. This can point to a directory to upload all contained files</span>
+<span class="n">uploader</span><span class="o">.</span><span class="n">add_data_to_load</span><span class="p">(</span>
+                            <span class="n">table_name</span> <span class="o">=</span> <span class="n">my_lake_table</span><span class="p">,</span>
+                            <span class="n">data</span> <span class="o">=</span> <span class="s1">'data/inforce_policies'</span>
+                          <span class="p">)</span>
+<span class="c1"># View uploads added</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">uploader</span><span class="o">.</span><span class="n">uploads</span><span class="p">)</span>
+
+<span class="n">uploader</span><span class="o">.</span><span class="n">execute_all_uploads</span><span class="p">()</span> <span class="c1"># Use execute_upload or execute_multiple_uploads if only certain uploads should be kicked off.</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">uploader</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">())</span> <span class="c1"># View status of uploads.  This also refreshes uploader.uploads</span>
+
+<span class="c1"># Remove uploads/datasources if you want to re-use the same instance</span>
+<span class="n">uploader</span><span class="o">.</span><span class="n">remove_load</span><span class="p">(</span><span class="n">table_name</span> <span class="o">=</span> <span class="n">my_lake_table</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="comotion.dash.DashBulkUploader.add_data_to_load">
+<code class="sig-name descname">add_data_to_load</code><span class="sig-paren">(</span><em class="sig-param">table_name: str, data: Union[str, pandas.core.frame.DataFrame, comotion.dash.Query], file_key: str = None, source_type: str = None, **pd_read_kwargs</em><span class="sig-paren">)</span> → None<a class="reference internal" href="_modules/comotion/dash.html#DashBulkUploader.add_data_to_load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashBulkUploader.add_data_to_load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds data to an existing load for a specified lake table. This function supports adding data
+from various sources including dataframes, directories, and files.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>table_name</strong> (<em>str</em>) – The name of the lake table to which data will be added.  A load should already be added for this table_name.</p></li>
+<li><p><strong>data</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>pd.DataFrame</em><em>, </em><a class="reference internal" href="#comotion.dash.Query" title="comotion.dash.Query"><em>Query</em></a><em>]</em>) – The data to be added. Can be a path to a file or directory, a <cite>pandas.DataFrame</cite> or a <cite>dash.Query</cite>.  See <cite>Load</cite> for how different upload types will be executed.</p></li>
+<li><p><strong>file_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Optional custom key for the file. This will ensure idempotence. Must be lowercase and can include underscores.
+If not provided, a random file key will be generated using <cite>DashBulkUploader.create_file_key()</cite>.
+If a directory is provided as the source of data, <cite>file_key</cite> is ignored and a random file key is generated for each file in the directory.
+If multiple files are uploaded to the same load with the same <cite>file_key</cite>, only the last one will be pushed to the lake.</p></li>
+<li><p><strong>source_type</strong> (<em>str</em><em>, </em><em>optional</em>) – The type of data source. Can be ‘df’ for DataFrame, ‘dir’ for directory, or ‘file’ for file.
+If not specified, the function will attempt to infer the source type.
+If a directory is provided, loop through the paths in the directory from <cite>listdir()</cite> and add valid files as datasources for the lake table.</p></li>
+<li><p><strong>pd_read_kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – Additional keyword arguments to pass to the pandas read function (one of [pd.read_csv, pd.read_parquet, pd.read_json, pd.read_excel]).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If no existing load is found for the specified table, if the table name is not lowercase,
+    or if the source type cannot be identified.</p></li>
+<li><p><strong>KeyError</strong> – If neither <cite>check_sum</cite> nor <cite>track_rows_uploaded</cite> is provided.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.DashBulkUploader.add_load">
+<code class="sig-name descname">add_load</code><span class="sig-paren">(</span><em class="sig-param">table_name: str</em>, <em class="sig-param">check_sum: Optional[Dict[str</em>, <em class="sig-param">Union[int</em>, <em class="sig-param">float</em>, <em class="sig-param">str]]] = None</em>, <em class="sig-param">modify_lambda: Callable = None</em>, <em class="sig-param">load_type: str = 'APPEND_ONLY'</em>, <em class="sig-param">load_as_service_client_id: str = None</em>, <em class="sig-param">partitions: Optional[List[str]] = None</em>, <em class="sig-param">track_rows_uploaded: bool = False</em>, <em class="sig-param">path_to_output_for_dryrun: str = None</em>, <em class="sig-param">chunksize: int = None</em><span class="sig-paren">)</span> → None<a class="reference internal" href="_modules/comotion/dash.html#DashBulkUploader.add_load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashBulkUploader.add_load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new load for a specified lake table. This function initializes the load
+process, ensuring that the table name is in lowercase and that a checksum or row tracking
+is provided for data integrity. Created loads can be fetched using the <cite>DashBulkUploader.uploads</cite> class variable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>table_name</strong> (<em>str</em>) – The name of the lake table. Must be in lowercase.</p></li>
+<li><p><strong>check_sum</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><em>str</em><em>, </em><em>Union</em><em>[</em><em>int</em><em>, </em><em>float</em><em>, </em><em>str</em><em>]</em><em>]</em><em>]</em>) – Checksum data for the files to be committed. The checksum should be a dictionary
+with Presto/Trino expressions as keys and their expected results as values.</p></li>
+<li><p><strong>modify_lambda</strong> (<em>Callable</em><em>, </em><em>optional</em>) – A lambda function to modify the data before loading.</p></li>
+<li><p><strong>load_type</strong> (<em>str</em><em>, </em><em>default 'APPEND_ONLY'</em>) – The type of load operation. Default is ‘APPEND_ONLY’.</p></li>
+<li><p><strong>load_as_service_client_id</strong> (<em>str</em><em>, </em><em>optional</em>) – The service client ID to use for the load.
+If service_client is not a field in the source data added to the load, this must be provided or the load will fail on commit.</p></li>
+<li><p><strong>partitions</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em><em>, </em><em>optional</em>) – List of partitions for the load to improve query efficiency from the Dash lake.</p></li>
+<li><p><strong>track_rows_uploaded</strong> (<em>bool</em><em>, </em><em>default False</em>) – Whether to track the number of rows uploaded for the load.</p></li>
+<li><p><strong>path_to_output_for_dryrun</strong> (<em>str</em><em>, </em><em>optional</em>) – If specified, no upload will be made to dash, but files
+will be saved to the location specified. This is useful for testing.</p></li>
+<li><p><strong>chunksize</strong> (<em>int</em><em>, </em><em>optional</em>) – Data source will be broken into chunks with chunksize rows before uploading.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If the table name contains uppercase characters or if a load has already been created for the table.</p></li>
+<li><p><strong>KeyError</strong> – If neither <cite>check_sum</cite> nor <cite>track_rows_uploaded</cite> is provided.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.DashBulkUploader.execute_all_uploads">
+<code class="sig-name descname">execute_all_uploads</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#DashBulkUploader.execute_all_uploads"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashBulkUploader.execute_all_uploads" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses execute_upload function for all loads created with the DashBulkUploader.</p>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.DashBulkUploader.execute_multiple_uploads">
+<code class="sig-name descname">execute_multiple_uploads</code><span class="sig-paren">(</span><em class="sig-param">table_names: List[str], max_workers: int = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#DashBulkUploader.execute_multiple_uploads"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashBulkUploader.execute_multiple_uploads" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses execute_upload function for each table name in the list provided.</p>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.DashBulkUploader.execute_upload">
+<code class="sig-name descname">execute_upload</code><span class="sig-paren">(</span><em class="sig-param">table_name: str</em>, <em class="sig-param">max_workers: int = None</em><span class="sig-paren">)</span> → None<a class="reference internal" href="_modules/comotion/dash.html#DashBulkUploader.execute_upload"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashBulkUploader.execute_upload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Executes the upload process for a specified lake table. This function uses multi-threading
+to upload data sources concurrently and commits the load upon completion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>table_name</strong> (<em>str</em>) – The name of the lake table to which data will be uploaded.</p></li>
+<li><p><strong>max_workers</strong> (<em>int</em>) – The maximum number of threads to use for concurrent uploads (passed to <cite>concurrent.futures.ThreadPoolExecutor</cite>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If no existing load is found for the specified table.</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.DashBulkUploader.get_load_info">
+<code class="sig-name descname">get_load_info</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#DashBulkUploader.get_load_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashBulkUploader.get_load_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the load information for all loads created. This also updates the load status for each
+Load created by the <cite>DashBulkUploader</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>load_info</strong> – A dictionary containing the load information for each table, with table names as keys
+and their respective load statuses as values.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><strong>Exception</strong> – If an error occurs while retrieving the load information for any table, it is caught
+    and printed, but the function continues to retrieve the remaining load statuses.</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.DashBulkUploader.remove_data_from_load">
+<code class="sig-name descname">remove_data_from_load</code><span class="sig-paren">(</span><em class="sig-param">table_name</em>, <em class="sig-param">file_key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#DashBulkUploader.remove_data_from_load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashBulkUploader.remove_data_from_load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deletes data source with specified file key for table_name from uploads class variable if the load has not been comitted yet.</p>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.DashBulkUploader.remove_load">
+<code class="sig-name descname">remove_load</code><span class="sig-paren">(</span><em class="sig-param">table_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#DashBulkUploader.remove_load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashBulkUploader.remove_load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deletes load for specified table_name from uploads class variable.</p>
+</dd></dl>
+</dd></dl>
+<dl class="class">
+<dt id="comotion.dash.DashConfig">
+<em class="property">class </em><code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">DashConfig</code><span class="sig-paren">(</span><em class="sig-param">auth: comotion.auth.Auth</em>, <em class="sig-param">zone: str = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#DashConfig"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Object containing configuration information for Dash API</p>
+<dl class="attribute">
+<dt id="comotion.dash.DashConfig.auth">
+<code class="sig-name descname">auth</code><a class="headerlink" href="#comotion.dash.DashConfig.auth" title="Permalink to this definition">¶</a></dt>
+<dd><p>comotion.Auth object holding information about authentication</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>comotion.Auth</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="attribute">
+<dt id="comotion.dash.DashConfig.zone">
+<code class="sig-name descname">zone</code><a class="headerlink" href="#comotion.dash.DashConfig.zone" title="Permalink to this definition">¶</a></dt>
+<dd><p>The zone to use for the API. If not provided, defaults to None, i.e. the main zone.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str, optional</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.DashConfig.auth_settings">
+<code class="sig-name descname">auth_settings</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#DashConfig.auth_settings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.DashConfig.auth_settings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets Auth Settings dict for api client.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The Auth Settings information dict.</p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
+<dl class="class">
+<dt id="comotion.dash.Load">
+<em class="property">class </em><code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">Load</code><span class="sig-paren">(</span><em class="sig-param">config: comotion.dash.DashConfig</em>, <em class="sig-param">load_type: str = None</em>, <em class="sig-param">table_name: str = None</em>, <em class="sig-param">load_as_service_client_id: str = None</em>, <em class="sig-param">partitions: Optional[List[str]] = None</em>, <em class="sig-param">load_id: str = None</em>, <em class="sig-param">track_rows_uploaded: bool = None</em>, <em class="sig-param">path_to_output_for_dryrun: str = None</em>, <em class="sig-param">modify_lambda: Callable = None</em>, <em class="sig-param">chunksize: int = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Load" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Load object starts and tracks a multi-file load to a single lake table on Comotion Dash</p>
+<p>Initialising this class starts a Load on Comotion Dash and stores the
+resulting <cite>load_id</cite>.</p>
+<p>The load then needs to be committed with valid checksums to be pushed to the lake.</p>
+<p>If you wish to work with an existing load, then supply only the <cite>load_id</cite> parameter</p>
+<p>Example of upload with a Load instance:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">load</span> <span class="o">=</span> <span class="n">Load</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">DashConfig</span><span class="p">(</span><span class="n">Auth</span><span class="p">(</span><span class="s1">'orgname'</span><span class="p">)),</span>
+            <span class="n">table_name</span> <span class="o">=</span> <span class="s1">'v1_inforce_policies'</span><span class="p">,</span>
+            <span class="n">load_as_service_client_id</span> <span class="o">=</span> <span class="s1">'0'</span><span class="p">)</span> <span class="c1"># Create the load</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">load</span><span class="o">.</span><span class="n">load_id</span><span class="p">)</span> <span class="c1"># It can be useful to track these to fix</span>
+<span class="k">for</span> <span class="n">file</span><span class="p">,</span> <span class="n">file_key</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">file_path_list</span><span class="p">,</span> <span class="n">file_keys</span><span class="p">):</span> <span class="c1"># Upload files with Load object</span>
+    <span class="n">load</span><span class="o">.</span><span class="n">upload_file</span><span class="p">(</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">file</span><span class="p">,</span>
+        <span class="n">file_key</span> <span class="o">=</span> <span class="n">file_key</span>
+    <span class="p">)</span>
+
+<span class="n">load</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span> <span class="c1"># Commit the load - this validates the files and pushes to the table_name specified</span>
+    <span class="n">check_sum</span> <span class="o">=</span> <span class="p">{</span> <span class="c1"># Check that data uploaded matches what you expected before pushing to the lake.  *Also see track_rows_uploaded option</span>
+        <span class="s1">'sum(face_amount)'</span><span class="p">:</span> <span class="mi">20000</span><span class="p">,</span>
+        <span class="s1">'count(distinct policy_number)'</span><span class="p">:</span> <span class="mi">1000</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">load</span><span class="o">.</span><span class="n">get_load_info</span><span class="p">())</span> <span class="c1"># Run this at any time to get the latest information on the load</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="comotion.dash.Load.commit">
+<code class="sig-name descname">commit</code><span class="sig-paren">(</span><em class="sig-param">check_sum: Optional[Dict[str</em>, <em class="sig-param">Union[int</em>, <em class="sig-param">float</em>, <em class="sig-param">str]]] = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Load.commit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Load.commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Kicks off the commit of the load. A checksum must be provided
+which is checked on the server side to ensure that the data provided
+has integrity.  This is automatically created if you specify <cite>track_rows_uploaded = True</cite> when creating the load.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>check_sum</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Union</em><em>[</em><em>int</em><em>, </em><em>float</em><em>, </em><em>str</em><em>]</em><em>] </em><em>(</em><em>optional</em><em>)</em>) – <p>Checksum data for the files to be committed.
+Checksums must be in the form of a dictionary, with presto / trino expressions
+as the key, and the expected result as the value.</p>
+<p>A check sum is not required if <cite>track_rows_uploaded</cite> was set to true for the load.
+This essentially builds the checksum <cite>{‘count(*)’: nrows_uploads}</cite> and adds it as an extrac checksum.</p>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">"count(*)"</span> <span class="p">:</span> <span class="mi">53</span><span class="p">,</span>
+    <span class="s2">"sum(my_value)"</span><span class="p">:</span> <span class="mf">123.3</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Load.create_file_key">
+<code class="sig-name descname">create_file_key</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → str<a class="reference internal" href="_modules/comotion/dash.html#Load.create_file_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Load.create_file_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to create a random, valid file key with specified length.</p>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Load.generate_presigned_url_for_file_upload">
+<code class="sig-name descname">generate_presigned_url_for_file_upload</code><span class="sig-paren">(</span><em class="sig-param">file_key: str = None</em><span class="sig-paren">)</span> → comodash_api_client_lowlevel.models.file_upload_response.FileUploadResponse<a class="reference internal" href="_modules/comotion/dash.html#Load.generate_presigned_url_for_file_upload"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Load.generate_presigned_url_for_file_upload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates presigned URLs and STS credentials for a new file upload.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>file_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Optional custom key for the file. This will ensure idempotence.
+If multiple files are uploaded to the same load with the same file_key,
+only the last one will be loaded. Must be lowercase and can include underscores.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Model containing all the relevant credentials to be able to upload a file to S3 as part of the load. This includes the following attributes:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>presigned_url<span class="classifier">str</span></dt><dd><p>Presigned URL data for S3 file upload. The file can be posted to this endpoint using any AWS S3 compatible toolset.
+Temporary credentials are included in the URL, so no other credentials are required.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>sts_credentials<span class="classifier">dict</span></dt><dd><p>Alternatively to the presigned_url, these Temporary AWS STS credentials can be used to upload the file to the location specified by <cite>path</cite> and <cite>bucket</cite>.
+This is required for various advanced toolsets, including AWS Wrangler.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>path<span class="classifier">str</span></dt><dd><p>Path of the file in the S3 bucket. See the description of <cite>sts_credentials</cite>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>bucket<span class="classifier">str</span></dt><dd><p>Name of the S3 bucket. See the description of <cite>sts_credentials</cite>.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>FileUploadResponse</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Load.get_load_info">
+<code class="sig-name descname">get_load_info</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → comodash_api_client_lowlevel.models.load.Load<a class="reference internal" href="_modules/comotion/dash.html#Load.get_load_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Load.get_load_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the state of the load</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><p>Model containing all the load info, with the following attributes</p>
+<dl class="simple">
+<dt><cite>load_status</cite></dt><dd><p>Status of the load, one of OPEN, PROCESSING, FAIL or SUCCESS</p>
+</dd>
+<dt><cite>error_type</cite></dt><dd><p>Type of error if the load status is FAIL.</p>
+</dd>
+<dt><cite>error_messages</cite></dt><dd><p>Detailed error messages if the load status is FAIL.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>LoadInfo</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Load.refresh_api_instance">
+<code class="sig-name descname">refresh_api_instance</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Load.refresh_api_instance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Load.refresh_api_instance" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Load.upload_dash_query">
+<code class="sig-name descname">upload_dash_query</code><span class="sig-paren">(</span><em class="sig-param">data: comotion.dash.Query</em>, <em class="sig-param">file_key: str = None</em>, <em class="sig-param">max_workers: int = None</em>, <em class="sig-param">**pd_read_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Load.upload_dash_query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Load.upload_dash_query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uploads the result of a <cite>dash.Query</cite> object to the specified lake table, or a local file if <cite>path_to_output_for_dryrun</cite> was specified.
+The result is read into a <cite>pandas.DataFrame</cite> and uploaded with the <cite>Load.upload_df()</cite> function.
+Note an index is added to the end of the file key to uniquely identify chunks uploaded.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference internal" href="#comotion.dash.Query" title="comotion.dash.Query"><em>Query</em></a>) – The Query whose result is to be uploaded.</p></li>
+<li><p><strong>file_key</strong> (<em>str</em><em>, </em><em>optional</em>) – A unique key for the file being uploaded. If not provided, a key will be generated.</p></li>
+<li><p><strong>max_workers</strong> (<em>int</em><em>, </em><em>optional</em>) – The maximum number of threads to use for concurrent uploads (passed to <cite>concurrent.futures.ThreadPoolExecutor</cite>)</p></li>
+<li><p><strong>**pd_read_kwargs</strong> – Additional keyword arguments to pass to the pandas function.
+Note that filepath_or_buffer, chunksize and dtype are passed by default and so duplicating those here could cause issues.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list of responses from the load upload API call for each chunk.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List[Any]</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If an error occurs during the upload of any chunk or during the Query.</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Load.upload_df">
+<code class="sig-name descname">upload_df</code><span class="sig-paren">(</span><em class="sig-param">data: pandas.core.frame.DataFrame</em>, <em class="sig-param">file_key: str = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Load.upload_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Load.upload_df" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uploads a <cite>pandas.DataFrame</cite> as a parquet file to an S3 bucket using a presigned URL.
+If <cite>path_to_output_for_dryrun</cite> is specified for the load, write the file to a local directory instead.
+Before uploading, <cite>modify_lambda</cite> is applied.  Then, column names are forced to be lowercase and spaces are replaced with underscores.
+This is to prevent potential schema issues in the Dash lake.</p>
+<dl class="simple">
+<dt>data<span class="classifier">pandas.DataFrame</span></dt><dd><p>The DataFrame to be uploaded. This should be a pandas.DataFrame object.</p>
+</dd>
+<dt>file_key<span class="classifier">str, optional</span></dt><dd><p>Optional custom key for the file to be. If not provided, a random file key is created.  See Load.create_file_key().
+This will ensure idempotence. If multiple files are uploaded to the same load with the same <cite>file_key</cite>, only the last one will be pushed to the lake.
+Must be lowercase and can include underscores.</p>
+</dd>
+</dl>
+<p>None</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="n">load</span> <span class="o">=</span> <span class="n">Load</span><span class="p">(</span><span class="n">dashconfig</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'path/to/file.parquet'</span><span class="p">)</span>
+<span class="n">load</span><span class="o">.</span><span class="n">upload_df</span><span class="p">(</span><span class="n">data</span> <span class="o">=</span> <span class="n">df</span><span class="p">,</span> <span class="n">file_key</span><span class="o">=</span><span class="s1">'my_file_id'</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Load.upload_file">
+<code class="sig-name descname">upload_file</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">file_key: str = None</em>, <em class="sig-param">use_file_name_as_key: bool = False</em>, <em class="sig-param">max_workers: int = None</em>, <em class="sig-param">**pd_read_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Load.upload_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Load.upload_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uploads a file to the lake table specified in the load, or a local file if <cite>path_to_output_for_dryrun</cite> was specified.
+The file provided is read into a <cite>pandas.DataFrame</cite> using <cite>pd_read_kwargs</cite> with an appropriate pandas function.
+Note an index is added to the end of the file key to uniquely identify chunks uploaded.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>Any</em>) – The file to be uploaded.  This should be readable by <cite>pandas.read_csv</cite>, <cite>pandas.read_parquet</cite>, <cite>pandas.read_json</cite> or <cite>pandas.read_excel</cite>.</p></li>
+<li><p><strong>file_key</strong> (<em>str</em><em>, </em><em>optional</em>) – A unique key for the file being uploaded. If not provided, a key will be generated.</p></li>
+<li><p><strong>use_file_name_as_key</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, the file name will be used as the file key. If False, a random key will be generated. Will throw an error when this is True and a file key is provided.</p></li>
+<li><p><strong>max_workers</strong> (<em>int</em><em>, </em><em>optional</em>) – The maximum number of threads to use for concurrent uploads (passed to concurrent.futures.ThreadPoolExecutor)</p></li>
+<li><p><strong>**pd_read_kwargs</strong> – Additional keyword arguments to pass to the pandas read function (one of [pd.read_csv, pd.read_parquet, pd.read_json, pd.read_excel]).
+You should not pass the variable pointing to the file here (e.g. filepath_or_buffer in pandas.read_csv), as this is passed in the data parameter.
+Chunksize and nrows should also not be provided as extra parameters.
+If you do not provide dtype, dtype will be determined automatically from the first chunk of data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list of responses from the load upload API call for each chunk.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List[Any]</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the file type cannot be determined or if an error occurs during the upload of any chunk.</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Load.wait_to_complete">
+<code class="sig-name descname">wait_to_complete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Load.wait_to_complete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Load.wait_to_complete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Blocks until the load is in a complete state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>State of the load, after processing  completed.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
+<dl class="class">
+<dt id="comotion.dash.Migration">
+<em class="property">class </em><code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">Migration</code><span class="sig-paren">(</span><em class="sig-param">config: comotion.dash.DashConfig</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Migration"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Migration" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Migration object starts and tracks a migration from lake v1 to lake v2. It can only be run once, after which the old lake will be disabled.</p>
+<dl class="method">
+<dt id="comotion.dash.Migration.start">
+<code class="sig-name descname">start</code><span class="sig-paren">(</span><em class="sig-param">migration_type: str = 'FLASH_SCHEMA'</em>, <em class="sig-param">clear_out_new_lake: bool = False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Migration.start"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Migration.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Starts a migration.</p>
+<p>Migrations can take a number of hours to complete. So get a cup of coffee.</p>
+<p>Initialising this class starts the migration on Comotion Dash.  If a migration is already in progress, initialisation will monitor the active load.</p>
+<p>There are two types of migraiton, set by <cite>migration_type</cite>:
+- <cite>FULL_MIGRATION</cite>:  runs a full migration by copying all the data across, updating the insights tables and deactivating data loads to the old lake.
+- <cite>FLASH_SCHEMA</cite>: copies the schema and one line of data per table to the new lake.  this is useful to dev and test ETL scripts</p>
+<p>There is an option to clear out the new lake on migration, set by the boolean parameters <cite>clear_out_new_lake</cite>. This is useful when testing has taken place, and data needs to be cleared.
+If <cite>clear_out_new_lake</cite> is set to False, the migration will fail if there is data in the new lake.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> (<a class="reference internal" href="#comotion.dash.DashConfig" title="comotion.dash.DashConfig"><em>DashConfig</em></a>) – Object of type DashConfig including configuration details</p></li>
+<li><p><strong>migration_type</strong> (<em>str</em>) – whether to run a full migration (“FULL_MIGRATION”) or only copy the schema of the lake across to the new lake (“FLASH_SCHEMA”)</p></li>
+<li><p><strong>clear_out_new_lake</strong> (<em>bool</em>) – whether to clear out the new lake on migration.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Migration.status">
+<code class="sig-name descname">status</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Migration.status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Migration.status" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+</dd></dl>
+<dl class="class">
+<dt id="comotion.dash.Query">
+<em class="property">class </em><code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">Query</code><span class="sig-paren">(</span><em class="sig-param">config: comotion.dash.DashConfig</em>, <em class="sig-param">query_text: str = None</em>, <em class="sig-param">query_id: str = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query" title="Permalink to this definition">¶</a></dt>
+<dd><p>The query object starts and tracks a query on Comotion Dash.</p>
+<p>Initialising this class runs a query on Comotion Dash and stores the
+resulting query id in <cite>query_id</cite></p>
+<dl class="attribute">
+<dt id="comotion.dash.Query.COMPLETED_STATES">
+<code class="sig-name descname">COMPLETED_STATES</code><em class="property"> = ['SUCCEEDED', 'CANCELLED', 'FAILED']</em><a class="headerlink" href="#comotion.dash.Query.COMPLETED_STATES" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="attribute">
+<dt id="comotion.dash.Query.SUCCEEDED_STATE">
+<code class="sig-name descname">SUCCEEDED_STATE</code><em class="property"> = 'SUCCEEDED'</em><a class="headerlink" href="#comotion.dash.Query.SUCCEEDED_STATE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.download_csv">
+<code class="sig-name descname">download_csv</code><span class="sig-paren">(</span><em class="sig-param">output_file_path</em>, <em class="sig-param">fail_if_exists=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Query.download_csv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.download_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Download csv of results and check that the total file size is correct</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_file_path</strong> (<em>File path</em>) – Path of the file to output to</p></li>
+<li><p><strong>fail_if_exists</strong> (<em>bool</em><em>, </em><em>optional</em>) – If true, then will fail if the target file name already/
+Defaults to false.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>IncompleteRead</strong> – If only part of the file is downloaded, this is raised</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.get_csv_for_streaming">
+<code class="sig-name descname">get_csv_for_streaming</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → urllib3.response.HTTPResponse<a class="reference internal" href="_modules/comotion/dash.html#Query.get_csv_for_streaming"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.get_csv_for_streaming" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a <code class="docutils literal notranslate"><span class="pre">urllib3.response.HTTPResponse</span></code> object that can be used for streaming
+This allows use of the downloaded file without having to save
+it to local storage.</p>
+<p>Be sure to use <code class="docutils literal notranslate"><span class="pre">.release_conn()</span></code> when completed to ensure that the
+connection is released</p>
+<p>This can be achieved using the <cite>with</cite> notation e.g.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">query</span><span class="o">.</span><span class="n">get_csv_for3_streaming</span><span class="p">()</span><span class="o">.</span><span class="n">stream</span><span class="p">()</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+  <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
+      <span class="c1"># do somthing with chunk</span>
+      <span class="c1"># chunk is a byte array ``</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.get_query_info">
+<code class="sig-name descname">get_query_info</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → comodash_api_client_lowlevel.models.query.Query<a class="reference internal" href="_modules/comotion/dash.html#Query.get_query_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.get_query_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the state of the query.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><p>Model containing all query info, with the following attributes</p>
+<dl class="simple">
+<dt><cite>query</cite></dt><dd><p>query sql</p>
+</dd>
+<dt><cite>query_id</cite></dt><dd><p>query_id of query</p>
+</dd>
+<dt><cite>status</cite></dt><dd><dl class="simple">
+<dt><cite>completion_date_time</cite></dt><dd><p>GMT Completion Time</p>
+</dd>
+<dt><cite>state</cite></dt><dd><p>Current state of query. One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED</p>
+</dd>
+<dt><cite>stateChangeReason</cite></dt><dd><p>info about reason for state change (generally failure)</p>
+</dd>
+<dt>submission_date_time`</dt><dd><p>GMT submission time</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>QueryInfo</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.is_complete">
+<code class="sig-name descname">is_complete</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → bool<a class="reference internal" href="_modules/comotion/dash.html#Query.is_complete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.is_complete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates whether the query is in a final state.
+This means it has either succeeded, failed or been cancelled.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Whether query complete</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.query_id">
+<code class="sig-name descname">query_id</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → str<a class="reference internal" href="_modules/comotion/dash.html#Query.query_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.query_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns query id for this query</p>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.refresh_api_instance">
+<code class="sig-name descname">refresh_api_instance</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Query.refresh_api_instance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.refresh_api_instance" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.state">
+<code class="sig-name descname">state</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → str<a class="reference internal" href="_modules/comotion/dash.html#Query.state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the state of the query.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>One of QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.stop">
+<code class="sig-name descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#Query.stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stop the query</p>
+</dd></dl>
+<dl class="method">
+<dt id="comotion.dash.Query.wait_to_complete">
+<code class="sig-name descname">wait_to_complete</code><span class="sig-paren">(</span><span class="sig-paren">)</span> → bool<a class="reference internal" href="_modules/comotion/dash.html#Query.wait_to_complete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.Query.wait_to_complete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Blocks until query is in a complete state</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Final state, one of ‘SUCCEEDED’, ‘CANCELLED’, ‘FAILED’</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
+<dl class="function">
+<dt id="comotion.dash.create_gzipped_csv_stream_from_df">
+<code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">create_gzipped_csv_stream_from_df</code><span class="sig-paren">(</span><em class="sig-param">df: pandas.core.frame.DataFrame</em><span class="sig-paren">)</span> → _io.BytesIO<a class="reference internal" href="_modules/comotion/dash.html#create_gzipped_csv_stream_from_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.create_gzipped_csv_stream_from_df" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a gzipped, utf-8 csv file bytestream from a pandas dataframe</p>
+<p>Useful to help upload dataframes to dash</p>
+<p>It does not break file up, so be sure to apply a maximise chunksize
+to the dataframe before applying - otherwise dash max file limits will
+cause an error</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>df</strong> (<em>pd.DataFrame</em>) – Dateframe to be turned into bytestream</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The Bytestream</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>io.BytesIO</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="function">
+<dt id="comotion.dash.read_and_upload_file_to_dash">
+<code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">read_and_upload_file_to_dash</code><span class="sig-paren">(</span><em class="sig-param">file: Union[str, _io.FileIO], dash_table: str, dash_orgname: str, file_key: str = None, dash_api_key: str = None, check_sum: Optional[Dict[str, Union[int, float, str]]] = None, encoding: str = 'utf-8', chunksize: int = 30000, modify_lambda: Callable = None, path_to_output_for_dryrun: str = None, service_client_id: str = '0', partitions: Optional[List[str]] = None, load_type: str = 'APPEND_ONLY', data_model_version: str = None, entity_type: str = 'user', application_client_id: str = None, application_client_secret: str = None</em><span class="sig-paren">)</span> → Union[List[Any], comotion.dash.DashBulkUploader]<a class="reference internal" href="_modules/comotion/dash.html#read_and_upload_file_to_dash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.read_and_upload_file_to_dash" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This function will be deprecated on 1 December 2025.  Please Migrate and move to the Load/DashBulkUploader class before then.</p>
+</div>
+<p>Reads a file and uploads it to Dash.</p>
+<p>This function will:
+- Read a CSV file
+- Break it up into multiple CSVs, each with a maximum number of lines defined by <cite>chunksize</cite>
+- Upload them to Dash</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>io.FileIO</em><em>]</em>) – Either a path to the file to be uploaded, or a FileIO stream representing the file to be uploaded.
+Should be an unencrypted, uncompressed CSV file.</p></li>
+<li><p><strong>dash_table</strong> (<em>str</em>) – Name of the Dash table to upload the file to.</p></li>
+<li><p><strong>dash_orgname</strong> (<em>str</em>) – Orgname of your Dash instance.</p></li>
+<li><p><strong>file_key</strong> (<em>str</em><em>, </em><em>optional</em>) – A unique key for the file being uploaded. If not provided, a key will be generated.</p></li>
+<li><p><strong>dash_api_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Valid API key for Dash API. Required for v1 data model uploads.</p></li>
+<li><p><strong>check_sum</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><em>str</em><em>, </em><em>Union</em><em>[</em><em>int</em><em>, </em><em>float</em><em>, </em><em>str</em><em>]</em><em>]</em><em>]</em><em>, </em><em>optional</em>) – Checksum data for the files to be committed. The checksum should be a dictionary
+with Presto/Trino expressions as keys and their expected results as values.</p></li>
+<li><p><strong>encoding</strong> (<em>str</em><em>, </em><em>default 'utf-8'</em>) – The encoding of the source file.</p></li>
+<li><p><strong>chunksize</strong> (<em>int</em><em>, </em><em>default 30000</em>) – The maximum number of lines to be included in each file. Note that this should be low enough
+that the zipped file is less than Dash’s maximum gzipped file size.</p></li>
+<li><p><strong>modify_lambda</strong> (<em>Callable</em><em>, </em><em>optional</em>) – A callable that receives the pandas DataFrame read from the CSV. Provides the opportunity to modify
+the DataFrame, such as adding a timestamp column.</p></li>
+<li><p><strong>path_to_output_for_dryrun</strong> (<em>str</em><em>, </em><em>optional</em>) – If specified, no upload will be made to Dash, but files will be saved to the location specified.
+This is useful for testing. Multiple files will be created (1 per chunk)</p></li>
+<li><p><strong>service_client_id</strong> (<em>str</em><em>, </em><em>optional</em>) – If specified, specifies the service client for the upload. See the Dash documentation for an explanation
+of the service client.
+<a class="reference external" href="https://docs.comotion.us/Comotion%20Dash/Analysts/How%20To/Prepare%20Your%20Data%20Model/Y%20Service%20Client%20and%20Row%20Level%20Security.html#service-client-and-row-level-security">https://docs.comotion.us/Comotion%20Dash/Analysts/How%20To/Prepare%20Your%20Data%20Model/Y%20Service%20Client%20and%20Row%20Level%20Security.html#service-client-and-row-level-security</a></p></li>
+<li><p><strong>partitions</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em><em>, </em><em>optional</em>) – List of partitions for the load.</p></li>
+<li><p><strong>load_type</strong> (<em>str</em><em>, </em><em>default 'APPEND_ONLY'</em>) – The type of load operation. Default is ‘APPEND_ONLY’.</p></li>
+<li><p><strong>data_model_version</strong> (<em>str</em><em>, </em><em>optional</em>) – The data model version to use for the upload. If not specified, the function will determine the version.
+If the migration status for the org is ‘Completed’, v2 is the model version.  Otherwise, v1 is the model version.
+data_model_version only needs be specified in exceptional circumstances where there are issues determining the migration status.</p></li>
+<li><p><strong>entity_type</strong> (<em>str</em><em>, </em><em>default Auth.USER</em>) – The entity type for authentication.  Use Auth.USER if uploading as a user.  Use Auth.APPLICATION if uploading with application credentials.</p></li>
+<li><p><strong>application_client_id</strong> (<em>str</em><em>, </em><em>optional</em>) – The application client ID for authentication.</p></li>
+<li><p><strong>application_client_secret</strong> (<em>str</em><em>, </em><em>optional</em>) – The application client secret for authentication.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>For v1 data model uploads, returns a list of HTTP responses.
+For v2 data model uploads, returns the DashBulkUploader instance.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Union[List[Any], <a class="reference internal" href="#comotion.dash.DashBulkUploader" title="comotion.dash.DashBulkUploader">DashBulkUploader</a>]</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the API key is not specified for v1 lake upload or if the file type cannot be determined.</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="function">
+<dt id="comotion.dash.upload_csv_to_dash">
+<code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">upload_csv_to_dash</code><span class="sig-paren">(</span><em class="sig-param">dash_orgname: str</em>, <em class="sig-param">dash_api_key: str</em>, <em class="sig-param">dash_table: str</em>, <em class="sig-param">csv_gz_stream: _io.FileIO</em>, <em class="sig-param">service_client_id: str = '0'</em><span class="sig-paren">)</span> → requests.models.Response<a class="reference internal" href="_modules/comotion/dash.html#upload_csv_to_dash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.upload_csv_to_dash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uploads csv gzipped stream to Dash</p>
+<p>Expects a csv gzipped stream to upload to dash.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dash_orgname</strong> (<em>str</em>) – Dash organisation name for dash instance</p></li>
+<li><p><strong>dash_api_key</strong> (<em>str</em>) – Valid API key for the organisation instance</p></li>
+<li><p><strong>dash_table</strong> (<em>str</em>) – Table name to upload to</p></li>
+<li><p><strong>csv_gz_stream</strong> (<em>io.FileIO</em>) – Description</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>response from dash api</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>requests.Response</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>HTTPError</strong> – If one is raised by the call</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="function">
+<dt id="comotion.dash.upload_from_oracle">
+<code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">upload_from_oracle</code><span class="sig-paren">(</span><em class="sig-param">sql_host: str</em>, <em class="sig-param">sql_port: int</em>, <em class="sig-param">sql_service_name: str</em>, <em class="sig-param">sql_username: str</em>, <em class="sig-param">sql_password: str</em>, <em class="sig-param">sql_query: str</em>, <em class="sig-param">dash_table: str</em>, <em class="sig-param">dash_orgname: str</em>, <em class="sig-param">dash_api_key: str</em>, <em class="sig-param">dtypes: dict = None</em>, <em class="sig-param">include_snapshot: bool = True</em>, <em class="sig-param">export_csvs: bool = True</em>, <em class="sig-param">chunksize: int = 50000</em>, <em class="sig-param">output_path: str = None</em>, <em class="sig-param">sep: str = '\t'</em>, <em class="sig-param">max_tries: int = 5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#upload_from_oracle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.upload_from_oracle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uploads data from a Oracle SQL database object to dash.</p>
+<p>This function will:
+- get the total number of rows chunks need for the sql query
+- get chunks of data from the SQL database
+- upload them to dash
+- append them to csv output (if specified)
+- save error chunks as csv (if any)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sql_host</strong> (<em>str</em>) – SQL hot e.g. ‘192.168.0.0.1’</p></li>
+<li><p><strong>sql_port</strong> (<em>str</em>) – SQL port number e.g 9005</p></li>
+<li><p><strong>sql_service_name</strong> (<em>str</em>) – SQL service name e.g. ‘myservice’</p></li>
+<li><p><strong>sql_username</strong> (<em>str</em>) – SQL username,</p></li>
+<li><p><strong>sql_password</strong> (<em>str</em>) – SQL password,</p></li>
+<li><p><strong>sql_query</strong> (<em>str</em>) – SQL query,</p></li>
+<li><p><strong>dash_table</strong> (<em>str</em>) – name of Dash table to upload the data to</p></li>
+<li><p><strong>dash_orgname</strong> (<em>str</em>) – orgname of your Dash instance</p></li>
+<li><p><strong>dash_api_key</strong> (<em>str</em>) – valid api key for Dash API</p></li>
+<li><p><strong>export_csvs</strong> – (optional)
+If True, data successfully uploaded is exported as csv
+Defaults to True i.e. output is included</p></li>
+<li><p><strong>dtypes</strong> (<em>dict</em>) – (optional)
+A dictionary that contains the column name and data type to convert to.
+Defaults to None i.e. load dataframe columns as they are.</p></li>
+<li><p><strong>chunksize</strong> (<em>int</em>) – (optional)
+the maximum number of lines to be included in each file.
+Note that this should be low enough that the zipped file is less
+than Dash maximum gzipped file size.
+Defaults to 50000.</p></li>
+<li><p><strong>sep</strong> (<em>str</em>) – (optional)
+Field delimiter for ComoDash table to upload the dataframe to.
+Defaults to /t.</p></li>
+<li><p><strong>output_path</strong> (<em>str</em>) – (optional)
+if specified, no output csv are saved in that location. If not, output is place in the same location as the script
+Defaults to None</p></li>
+<li><p><strong>include_snapshot</strong> (<em>bool</em>) – (optional)
+If True, an additional column ‘snapshot_timestamp’ will be added to the DataFrame.
+This column will contain the time that data is loaded in “%Y-%m-%d %H:%M:%S.%f”
+format in order to help with database management
+Defaults to True i.e. snapshot_timestamp is included</p></li>
+<li><p><strong>max_tries</strong> (<em>int</em>) – (optional)
+Maximum number of times to retry if there is an HTTP error
+Defaults to 5</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>DataFrame with errors</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="function">
+<dt id="comotion.dash.v1_upload_csv">
+<code class="sig-prename descclassname">comotion.dash.</code><code class="sig-name descname">v1_upload_csv</code><span class="sig-paren">(</span><em class="sig-param">file: Union[str, _io.FileIO], dash_table: str, dash_orgname: str, dash_api_key: str, encoding: str = 'utf-8', chunksize: int = 30000, modify_lambda: Callable = None, path_to_output_for_dryrun: str = None, service_client_id: str = '0'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/comotion/dash.html#v1_upload_csv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#comotion.dash.v1_upload_csv" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This function is deprecated.  Use <cite>read_and_upload_file_to_dash</cite> instead.</p>
+</div>
+<p>Reads a file and uploads it to Dash.</p>
+<p>This function will:
+- Read a csv file
+- Break it up into multiple csv’s
+- each with a maximum number of lines defined by chunksize
+- upload them to dash</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>io.FileIO</em><em>]</em>) – Either a path to the file to be uploaded,
+or a FileIO stream representing the file to be uploaded
+Should be an unencrypted, uncompressed CSV file</p></li>
+<li><p><strong>dash_table</strong> (<em>str</em>) – name of Dash table to upload the file to</p></li>
+<li><p><strong>dash_orgname</strong> (<em>str</em>) – orgname of your Dash instance</p></li>
+<li><p><strong>dash_api_key</strong> (<em>str</em>) – valid api key for Dash API</p></li>
+<li><p><strong>encoding</strong> (<em>str</em>) – the encoding of the source file.  defaults to utf-8.</p></li>
+<li><p><strong>chunksize</strong> (<em>int</em>) – (optional)
+the maximum number of lines to be included in each file.
+Note that this should be low enough that the zipped file is less
+than Dash maximum gzipped file size. Defaults to 30000.</p></li>
+<li><p><strong>modify_lambda</strong> – (optional)
+a callable that recieves the pandas dataframe read from the
+csv.  Gives the opportunity to modify - such as adding a timestamp
+column.
+Is not required.</p></li>
+<li><p><strong>path_to_output_for_dryrun</strong> (<em>str</em>) – (optional)
+if specified, no upload will be made to dash, but files
+will be saved to the location specified. This is useful for
+testing.
+multiple files will be created: [table_name].[i].csv.gz where i
+represents multiple file parts</p></li>
+<li><p><strong>service_client_id</strong> (<em>str</em>) – (optional)
+if specified, specifies the service client for the upload. See the dash documentation for an explanation of service client.
+<a class="reference external" href="https://docs.comotion.us/Comotion%20Dash/Analysts/How%20To/Prepare%20Your%20Data%20Model/Y%20Service%20Client%20and%20Row%20Level%20Security.html#service-client-and-row-level-security">https://docs.comotion.us/Comotion%20Dash/Analysts/How%20To/Prepare%20Your%20Data%20Model/Y%20Service%20Client%20and%20Row%20Level%20Security.html#service-client-and-row-level-security</a></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>List of http responses</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List</p>
+</dd>
+</dl>
+</dd></dl>
 
 
 
