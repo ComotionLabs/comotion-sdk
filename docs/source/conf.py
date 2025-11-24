@@ -92,6 +92,18 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+# Mock heavy/optional runtime deps so autodoc can import modules in CI
+autodoc_mock_imports = [
+    'pyarrow',
+    'pyarrow.parquet',
+    'boto3',
+    'awswrangler',
+    'cx_Oracle',
+    'sqlalchemy',
+    'tqdm',
+    'requests',
+]
+
 
 # -- Options for HTML output -------------------------------------------------
 
