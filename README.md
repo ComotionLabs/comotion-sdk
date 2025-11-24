@@ -55,6 +55,7 @@ pipenv run test -v
 Run the following from the docs directly. Ensure to watch out for warnings.
 `
 pipenv install --dev
+pipenv shell
 make html
 `
 ## Rerunning code generator
