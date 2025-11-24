@@ -4,3 +4,4 @@ setuptools_scm
 jwt
 pyarrow
 boto3
+awswrangler
