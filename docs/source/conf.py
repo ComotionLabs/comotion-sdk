@@ -94,8 +94,6 @@ exclude_patterns = []
 
 # Mock heavy/optional runtime deps so autodoc can import modules in CI
 autodoc_mock_imports = [
-    'pyarrow',
-    'pyarrow.parquet',
     'boto3',
     'awswrangler',
     'cx_Oracle',
