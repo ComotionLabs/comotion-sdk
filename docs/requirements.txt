@@ -5,3 +5,4 @@ jwt
 pyarrow
 boto3
 awswrangler
+pydantic>=2,<3
