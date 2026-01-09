@@ -5,6 +5,7 @@ import requests
 import csv
 import time
 from typing import Union, Callable, List, Optional, Dict, Any
+from enum import Enum
 from os.path import join, basename, isdir, isfile, splitext
 from os import listdir
 import logging
@@ -84,9 +85,10 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
         self.auth = auth
         self.orgname = auth.orgname
         self.zone = zone
+        self.daily_run_host_url = 'https://api.%s.comodash.io/superset' % (self.orgname)
 
         host_url = 'https://%s.api.comodash.io/v2' % (self.orgname) if not zone else 'https://%s.%s.api.comodash.io/v2' % (self.zone, self.orgname)
-        
+
         super().__init__(
             host=host_url,
             access_token=None
@@ -351,6 +353,244 @@ class Query():
         """ Stop the query"""
         self.refresh_api_instance()
         return self.query_api_instance.stop_query(self.query_id)
+
+class DailyRun():
+    """
+    Helper class to check whether the DailyRun flag is enabled for the current Dash organisation.
+
+    This class uses the provided `DashConfig` to call the `/dailyRun/flag_status` endpoint and
+    exposes the result as a simple boolean via `get_flag_status()`.
+    """
+
+    def __init__(self, config: DashConfig):
+        """
+        Parameters
+        ----------
+        config : DashConfig
+            Object of type DashConfig including configuration details and authentication.
+
+        Raises
+        ------
+        TypeError
+            If config is not of type DashConfig
+        """
+        if not isinstance(config, DashConfig):
+            raise TypeError("config must be of type comotion.dash.DashConfig")
+
+        self.config = config
+
+    def refresh_api_instance(self):
+        zone = self.config.zone
+        auth_token = self.config.auth
+        orgname = auth_token.orgname
+        entity_type = auth_token.entity_type
+
+        if entity_type == Auth.APPLICATION:
+            application_client_id = auth_token.application_client_id
+            application_client_secret = auth_token.application_client_secret
+        else:
+            application_client_id = None
+            application_client_secret = None
+        
+        self.config = DashConfig(
+            Auth(
+                orgname=orgname,
+                entity_type=entity_type,
+                application_client_id=application_client_id,
+                application_client_secret=application_client_secret
+            ),
+            zone = zone
+        )
+        with comodash_api_client_lowlevel.ApiClient(self.config) as api_client:
+            # Create an instance of the API class with provided parameters
+            self.query_api_instance = QueriesApi(api_client) 
+
+    def get_flag_status(self) -> bool:
+        """
+        Calls the `/dailyRun/flag_status` endpoint on the Dash API and returns the
+        `DailyRun` flag as a boolean.
+
+        Returns
+        -------
+        bool
+            The value of the `DailyRun` flag.
+
+        Raises
+        ------
+        ValueError
+            If the response from the API is unexpected or cannot be parsed.
+        """
+        # Ensure we have a valid, non-expired token
+        self.config._check_and_refresh_token()
+
+        base_url = self.config.daily_run_host_url.rstrip("/")
+        url = f"{base_url}/dailyRun/flag_status"
+
+        headers = {
+            "Authorization": f"Bearer {self.config.access_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.get(url, headers=headers)
+        except Exception as e:
+            raise ValueError(f"Error calling DailyRun flag endpoint: {e}")
+
+        if not response.ok:
+            raise ValueError(
+                f"Unexpected status code from DailyRun flag endpoint: "
+                f"{response.status_code} - {response.text}"
+            )
+
+        try:
+            payload = response.json()
+        except Exception as e:
+            raise ValueError(f"Could not parse DailyRun flag response as JSON: {e}")
+
+        if "DailyRun" not in payload:
+            raise ValueError("DailyRun flag not found in response payload.")
+
+        flag_value = payload["DailyRun"]
+        if not isinstance(flag_value, bool):
+            raise ValueError("DailyRun flag in response is not a boolean.")
+
+        return flag_value
+
+    def update_flag_status(self, new_status: bool) -> bool:
+        """
+        Updates the DailyRun flag by calling the `/dailyRun/flag_status` endpoint with a POST
+        request and returns the resulting flag value as a boolean.
+
+        Parameters
+        ----------
+        new_status : bool
+            The new boolean value to set for the DailyRun flag.
+
+        Returns
+        -------
+        bool
+            The updated value of the DailyRun flag as returned by the API.
+        """
+        if not isinstance(new_status, bool):
+            raise TypeError("new_status must be a boolean.")
+
+        # Ensure we have a valid, non-expired token
+        self.config._check_and_refresh_token()
+
+        base_url = self.config.daily_run_host_url.rstrip("/")
+        url = f"{base_url}/dailyRun/flag_status"
+
+        headers = {
+            "Authorization": f"Bearer {self.config.access_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+
+        body = {
+            "dailyRun": new_status
+        }
+
+        try:
+            response = requests.post(url, headers=headers, json=body)
+        except Exception as e:
+            raise ValueError(f"Error updating DailyRun flag endpoint: {e}")
+
+        if not response.ok:
+            raise ValueError(
+                f"Unexpected status code when updating DailyRun flag: "
+                f"{response.status_code} - {response.text}"
+            )
+
+        try:
+            payload = response.json()
+        except Exception as e:
+            raise ValueError(f"Could not parse DailyRun update response as JSON: {e}")
+
+        # Prefer the capitalised form (as used by the GET endpoint), but fall back gracefully
+        if "DailyRun" in payload:
+            flag_value = payload["DailyRun"]
+        elif "dailyRun" in payload:
+            flag_value = payload["dailyRun"]
+        else:
+            raise ValueError("Updated DailyRun flag not found in response payload.")
+
+        if not isinstance(flag_value, bool):
+            raise ValueError("Updated DailyRun flag in response is not a boolean.")
+
+        return flag_value
+
+    class GetDailyRunExecutionMode(Enum):
+        LIST = "list"
+        LATEST = "latest"
+        LAST_SUCCESSFUL = "last_successful"
+
+    def get_execution_info(self, mode: "GetDailyRunExecutionMode") -> Dict[str, Any]:
+        """
+        Calls the `/dailyRun/execution_status` endpoint on the Dash API and returns the
+        execution information payload as a dictionary.
+
+        Parameters
+        ----------
+        mode : GetDailyRunExecutionMode
+            The mode for the execution status query. Must be one of
+            ``GetDailyRunExecutionMode.LIST``, ``GetDailyRunExecutionMode.LATEST``
+            or ``GetDailyRunExecutionMode.LAST_SUCCESSFUL``.
+
+        Returns
+        -------
+        Dict[str, Any]
+            The JSON payload returned by the `dailyRun` execution status endpoint.
+
+        Raises
+        ------
+        ValueError
+            If an invalid mode is provided.
+        ValueError
+            If the response from the API is unexpected or cannot be parsed.
+        """
+        if not isinstance(mode, DailyRun.GetDailyRunExecutionMode):
+            raise ValueError(
+                "Invalid mode. Must be an instance of "
+                "DailyRun.GetDailyRunExecutionMode."
+            )
+
+        # Ensure we have a valid, non-expired token
+        self.config._check_and_refresh_token()
+
+        base_url = self.config.daily_run_host_url.rstrip("/")
+        url = f"{base_url}/dailyRun/execution_status"
+
+        headers = {
+            "Authorization": f"Bearer {self.config.access_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.get(
+                url,
+                headers=headers,
+                json={"mode": mode.value},
+            )
+        except Exception as e:
+            raise ValueError(f"Error calling DailyRun execution status endpoint: {e}")
+
+        if not response.ok:
+            raise ValueError(
+                f"Unexpected status code from DailyRun execution status endpoint: "
+                f"{response.status_code} - {response.text}"
+            )
+
+        try:
+            payload = response.json()
+        except Exception as e:
+            raise ValueError(
+                f"Could not parse DailyRun execution status response as JSON: {e}"
+            )
+
+        return payload
+
 
 class Load():
     """
