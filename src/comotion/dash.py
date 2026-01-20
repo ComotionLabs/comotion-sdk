@@ -591,6 +591,63 @@ class DailyRun():
 
         return payload
 
+    def start_execution(self, verify: Union[bool, str] = True) -> Dict[str, Any]:
+        """
+        Starts a `DailyETLPipeline` execution for the current Dash organisation.
+
+        This method calls the `/dailyRun/start_execution` endpoint on the main
+        Dash v2 API (e.g. `https://cg.api.comodash.io/v2/dailyRun/start_execution`),
+        which is expected to trigger a new `DailyETLPipeline` run.
+
+        Parameters
+        ----------
+        verify : bool | str, default True
+            Passed through to `requests.post` as the `verify` argument. Set to
+            False to disable TLS certificate verification (not recommended for
+            production), or to a path to a CA bundle to use for verification.
+
+        Returns
+        -------
+        Dict[str, Any]
+            The JSON payload returned by the `dailyRun` start execution endpoint.
+
+        Raises
+        ------
+        ValueError
+            If the response from the API is unexpected or cannot be parsed.
+        """
+        # Ensure we have a valid, non-expired token
+        self.config._check_and_refresh_token()
+
+        # Use the same base host as the low-level v2 API client
+        base_url = self.config.daily_run_host_url.rstrip("/")
+        url = f"{base_url}/dailyRun/start_execution"
+
+        headers = {
+            "Authorization": f"Bearer {self.config.access_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.post(url, headers=headers, verify=verify)
+        except Exception as e:
+            raise ValueError(f"Error calling DailyRun start execution endpoint: {e}")
+
+        if not response.ok:
+            raise ValueError(
+                f"Unexpected status code from DailyRun start execution endpoint: "
+                f"{response.status_code} - {response.text}"
+            )
+
+        try:
+            payload = response.json()
+        except Exception as e:
+            raise ValueError(
+                f"Could not parse DailyRun start execution response as JSON: {e}"
+            )
+
+        return payload
 
 class Load():
     """
