@@ -111,6 +111,16 @@ Class | Method | HTTP request | Description
  - [QueryText](comodash_api_client_lowlevel/docs/QueryText.md)
 
 
+## Additional helper documentation (DailyRun)
+
+The following high-level helper documentation builds on top of this low-level client and the `comotion.dash.DailyRun` class:
+
+- [DailyRunGetFlagStatus](comodash_api_client_lowlevel/docs/DailyRunGetFlagStatus.md)
+- [DailyRunUpdateFlagStatus](comodash_api_client_lowlevel/docs/DailyRunUpdateFlagStatus.md)
+- [DailyRunGetExectionInfo](comodash_api_client_lowlevel/docs/DailyRunGetExectionInfo.md)
+- [DailyRunStartExection](comodash_api_client_lowlevel/docs/DailyRunStartExection.md)
+
+
 <a id="documentation-for-authorization"></a>
 ## Documentation For Authorization
 
