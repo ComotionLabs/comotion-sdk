@@ -8,6 +8,14 @@ This helper calls the `/dailyRun/execution_status` endpoint on the Dash API and 
 > This document describes the high-level usage pattern, building on top of the low-level client in this package.  
 > For the full Dash SDK helper implementation, see `comotion.dash.DailyRun.get_execution_info`.
 
+## Required permissions
+
+The `/dailyRun` endpoints are protected by a JWT authorizer. Your access token must be issued for the `dash_api` **audience** and carry the **`dailyrun:execution:read` scope**.
+
+No other scope grants access here: `dailyrun:execution:write` only permits triggering runs, and the `dailyrun:enabled:*` scopes cover the daily run setting rather than pipeline executions.
+
+The helper checks the scope and audience before sending the request and raises `comotion.auth.UnAuthenticatedException` with an explanation if either is missing. Ask your Comotion administrator to grant these to your user or application if you hit that error.
+
 ## HTTP details
 
 - **Base URL**: `https://api.{orgname}.comodash.io/superset`
@@ -17,15 +25,19 @@ This helper calls the `/dailyRun/execution_status` endpoint on the Dash API and 
   - `Authorization: Bearer <access-token>`
   - `Accept: application/json`
   - `Content-Type: application/json`
-- **Body**:
-  - JSON object: `{"mode": "<list|latest|last_successful>"}` (sent by the helper)
+- **Query string parameters**:
+  - `mode` – one of `list`, `latest` or `last_successful`. Defaults to `list`.
+  - `limit` – optional integer, clamped by the API to between 1 and 200. Defaults to 50.
+
+> **Note**  
+> `mode` and `limit` are read from the **query string**. Sending them in a request body has no effect and the endpoint will silently fall back to `list` mode.
 
 ## Execution modes
 
 The helper exposes an `Enum` on the `DailyRun` class to control how much information is returned:
 
-- `DailyRun.GetDailyRunExecutionMode.LIST` – list of recent executions
-- `DailyRun.GetDailyRunExecutionMode.LATEST` – the latest execution
+- `DailyRun.GetDailyRunExecutionMode.LIST` – list of recent executions (the default)
+- `DailyRun.GetDailyRunExecutionMode.LATEST` – the latest execution, or `None` if there are none
 - `DailyRun.GetDailyRunExecutionMode.LAST_SUCCESSFUL` – the last successful execution
 
 ## Example
@@ -70,6 +82,9 @@ pprint(execution_status_latest)
 # Last successful execution
 execution_status_last_successful = daily_run.get_execution_info(mode=modes.LAST_SUCCESSFUL)
 pprint(execution_status_last_successful)
+
+# Only consider the ten most recent executions
+pprint(daily_run.get_execution_info(mode=modes.LIST, limit=10))
 ```
 
 ### Direct HTTP example (without helper)
@@ -91,7 +106,7 @@ headers = {
     "Content-Type": "application/json",
 }
 
-response = requests.get(url, headers=headers, json={"mode": "list"})
+response = requests.get(url, headers=headers, params={"mode": "list"})
 response.raise_for_status()
 
 payload = response.json()
@@ -120,10 +135,14 @@ For `LIST` mode this is typically a structure like:
 
 ### Errors
 
-`DailyRun.get_execution_info` will raise a `ValueError` if:
+`DailyRun.get_execution_info` raises `UnAuthenticatedException` if the token is missing the required scope or audience, or if the API responds with `401` or `403`.
+
+It raises a `ValueError` if:
 
 - `mode` is not an instance of `DailyRun.GetDailyRunExecutionMode`, or
+- `limit` is not an integer, or
 - the underlying HTTP request to `/dailyRun/execution_status` fails, or
+- the API responds with any other non-2xx status, or
 - the response cannot be parsed as JSON.
 
 If you consistently receive `404`, `401`, or other unexpected errors from this endpoint, please contact Comotion support to ensure the `/dailyRun` endpoints (including `/dailyRun/execution_status`) have been implemented and enabled for your organisation.

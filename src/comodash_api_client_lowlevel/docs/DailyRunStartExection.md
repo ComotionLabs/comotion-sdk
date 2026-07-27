@@ -2,11 +2,21 @@
 
 Helper for starting a `DailyETLPipeline` execution for the current Dash organisation.
 
-This helper calls the `/dailyRun/start_execution` endpoint on the main Dash v2 API (for example `https://cg.api.comodash.io/v2/dailyRun/start_execution`) and returns the JSON payload as a Python dictionary.
+This helper calls the `/dailyRun/start_execution` endpoint on the per-organisation frontend API (for example `https://api.org.comodash.io/superset/dailyRun/start_execution`) and returns the JSON payload as a Python dictionary.
+
+The pipeline only starts if the daily run is enabled for the organisation. When it is disabled the API still responds with a `200`, and the returned payload has `started` set to `False`.
 
 > **Note**  
 > This document describes the high-level usage pattern, building on top of the low-level client in this package.  
 > For the full Dash SDK helper implementation, see `comotion.dash.DailyRun.start_execution`.
+
+## Required permissions
+
+The `/dailyRun` endpoints are protected by a JWT authorizer. Your access token must be issued for the `dash_api` **audience** and carry the **`dailyrun:execution:write` scope**.
+
+Triggering a pipeline run is an operational action, so `dailyrun:execution:read` is **not** sufficient. Conversely, this scope alone does not let you check the resulting execution status — that needs `dailyrun:execution:read` as well.
+
+The helper checks the scope and audience before sending the request and raises `comotion.auth.UnAuthenticatedException` with an explanation if either is missing. Ask your Comotion administrator to grant these to your user or application if you hit that error.
 
 ## HTTP details
 
@@ -84,11 +94,26 @@ This is passed directly to `requests.post` as the `verify` argument:
 
 ### Return type
 
-`Dict[str, Any]` – the JSON payload returned by the `/dailyRun/start_execution` endpoint.
+`Dict[str, Any]` – the JSON payload returned by the `/dailyRun/start_execution` endpoint:
+
+```python
+{
+    "message": "Daily ETL pipeline execution started.",
+    "started": True,
+    "executionArn": "arn:aws:states:eu-west-1:...:execution:DailyETLPipeline:...",
+    "startDate": "2026-01-08T10:02:14.025000+00:00",
+    "executionName": "DailyScheduledETL_org_20260108T100213Z",
+    "stateMachineArn": "arn:aws:states:eu-west-1:...:stateMachine:DailyETLPipeline",
+}
+```
+
+When the daily run is disabled for the organisation, `started` is `False` and `executionArn`, `startDate` and `executionName` are omitted or `None`.
 
 ### Errors
 
-`DailyRun.start_execution` will raise a `ValueError` if:
+`DailyRun.start_execution` raises `UnAuthenticatedException` if the token is missing the required scope or audience, or if the API responds with `401` or `403`.
+
+It raises a `ValueError` if:
 
 - the underlying HTTP request to `/dailyRun/start_execution` fails, or
 - the response is not `2xx`, or

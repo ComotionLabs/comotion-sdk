@@ -47,6 +47,7 @@ except ImportError:
     logger.warning("Optional dependency 'tqdm' is not installed; progress bars are unavailable.")
 from datetime import datetime, timedelta
 from comotion import Auth
+from comotion.auth import UnAuthenticatedException
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel import QueriesApi, LoadsApi, MigrationsApi
 from comodash_api_client_lowlevel.models.query_text import QueryText
@@ -356,11 +357,49 @@ class Query():
 
 class DailyRun():
     """
-    Helper class to check whether the DailyRun flag is enabled for the current Dash organisation.
+    Helper class for the ``/dailyRun`` endpoints of the Dash frontend API.
 
-    This class uses the provided `DashConfig` to call the `/dailyRun/flag_status` endpoint and
-    exposes the result as a simple boolean via `get_flag_status()`.
+    The endpoints are served from the per-organisation frontend API
+    (``https://api.<orgname>.comodash.io/superset``) and are protected by a JWT
+    authorizer. The access token must be issued for the ``dash_api`` audience
+    and carry a scope appropriate to the operation. This class checks both up
+    front so that a missing entitlement produces an actionable error rather than
+    an opaque ``403`` from API Gateway.
+
+    Four scopes in two pairs (read/write per concern):
+
+    * ``dailyrun:execution:read`` / ``dailyrun:execution:write`` - inspect or
+      trigger Daily ETL pipeline runs
+    * ``dailyrun:enabled:read`` / ``dailyrun:enabled:write`` - inspect or
+      change whether the daily run is enabled
+
+    All four are independent: each endpoint accepts exactly one scope, so a
+    write scope does not also grant the matching read.
+
+    Superset API access still requires ``superset:user`` separately.
+
+    Available endpoints:
+
+    * ``GET  /dailyRun/dailyRun_enabled``  -> :meth:`get_daily_run_enabled`
+    * ``POST /dailyRun/dailyRun_enabled``  -> :meth:`update_daily_run_enabled`
+    * ``GET  /dailyRun/execution_status``  -> :meth:`get_execution_info`
+    * ``POST /dailyRun/start_execution``   -> :meth:`start_execution`
     """
+
+    EXECUTION_READ_SCOPE = "dailyrun:execution:read"
+    EXECUTION_WRITE_SCOPE = "dailyrun:execution:write"
+    ENABLED_READ_SCOPE = "dailyrun:enabled:read"
+    ENABLED_WRITE_SCOPE = "dailyrun:enabled:write"
+
+    # Scopes accepted for each operation, mirroring AuthorizationScopes on the
+    # API Gateway routes. Each route accepts exactly one scope: a write scope
+    # does not imply the matching read scope.
+    EXECUTION_READ_SCOPES = (EXECUTION_READ_SCOPE,)
+    EXECUTION_WRITE_SCOPES = (EXECUTION_WRITE_SCOPE,)
+    ENABLED_READ_SCOPES = (ENABLED_READ_SCOPE,)
+    ENABLED_WRITE_SCOPES = (ENABLED_WRITE_SCOPE,)
+
+    REQUIRED_AUDIENCE = "dash_api"
 
     def __init__(self, config: DashConfig):
         """
@@ -379,52 +418,80 @@ class DailyRun():
 
         self.config = config
 
-    def refresh_api_instance(self):
-        zone = self.config.zone
-        auth_token = self.config.auth
-        orgname = auth_token.orgname
-        entity_type = auth_token.entity_type
-
-        if entity_type == Auth.APPLICATION:
-            application_client_id = auth_token.application_client_id
-            application_client_secret = auth_token.application_client_secret
-        else:
-            application_client_id = None
-            application_client_secret = None
-        
-        self.config = DashConfig(
-            Auth(
-                orgname=orgname,
-                entity_type=entity_type,
-                application_client_id=application_client_id,
-                application_client_secret=application_client_secret
-            ),
-            zone = zone
-        )
-        with comodash_api_client_lowlevel.ApiClient(self.config) as api_client:
-            # Create an instance of the API class with provided parameters
-            self.query_api_instance = QueriesApi(api_client) 
-
-    def get_flag_status(self) -> bool:
+    def _check_authorisation(self, accepted_scopes):
         """
-        Calls the `/dailyRun/flag_status` endpoint on the Dash API and returns the
-        `DailyRun` flag as a boolean.
+        Verify that the current access token is entitled to call a
+        ``/dailyRun`` endpoint.
 
-        Returns
-        -------
-        bool
-            The value of the `DailyRun` flag.
+        Parameters
+        ----------
+        accepted_scopes : tuple of str
+            The scopes configured on the API Gateway route. The token needs
+            any one of them, matching how API Gateway evaluates scopes.
 
         Raises
         ------
-        ValueError
-            If the response from the API is unexpected or cannot be parsed.
+        UnAuthenticatedException
+            If the token cannot be read, or is missing the ``dash_api``
+            audience or all of the accepted scopes.
         """
-        # Ensure we have a valid, non-expired token
+        import jwt
+
+        try:
+            claims = jwt.decode(
+                self.config.access_token,
+                options={"verify_signature": False}
+            )
+        except jwt.PyJWTError as e:
+            raise UnAuthenticatedException(
+                f"Could not read the access token to check DailyRun permissions: {e}"
+            )
+
+        scopes = set((claims.get("scope") or "").split())
+
+        audiences = claims.get("aud") or []
+        if isinstance(audiences, str):
+            audiences = [audiences]
+
+        missing = []
+        if scopes.isdisjoint(accepted_scopes):
+            accepted = " or ".join(f"'{scope}'" for scope in accepted_scopes)
+            missing.append(f"one of the scopes {accepted}")
+        if DailyRun.REQUIRED_AUDIENCE not in audiences:
+            missing.append(f"the audience '{DailyRun.REQUIRED_AUDIENCE}'")
+
+        if missing:
+            raise UnAuthenticatedException(
+                "Your credentials are not entitled to perform this DailyRun "
+                f"operation. The access token is missing {' and '.join(missing)}. "
+                f"It currently has scopes {sorted(scopes) or ['<none>']} and "
+                f"audiences {sorted(audiences) or ['<none>']}. "
+                "Ask your Comotion administrator to grant your user or application "
+                f"the required scope on the '{DailyRun.REQUIRED_AUDIENCE}' audience."
+            )
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        accepted_scopes,
+        params: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
+        verify: Union[bool, str] = True
+    ) -> Dict[str, Any]:
+        """
+        Send an authenticated request to a ``/dailyRun`` endpoint and return the
+        decoded JSON payload.
+
+        Refreshes the access token if needed, checks the token entitlements
+        against ``accepted_scopes``, and translates transport errors and non-2xx
+        responses into meaningful exceptions.
+        """
         self.config._check_and_refresh_token()
+        self._check_authorisation(accepted_scopes)
 
         base_url = self.config.daily_run_host_url.rstrip("/")
-        url = f"{base_url}/dailyRun/flag_status"
+        url = f"{base_url}{path}"
 
         headers = {
             "Authorization": f"Bearer {self.config.access_token}",
@@ -433,221 +500,229 @@ class DailyRun():
         }
 
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.request(
+                method,
+                url,
+                headers=headers,
+                params=params,
+                json=body,
+                verify=verify
+            )
         except Exception as e:
-            raise ValueError(f"Error calling DailyRun flag endpoint: {e}")
+            raise ValueError(f"Error calling DailyRun endpoint {path}: {e}")
+
+        if response.status_code in (401, 403):
+            accepted = " or ".join(f"'{scope}'" for scope in accepted_scopes)
+            raise UnAuthenticatedException(
+                f"Access denied ({response.status_code}) calling {path}. The API "
+                f"requires one of the scopes {accepted} on the "
+                f"'{DailyRun.REQUIRED_AUDIENCE}' audience. Response: {response.text}"
+            )
 
         if not response.ok:
             raise ValueError(
-                f"Unexpected status code from DailyRun flag endpoint: "
+                f"Unexpected status code from DailyRun endpoint {path}: "
                 f"{response.status_code} - {response.text}"
             )
 
         try:
-            payload = response.json()
+            return response.json()
         except Exception as e:
-            raise ValueError(f"Could not parse DailyRun flag response as JSON: {e}")
+            raise ValueError(
+                f"Could not parse response from DailyRun endpoint {path} as JSON: {e}"
+            )
 
-        if "DailyRun" not in payload:
+    @staticmethod
+    def _read_daily_run_flag(payload: Dict[str, Any]) -> bool:
+        """Pull the DailyRun boolean out of an endpoint response payload."""
+        if not isinstance(payload, dict):
             raise ValueError("DailyRun flag not found in response payload.")
 
-        flag_value = payload["DailyRun"]
+        if "dailyRun" in payload:
+            flag_value = payload["dailyRun"]
+        elif "DailyRun" in payload:
+            flag_value = payload["DailyRun"]
+        else:
+            raise ValueError("DailyRun flag not found in response payload.")
+
         if not isinstance(flag_value, bool):
             raise ValueError("DailyRun flag in response is not a boolean.")
 
         return flag_value
 
-    def update_flag_status(self, new_status: bool) -> bool:
+    def get_daily_run_enabled(self) -> bool:
         """
-        Updates the DailyRun flag by calling the `/dailyRun/flag_status` endpoint with a POST
-        request and returns the resulting flag value as a boolean.
+        Calls ``GET /dailyRun/dailyRun_enabled`` and returns whether the daily run
+        is enabled for the current Dash organisation.
 
-        Parameters
-        ----------
-        new_status : bool
-            The new boolean value to set for the DailyRun flag.
+        Requires the ``dailyrun:enabled:read`` scope.
 
         Returns
         -------
         bool
-            The updated value of the DailyRun flag as returned by the API.
+            True if the daily run is enabled for the organisation.
+
+        Raises
+        ------
+        UnAuthenticatedException
+            If the access token lacks an accepted scope or the audience.
+        ValueError
+            If the response from the API is unexpected or cannot be parsed.
+            A ``404`` is raised here when the organisation has no DailyRun
+            setting recorded against it.
         """
-        if not isinstance(new_status, bool):
-            raise TypeError("new_status must be a boolean.")
+        payload = self._request(
+            "GET",
+            "/dailyRun/dailyRun_enabled",
+            DailyRun.ENABLED_READ_SCOPES
+        )
+        return DailyRun._read_daily_run_flag(payload)
 
-        # Ensure we have a valid, non-expired token
-        self.config._check_and_refresh_token()
+    def update_daily_run_enabled(self, enabled: bool) -> bool:
+        """
+        Calls ``POST /dailyRun/dailyRun_enabled`` to enable or disable the daily
+        run for the current Dash organisation.
 
-        base_url = self.config.daily_run_host_url.rstrip("/")
-        url = f"{base_url}/dailyRun/flag_status"
+        Turning the daily ETL on or off is a configuration change, so this
+        requires the ``dailyrun:enabled:write`` scope.
 
-        headers = {
-            "Authorization": f"Bearer {self.config.access_token}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        }
+        Parameters
+        ----------
+        enabled : bool
+            The new value for the daily run setting.
 
-        body = {
-            "dailyRun": new_status
-        }
+        Returns
+        -------
+        bool
+            The value stored by the API.
 
-        try:
-            response = requests.post(url, headers=headers, json=body)
-        except Exception as e:
-            raise ValueError(f"Error updating DailyRun flag endpoint: {e}")
+        Raises
+        ------
+        TypeError
+            If enabled is not a boolean.
+        UnAuthenticatedException
+            If the access token lacks the admin scope or the audience.
+        ValueError
+            If the response from the API is unexpected or cannot be parsed.
+        """
+        if not isinstance(enabled, bool):
+            raise TypeError("enabled must be a boolean.")
 
-        if not response.ok:
-            raise ValueError(
-                f"Unexpected status code when updating DailyRun flag: "
-                f"{response.status_code} - {response.text}"
-            )
-
-        try:
-            payload = response.json()
-        except Exception as e:
-            raise ValueError(f"Could not parse DailyRun update response as JSON: {e}")
-
-        # Prefer the capitalised form (as used by the GET endpoint), but fall back gracefully
-        if "DailyRun" in payload:
-            flag_value = payload["DailyRun"]
-        elif "dailyRun" in payload:
-            flag_value = payload["dailyRun"]
-        else:
-            raise ValueError("Updated DailyRun flag not found in response payload.")
-
-        if not isinstance(flag_value, bool):
-            raise ValueError("Updated DailyRun flag in response is not a boolean.")
-
-        return flag_value
+        payload = self._request(
+            "POST",
+            "/dailyRun/dailyRun_enabled",
+            DailyRun.ENABLED_WRITE_SCOPES,
+            body={"dailyRun": enabled}
+        )
+        return DailyRun._read_daily_run_flag(payload)
 
     class GetDailyRunExecutionMode(Enum):
         LIST = "list"
         LATEST = "latest"
         LAST_SUCCESSFUL = "last_successful"
 
-    def get_execution_info(self, mode: "GetDailyRunExecutionMode") -> Dict[str, Any]:
+    def get_execution_info(
+        self,
+        mode: "GetDailyRunExecutionMode" = None,
+        limit: Optional[int] = None
+    ) -> Dict[str, Any]:
         """
-        Calls the `/dailyRun/execution_status` endpoint on the Dash API and returns the
-        execution information payload as a dictionary.
+        Calls ``GET /dailyRun/execution_status`` and returns information about
+        the organisation's Daily ETL pipeline executions.
+
+        Requires the ``dailyrun:execution:read`` scope.
 
         Parameters
         ----------
-        mode : GetDailyRunExecutionMode
-            The mode for the execution status query. Must be one of
-            ``GetDailyRunExecutionMode.LIST``, ``GetDailyRunExecutionMode.LATEST``
-            or ``GetDailyRunExecutionMode.LAST_SUCCESSFUL``.
+        mode : GetDailyRunExecutionMode, optional
+            Which view of the execution history to return. Defaults to
+            ``GetDailyRunExecutionMode.LIST``.
+
+            * ``LIST`` returns ``{"executions": [...]}``
+            * ``LATEST`` returns the most recent execution, or ``None``
+            * ``LAST_SUCCESSFUL`` returns the most recent succeeded execution,
+              or a message payload if there is none
+        limit : int, optional
+            Maximum number of executions to consider. The API clamps this to
+            between 1 and 200, and defaults to 50.
 
         Returns
         -------
         Dict[str, Any]
-            The JSON payload returned by the `dailyRun` execution status endpoint.
+            The JSON payload returned by the execution status endpoint. The
+            shape depends on ``mode``, as described above.
 
         Raises
         ------
         ValueError
-            If an invalid mode is provided.
-        ValueError
-            If the response from the API is unexpected or cannot be parsed.
+            If an invalid mode or limit is provided, or the response from the
+            API is unexpected or cannot be parsed.
+        UnAuthenticatedException
+            If the access token lacks an accepted scope or the audience.
         """
+        if mode is None:
+            mode = DailyRun.GetDailyRunExecutionMode.LIST
+
         if not isinstance(mode, DailyRun.GetDailyRunExecutionMode):
             raise ValueError(
                 "Invalid mode. Must be an instance of "
                 "DailyRun.GetDailyRunExecutionMode."
             )
 
-        # Ensure we have a valid, non-expired token
-        self.config._check_and_refresh_token()
+        # The API reads these from the query string, not the request body.
+        params = {"mode": mode.value}
 
-        base_url = self.config.daily_run_host_url.rstrip("/")
-        url = f"{base_url}/dailyRun/execution_status"
+        if limit is not None:
+            if not isinstance(limit, int) or isinstance(limit, bool):
+                raise ValueError("limit must be an integer.")
+            params["limit"] = limit
 
-        headers = {
-            "Authorization": f"Bearer {self.config.access_token}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        }
-
-        try:
-            response = requests.get(
-                url,
-                headers=headers,
-                json={"mode": mode.value},
-            )
-        except Exception as e:
-            raise ValueError(f"Error calling DailyRun execution status endpoint: {e}")
-
-        if not response.ok:
-            raise ValueError(
-                f"Unexpected status code from DailyRun execution status endpoint: "
-                f"{response.status_code} - {response.text}"
-            )
-
-        try:
-            payload = response.json()
-        except Exception as e:
-            raise ValueError(
-                f"Could not parse DailyRun execution status response as JSON: {e}"
-            )
-
-        return payload
+        return self._request(
+            "GET",
+            "/dailyRun/execution_status",
+            DailyRun.EXECUTION_READ_SCOPES,
+            params=params
+        )
 
     def start_execution(self, verify: Union[bool, str] = True) -> Dict[str, Any]:
         """
-        Starts a `DailyETLPipeline` execution for the current Dash organisation.
+        Calls ``POST /dailyRun/start_execution`` to start a ``DailyETLPipeline``
+        execution for the current Dash organisation.
 
-        This method calls the `/dailyRun/start_execution` endpoint on the main
-        Dash v2 API (e.g. `https://cg.api.comodash.io/v2/dailyRun/start_execution`),
-        which is expected to trigger a new `DailyETLPipeline` run.
+        Requires the ``dailyrun:execution:write`` scope.
+
+        The pipeline only starts if the daily run is enabled for the
+        organisation. When it is disabled the API still responds with a ``200``
+        and a payload where ``started`` is False.
 
         Parameters
         ----------
         verify : bool | str, default True
-            Passed through to `requests.post` as the `verify` argument. Set to
+            Passed through to `requests` as the `verify` argument. Set to
             False to disable TLS certificate verification (not recommended for
             production), or to a path to a CA bundle to use for verification.
 
         Returns
         -------
         Dict[str, Any]
-            The JSON payload returned by the `dailyRun` start execution endpoint.
+            The JSON payload returned by the start execution endpoint,
+            containing ``message``, ``started``, ``executionName`` and
+            ``stateMachineArn``, plus ``executionArn`` and ``startDate`` when an
+            execution was actually started.
 
         Raises
         ------
+        UnAuthenticatedException
+            If the access token lacks an accepted scope or the audience.
         ValueError
             If the response from the API is unexpected or cannot be parsed.
         """
-        # Ensure we have a valid, non-expired token
-        self.config._check_and_refresh_token()
-
-        # Use the same base host as the low-level v2 API client
-        base_url = self.config.daily_run_host_url.rstrip("/")
-        url = f"{base_url}/dailyRun/start_execution"
-
-        headers = {
-            "Authorization": f"Bearer {self.config.access_token}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        }
-
-        try:
-            response = requests.post(url, headers=headers, verify=verify)
-        except Exception as e:
-            raise ValueError(f"Error calling DailyRun start execution endpoint: {e}")
-
-        if not response.ok:
-            raise ValueError(
-                f"Unexpected status code from DailyRun start execution endpoint: "
-                f"{response.status_code} - {response.text}"
-            )
-
-        try:
-            payload = response.json()
-        except Exception as e:
-            raise ValueError(
-                f"Could not parse DailyRun start execution response as JSON: {e}"
-            )
-
-        return payload
+        return self._request(
+            "POST",
+            "/dailyRun/start_execution",
+            DailyRun.EXECUTION_WRITE_SCOPES,
+            verify=verify
+        )
 
 class Load():
     """
