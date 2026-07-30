@@ -693,9 +693,12 @@ class DailyRun():
 
     def start_execution(self, verify: Union[bool, str] = True) -> Dict[str, Any]:
         """
-        Calls ``POST /dailyRun/start_execution`` to start the daily ETL pipeline
-        (``DailyETLPipeline`` or ``DailyETLPipelineV2``) for the current Dash
-        organisation.
+        Calls ``POST /dailyRun/start_execution`` to start ``DailyETLPipeline`` for
+        the current Dash organisation.
+
+        Manual SDK runs always target ``DailyETLPipeline`` (not
+        ``DailyETLPipelineV2``). The scheduled nightly kickoff still routes
+        ``insights_v2`` clients to V2 separately.
 
         Requires the ``dailyrun:execution:write`` scope.
 

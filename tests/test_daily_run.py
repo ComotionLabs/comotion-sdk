@@ -219,7 +219,7 @@ class TestStartExecution(unittest.TestCase):
     @patch("comotion.dash.requests.request")
     def test_started_payload_on_success(self, mock_request):
         mock_request.return_value = make_response(
-            json_payload={"started": True, "executionName": "DailyScheduledETLV2_testorg_x"}
+            json_payload={"started": True, "executionName": "DailyScheduledETL_testorg_x"}
         )
         result = DailyRun(make_config(EXECUTION_WRITE_CLAIMS)).start_execution()
         self.assertTrue(result["started"])

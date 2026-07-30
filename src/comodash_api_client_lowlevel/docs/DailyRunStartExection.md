@@ -96,7 +96,7 @@ This is passed directly to `requests.post` as the `verify` argument:
 
 `Dict[str, Any]` – the JSON payload returned by the `/dailyRun/start_execution` endpoint.
 
-On a successful start (`200`), for a client on the legacy pipeline:
+On a successful start (`200`):
 
 ```python
 {
@@ -109,7 +109,8 @@ On a successful start (`200`), for a client on the legacy pipeline:
 }
 ```
 
-The API routes per organisation: clients with `insights_v2` set to boolean `true` in `ClientMetaData` run `DailyETLPipelineV2` and their `executionName` is prefixed `DailyScheduledETLV2_`; everyone else runs `DailyETLPipeline` with the `DailyScheduledETL_` prefix.
+Manual runs always target `DailyETLPipeline`. The scheduled nightly kickoff
+may still route `insights_v2` clients to `DailyETLPipelineV2` separately.
 
 When a run is already in progress (`409`), the helper returns the payload instead of raising:
 

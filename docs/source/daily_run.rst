@@ -351,10 +351,9 @@ running the API responds with ``409`` and a payload where ``started`` is False;
 :meth:`~comotion.dash.DailyRun.start_execution` returns that payload rather than
 raising, so inspect ``started`` to tell the two outcomes apart.
 
-The API also routes per organisation: clients with ``insights_v2`` set to
-boolean ``true`` in ``ClientMetaData`` run ``DailyETLPipelineV2`` (execution
-names prefixed ``DailyScheduledETLV2_``); everyone else runs
-``DailyETLPipeline`` (prefix ``DailyScheduledETL_``).
+Manual runs always start ``DailyETLPipeline`` (execution names prefixed
+``DailyScheduledETL_``). The scheduled nightly kickoff may still route
+``insights_v2`` clients to ``DailyETLPipelineV2`` independently.
 
 Example
 *******
