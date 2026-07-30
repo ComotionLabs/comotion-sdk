@@ -4,7 +4,7 @@ Helper for starting a `DailyETLPipeline` execution for the current Dash organisa
 
 This helper calls the `/dailyRun/start_execution` endpoint on the per-organisation frontend API (for example `https://api.org.comodash.io/superset/dailyRun/start_execution`) and returns the JSON payload as a Python dictionary.
 
-The pipeline only starts if the daily run is enabled for the organisation. When it is disabled the API still responds with a `200`, and the returned payload has `started` set to `False`.
+Starting a run manually is **not** gated by the daily-run enabled flag — that flag only controls the scheduled nightly kickoff. A manual run starts unless a pipeline run is already in progress for the organisation. When one is already running the API responds with `409` and a payload where `started` is `False` (see below); the helper returns that payload rather than raising, so inspect `started` to distinguish the two outcomes.
 
 > **Note**  
 > This document describes the high-level usage pattern, building on top of the low-level client in this package.  
@@ -94,7 +94,9 @@ This is passed directly to `requests.post` as the `verify` argument:
 
 ### Return type
 
-`Dict[str, Any]` – the JSON payload returned by the `/dailyRun/start_execution` endpoint:
+`Dict[str, Any]` – the JSON payload returned by the `/dailyRun/start_execution` endpoint.
+
+On a successful start (`200`), for a client on the legacy pipeline:
 
 ```python
 {
@@ -107,7 +109,23 @@ This is passed directly to `requests.post` as the `verify` argument:
 }
 ```
 
-When the daily run is disabled for the organisation, `started` is `False` and `executionArn`, `startDate` and `executionName` are omitted or `None`.
+The API routes per organisation: clients with `insights_v2` set to boolean `true` in `ClientMetaData` run `DailyETLPipelineV2` and their `executionName` is prefixed `DailyScheduledETLV2_`; everyone else runs `DailyETLPipeline` with the `DailyScheduledETL_` prefix.
+
+When a run is already in progress (`409`), the helper returns the payload instead of raising:
+
+```python
+{
+    "message": "Daily ETL pipeline is already running for this client; no execution started.",
+    "started": False,
+    "executionName": None,
+    "runningExecution": {
+        "name": "DailyScheduledETL_org_20260108T100213Z",
+        "status": "RUNNING",
+        "startDate": "2026-01-08T10:02:14.025000+00:00",
+    },
+    "stateMachineArn": "arn:aws:states:eu-west-1:...:stateMachine:DailyETLPipeline",
+}
+```
 
 ### Errors
 
@@ -116,7 +134,7 @@ When the daily run is disabled for the organisation, `started` is `False` and `e
 It raises a `ValueError` if:
 
 - the underlying HTTP request to `/dailyRun/start_execution` fails, or
-- the response is not `2xx`, or
+- the response is not `2xx` and not the `409` already-running case described above, or
 - the response cannot be parsed as JSON.
 
 If you consistently receive `404`, `401`, or other unexpected errors from this endpoint, please contact Comotion support to ensure the `/dailyRun` endpoints (including `/dailyRun/start_execution`) have been implemented and enabled for your organisation.

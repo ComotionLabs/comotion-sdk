@@ -193,6 +193,43 @@ class TestStartExecution(unittest.TestCase):
         self.assertEqual(args[0], "POST")
         self.assertIn("/dailyRun/start_execution", args[1])
 
+    @patch("comotion.dash.requests.request")
+    def test_conflict_returns_payload_instead_of_raising(self, mock_request):
+        running_payload = {
+            "started": False,
+            "message": "Daily ETL pipeline is already running for this client; "
+                       "no execution started.",
+            "runningExecution": {
+                "name": "DailyScheduledETL_testorg_20260730T080000Z",
+                "status": "RUNNING",
+            },
+        }
+        mock_request.return_value = make_response(
+            status_code=409, json_payload=running_payload
+        )
+
+        result = DailyRun(make_config(EXECUTION_WRITE_CLAIMS)).start_execution()
+
+        self.assertFalse(result["started"])
+        self.assertEqual(
+            result["runningExecution"]["name"],
+            "DailyScheduledETL_testorg_20260730T080000Z",
+        )
+
+    @patch("comotion.dash.requests.request")
+    def test_started_payload_on_success(self, mock_request):
+        mock_request.return_value = make_response(
+            json_payload={"started": True, "executionName": "DailyScheduledETLV2_testorg_x"}
+        )
+        result = DailyRun(make_config(EXECUTION_WRITE_CLAIMS)).start_execution()
+        self.assertTrue(result["started"])
+
+    @patch("comotion.dash.requests.request")
+    def test_other_error_statuses_still_raise(self, mock_request):
+        mock_request.return_value = make_response(status_code=500, text="boom")
+        with self.assertRaises(ValueError):
+            DailyRun(make_config(EXECUTION_WRITE_CLAIMS)).start_execution()
+
 
 class TestUpdateDailyRunEnabled(unittest.TestCase):
 

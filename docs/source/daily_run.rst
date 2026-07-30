@@ -344,9 +344,17 @@ Starting a DailyRun execution
 :meth:`DailyRun.start_execution <comotion.dash.DailyRun.start_execution>` starts a
 Daily ETL pipeline execution for the current organisation.
 
-The pipeline only starts if the daily run is enabled for the organisation. When it
-is disabled the API still responds with a ``200``, and the returned payload has
-``started`` set to False.
+Starting a run manually is **not** gated by the daily-run enabled flag — that
+flag only controls the scheduled nightly kickoff. A manual run starts unless a
+pipeline run is already in progress for the organisation. When one is already
+running the API responds with ``409`` and a payload where ``started`` is False;
+:meth:`~comotion.dash.DailyRun.start_execution` returns that payload rather than
+raising, so inspect ``started`` to tell the two outcomes apart.
+
+The API also routes per organisation: clients with ``insights_v2`` set to
+boolean ``true`` in ``ClientMetaData`` run ``DailyETLPipelineV2`` (execution
+names prefixed ``DailyScheduledETLV2_``); everyone else runs
+``DailyETLPipeline`` (prefix ``DailyScheduledETL_``).
 
 Example
 *******
@@ -358,10 +366,13 @@ Example
    if response["started"]:
        print(f"Started {response['executionName']}")
    else:
+       # Already running: response["runningExecution"] describes the in-flight run
        print(response["message"])
 
 Typical response structure
 **************************
+
+On a successful start (``200``):
 
 .. code-block:: python
 
@@ -371,6 +382,22 @@ Typical response structure
        "executionArn": "arn:aws:states:eu-west-1:...:execution:DailyETLPipeline:...",
        "startDate": "2026-01-08T10:02:14.025000+00:00",
        "executionName": "DailyScheduledETL_org_20260108T100213Z",
+       "stateMachineArn": "arn:aws:states:eu-west-1:...:stateMachine:DailyETLPipeline",
+   }
+
+When a run is already in progress (``409``):
+
+.. code-block:: python
+
+   {
+       "message": "Daily ETL pipeline is already running for this client; no execution started.",
+       "started": False,
+       "executionName": None,
+       "runningExecution": {
+           "name": "DailyScheduledETL_org_20260108T100213Z",
+           "status": "RUNNING",
+           "startDate": "2026-01-08T10:02:14.025000+00:00",
+       },
        "stateMachineArn": "arn:aws:states:eu-west-1:...:stateMachine:DailyETLPipeline",
    }
 

@@ -4,7 +4,7 @@ import json
 import requests
 import csv
 import time
-from typing import Union, Callable, List, Optional, Dict, Any
+from typing import Union, Callable, List, Optional, Dict, Any, Tuple
 from enum import Enum
 from os.path import join, basename, isdir, isfile, splitext
 from os import listdir
@@ -477,7 +477,8 @@ class DailyRun():
         accepted_scopes,
         params: Optional[Dict[str, Any]] = None,
         body: Optional[Dict[str, Any]] = None,
-        verify: Union[bool, str] = True
+        verify: Union[bool, str] = True,
+        additional_ok_statuses: Tuple[int, ...] = ()
     ) -> Dict[str, Any]:
         """
         Send an authenticated request to a ``/dailyRun`` endpoint and return the
@@ -486,6 +487,12 @@ class DailyRun():
         Refreshes the access token if needed, checks the token entitlements
         against ``accepted_scopes``, and translates transport errors and non-2xx
         responses into meaningful exceptions.
+
+        ``additional_ok_statuses`` lists non-2xx status codes that should be
+        treated as a normal response and have their JSON payload returned to the
+        caller rather than raising. This lets an endpoint surface a structured
+        body (for example the ``409`` returned by ``start_execution`` when a
+        pipeline is already running) instead of an opaque error.
         """
         self.config._check_and_refresh_token()
         self._check_authorisation(accepted_scopes)
@@ -519,7 +526,7 @@ class DailyRun():
                 f"'{DailyRun.REQUIRED_AUDIENCE}' audience. Response: {response.text}"
             )
 
-        if not response.ok:
+        if not response.ok and response.status_code not in additional_ok_statuses:
             raise ValueError(
                 f"Unexpected status code from DailyRun endpoint {path}: "
                 f"{response.status_code} - {response.text}"
@@ -686,14 +693,18 @@ class DailyRun():
 
     def start_execution(self, verify: Union[bool, str] = True) -> Dict[str, Any]:
         """
-        Calls ``POST /dailyRun/start_execution`` to start a ``DailyETLPipeline``
-        execution for the current Dash organisation.
+        Calls ``POST /dailyRun/start_execution`` to start the daily ETL pipeline
+        (``DailyETLPipeline`` or ``DailyETLPipelineV2``) for the current Dash
+        organisation.
 
         Requires the ``dailyrun:execution:write`` scope.
 
-        The pipeline only starts if the daily run is enabled for the
-        organisation. When it is disabled the API still responds with a ``200``
-        and a payload where ``started`` is False.
+        Starting a run manually is **not** gated by the daily-run enabled flag
+        (that flag only controls the scheduled nightly kickoff). A manual run is
+        started unless one is already in progress for the organisation: in that
+        case the API responds with ``409`` and a payload where ``started`` is
+        False, and this method returns that payload rather than raising, so
+        callers should inspect ``started`` to tell the two outcomes apart.
 
         Parameters
         ----------
@@ -705,10 +716,12 @@ class DailyRun():
         Returns
         -------
         Dict[str, Any]
-            The JSON payload returned by the start execution endpoint,
-            containing ``message``, ``started``, ``executionName`` and
-            ``stateMachineArn``, plus ``executionArn`` and ``startDate`` when an
-            execution was actually started.
+            The JSON payload returned by the start execution endpoint. On a
+            successful start (``200``) ``started`` is True and the payload also
+            contains ``executionArn``, ``startDate``, ``executionName`` and
+            ``stateMachineArn``. When a run is already in progress (``409``)
+            ``started`` is False and the payload contains ``runningExecution``
+            describing the in-flight run.
 
         Raises
         ------
@@ -721,7 +734,8 @@ class DailyRun():
             "POST",
             "/dailyRun/start_execution",
             DailyRun.EXECUTION_WRITE_SCOPES,
-            verify=verify
+            verify=verify,
+            additional_ok_statuses=(409,)
         )
 
 class Load():
