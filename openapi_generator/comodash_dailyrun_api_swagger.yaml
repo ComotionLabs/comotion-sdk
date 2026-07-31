@@ -1,0 +1,405 @@
+openapi: 3.0.1
+info:
+  title: Comotion Dash DailyRun API
+  description: >
+    Comotion Dash DailyRun API.
+
+    These endpoints control and inspect the Daily ETL pipeline for a single
+    Dash organisation.  They are served from the per-organisation frontend API
+    rather than the main Dash `/v2` API, which is why they live in a separate
+    specification and generate a separate client package.
+
+    The organisation is determined by the hostname, so none of the operations
+    take an organisation parameter.
+  version: '2.0'
+
+servers:
+  - url: https://api.{orgName}.{dnsSuffix}/superset
+    description: Per-organisation frontend API.
+    variables:
+      orgName:
+        default: 'training'
+        description: OrgName for your organisation
+      dnsSuffix:
+        default: 'comodash.io'
+        description: >
+          Base domain for the region hosting the organisation.  eu-west-1 uses
+          comodash.io and us-east-1 uses comodash.com.
+        enum:
+          - comodash.io
+          - comodash.com
+
+paths:
+  /dailyRun/dailyRun_enabled:
+    get:
+      summary: Get whether the daily run is enabled
+      description: >
+        Returns whether the scheduled nightly Daily ETL kickoff is enabled for
+        this organisation.  This flag does not affect manually started runs.
+      operationId: getDailyRunEnabled
+      tags:
+        - dailyRun
+      responses:
+        200:
+          description: The current daily run setting.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyRunEnabled'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: The token is not entitled to perform this operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: No daily run setting is recorded against this organisation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+            - dailyrun:enabled:read
+
+    post:
+      summary: Enable or disable the daily run
+      description: >
+        Sets whether the scheduled nightly Daily ETL kickoff is enabled for this
+        organisation, and returns the value that was stored.
+      operationId: updateDailyRunEnabled
+      tags:
+        - dailyRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DailyRunEnabled'
+      responses:
+        200:
+          description: The value stored by the API.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyRunEnabled'
+        400:
+          description: The request body is missing or is not a valid boolean setting.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: The token is not entitled to perform this operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+            - dailyrun:enabled:write
+
+  /dailyRun/execution_status:
+    get:
+      summary: Get Daily ETL pipeline execution information
+      description: >
+        Returns information about this organisation's Daily ETL pipeline
+        executions.  The shape of the response depends on the `mode` parameter:
+
+        * `list` returns an object with an `executions` array.
+
+        * `latest` returns the most recent execution, or a null body when there
+        are none.
+
+        * `last_successful` returns the most recent succeeded execution, or an
+        object with only a `message` when there are none.
+
+        All three shapes are described by the single `ExecutionStatus` schema,
+        in which every field is optional.
+      operationId: getDailyRunExecutionStatus
+      tags:
+        - dailyRun
+      parameters:
+        - in: query
+          name: mode
+          required: false
+          description: Which view of the execution history to return.
+          schema:
+            type: string
+            default: list
+            enum:
+              - list
+              - latest
+              - last_successful
+          example: latest
+        - in: query
+          name: limit
+          required: false
+          description: >
+            Maximum number of executions to consider.  The API clamps this to
+            between 1 and 200 rather than rejecting out of range values, and
+            defaults to 50.
+          schema:
+            type: integer
+            default: 50
+          example: 10
+      responses:
+        200:
+          description: Execution information, in the shape selected by `mode`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionStatus'
+        400:
+          description: The `mode` parameter is not one of the supported values.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: The token is not entitled to perform this operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        5XX:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+            - dailyrun:execution:read
+
+  /dailyRun/start_execution:
+    post:
+      summary: Start a Daily ETL pipeline execution
+      description: >
+        Starts a new execution of the Daily ETL pipeline for this organisation.
+
+        Starting a run this way is not gated by the daily run enabled flag,
+        which only controls the scheduled nightly kickoff.  A run is started
+        unless one is already in progress, in which case the API responds with
+        409 and a body in which `started` is false and `runningExecution`
+        describes the in-flight run.
+
+        The 200 and 409 bodies share the `StartExecutionResponse` schema, so
+        callers can inspect `started` to tell the two outcomes apart.
+      operationId: startDailyRunExecution
+      tags:
+        - dailyRun
+      responses:
+        200:
+          description: A new pipeline execution was started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartExecutionResponse'
+        401:
+          description: Authorization information is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: The token is not entitled to perform this operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        409:
+          description: >
+            A pipeline run is already in progress for this organisation, so no
+            execution was started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartExecutionResponse'
+        5XX:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - OAuth2Authorizer:
+            - dailyrun:execution:write
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: An Error Message
+
+    DailyRunEnabled:
+      type: object
+      properties:
+        dailyRun:
+          type: boolean
+          description: Whether the scheduled nightly Daily ETL kickoff is enabled.
+          example: true
+      required:
+        - dailyRun
+
+    Execution:
+      type: object
+      description: A single Daily ETL pipeline execution.
+      properties:
+        name:
+          type: string
+          description: >
+            Step Functions execution name.  Always starts with
+            `DailyScheduledETL_{orgName}_`.
+          example: DailyScheduledETL_training_20260108T100213Z
+        status:
+          type: string
+          description: >
+            Step Functions execution status, for example RUNNING, SUCCEEDED,
+            FAILED, TIMED_OUT or ABORTED.  Left unconstrained so that new
+            Step Functions statuses do not break deserialisation.
+          example: SUCCEEDED
+        startDate:
+          type: string
+          description: ISO 8601 timestamp of when the execution started.
+          example: '2026-01-08T10:02:14.025000+00:00'
+        stopDate:
+          type: string
+          nullable: true
+          description: >
+            ISO 8601 timestamp of when the execution stopped, or null while it
+            is still running.
+          example: '2026-01-08T11:14:52.331000+00:00'
+
+    RunningExecution:
+      type: object
+      description: The in-flight execution that blocked a manual start.
+      properties:
+        name:
+          type: string
+          example: DailyScheduledETL_training_20260108T100213Z
+        status:
+          type: string
+          example: RUNNING
+        startDate:
+          type: string
+          example: '2026-01-08T10:02:14.025000+00:00'
+
+    ExecutionStatus:
+      type: object
+      nullable: true
+      description: >
+        Execution information.  Which fields are populated depends on the
+        `mode` used on the request, so every field is optional.
+
+        In `list` mode only `executions` is set.  In `latest` and
+        `last_successful` mode the execution fields are set directly on this
+        object, or `message` is set when there is nothing to return.
+      properties:
+        executions:
+          type: array
+          description: Recent executions.  Populated in `list` mode.
+          items:
+            $ref: '#/components/schemas/Execution'
+        name:
+          type: string
+          description: Execution name.  Populated in `latest` and `last_successful` mode.
+          example: DailyScheduledETL_training_20260108T100213Z
+        status:
+          type: string
+          description: Execution status.  Populated in `latest` and `last_successful` mode.
+          example: SUCCEEDED
+        startDate:
+          type: string
+          description: Execution start time.  Populated in `latest` and `last_successful` mode.
+          example: '2026-01-08T10:02:14.025000+00:00'
+        stopDate:
+          type: string
+          nullable: true
+          description: Execution stop time.  Populated in `latest` and `last_successful` mode.
+          example: '2026-01-08T11:14:52.331000+00:00'
+        message:
+          type: string
+          description: >
+            Explanatory message, set in `last_successful` mode when there are no
+            successful executions.
+          example: No successful Daily ETL executions found.
+
+    StartExecutionResponse:
+      type: object
+      description: >
+        Result of a start request.  Shared by the 200 and 409 responses, so
+        `started` distinguishes the two outcomes.
+      properties:
+        message:
+          type: string
+          example: Daily ETL pipeline execution started.
+        started:
+          type: boolean
+          description: True when a new execution was started, false when one was already running.
+          example: true
+        executionArn:
+          type: string
+          nullable: true
+          description: ARN of the started execution.  Only set when `started` is true.
+          example: arn:aws:states:eu-west-1:060651130682:execution:DailyETLPipeline:DailyScheduledETL_training_20260108T100213Z
+        startDate:
+          type: string
+          nullable: true
+          description: ISO 8601 start time of the started execution.  Only set when `started` is true.
+          example: '2026-01-08T10:02:14.025000+00:00'
+        executionName:
+          type: string
+          nullable: true
+          description: Name of the started execution, or null when one was already running.
+          example: DailyScheduledETL_training_20260108T100213Z
+        stateMachineArn:
+          type: string
+          description: ARN of the state machine the request targeted.
+          example: arn:aws:states:eu-west-1:060651130682:stateMachine:DailyETLPipeline
+        runningExecution:
+          allOf:
+            - $ref: '#/components/schemas/RunningExecution'
+          nullable: true
+          description: >
+            The execution already in progress.  Only set when `started` is
+            false.
+
+  securitySchemes:
+    OAuth2Authorizer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -4,7 +4,8 @@ import json
 import requests
 import csv
 import time
-from typing import Union, Callable, List, Optional, Dict, Any
+from typing import Union, Callable, List, Optional, Dict, Any, Tuple, cast
+from enum import Enum
 from os.path import join, basename, isdir, isfile, splitext
 from os import listdir
 import logging
@@ -30,7 +31,7 @@ except ImportError:
 import re
 import uuid
 try:
-    import cx_Oracle
+    import cx_Oracle  # type: ignore[import-unresolved]
 except ImportError:
     cx_Oracle = None
     logger.warning("Optional dependency 'cx_Oracle' is not installed; Oracle-related features are unavailable.")
@@ -46,6 +47,7 @@ except ImportError:
     logger.warning("Optional dependency 'tqdm' is not installed; progress bars are unavailable.")
 from datetime import datetime, timedelta
 from comotion import Auth
+from comotion.auth import UnAuthenticatedException
 import comodash_api_client_lowlevel
 from comodash_api_client_lowlevel import QueriesApi, LoadsApi, MigrationsApi
 from comodash_api_client_lowlevel.models.query_text import QueryText
@@ -60,6 +62,25 @@ from comodash_api_client_lowlevel.models.load_commit import LoadCommit
 from comodash_api_client_lowlevel.models.load import Load
 from comodash_api_client_lowlevel.models.query_id import QueryId
 from comodash_api_client_lowlevel.rest import ApiException
+from comodash_api_client_lowlevel.exceptions import (
+    BadRequestException,
+    NotFoundException,
+)
+# The DailyRun endpoints are served by a different API gateway to the /v2 Dash
+# API, so they have their own spec and their own generated client. Its names
+# collide with the /v2 client's, hence the aliases.
+import comodash_dailyrun_api_client_lowlevel
+from comodash_dailyrun_api_client_lowlevel import DailyRunApi
+from comodash_dailyrun_api_client_lowlevel.models.daily_run_enabled import DailyRunEnabled
+from comodash_dailyrun_api_client_lowlevel.models.execution_status import ExecutionStatus
+from comodash_dailyrun_api_client_lowlevel.models.start_execution_response import (
+    StartExecutionResponse
+)
+from comodash_dailyrun_api_client_lowlevel.exceptions import (
+    ApiException as DailyRunApiException,
+    ForbiddenException as DailyRunForbiddenException,
+    UnauthorizedException as DailyRunUnauthorizedException,
+)
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import random 
 import string
@@ -190,7 +211,7 @@ class Query():
                 query_text_model = QueryText(query=query_text)
                 try:
                     query_id_model = self.query_api_instance.run_query(query_text_model) # noqa
-                except comodash_api_client_lowlevel.exceptions.BadRequestException as exp:
+                except BadRequestException as exp:
                     raise ValueError(json.loads(exp.body)['message'])
                     
                 self.query_id = query_id_model.query_id
@@ -249,7 +270,7 @@ class Query():
         try:
             self.refresh_api_instance()
             return self.query_api_instance.get_query(self.query_id)
-        except comodash_api_client_lowlevel.exceptions.NotFoundException as exp:
+        except NotFoundException as exp:
             raise ValueError("query_id cannot be found")
 
     def state(self) -> str:
@@ -351,6 +372,413 @@ class Query():
         """ Stop the query"""
         self.refresh_api_instance()
         return self.query_api_instance.stop_query(self.query_id)
+
+class DailyRun():
+    """
+    Helper class for the ``/dailyRun`` endpoints of the Dash frontend API.
+
+    The endpoints are served from the per-organisation frontend API
+    (``https://api.<orgname>.comodash.io/superset``) and are protected by a JWT
+    authorizer. The access token must be issued for the ``dash_api`` audience
+    and carry a scope appropriate to the operation. This class checks both up
+    front so that a missing entitlement produces an actionable error rather than
+    an opaque ``403`` from API Gateway.
+
+    Four scopes in two pairs (read/write per concern):
+
+    * ``dailyrun:execution:read`` / ``dailyrun:execution:write`` - inspect or
+      trigger Daily ETL pipeline runs
+    * ``dailyrun:enabled:read`` / ``dailyrun:enabled:write`` - inspect or
+      change whether the daily run is enabled
+
+    All four are independent: each endpoint accepts exactly one scope, so a
+    write scope does not also grant the matching read.
+
+    Superset API access still requires ``superset:user`` separately.
+
+    Available endpoints:
+
+    * ``GET  /dailyRun/dailyRun_enabled``  -> :meth:`get_daily_run_enabled`
+    * ``POST /dailyRun/dailyRun_enabled``  -> :meth:`update_daily_run_enabled`
+    * ``GET  /dailyRun/execution_status``  -> :meth:`get_execution_info`
+    * ``POST /dailyRun/start_execution``   -> :meth:`start_execution`
+
+    HTTP transport and payload models come from the generated
+    ``comodash_dailyrun_api_client_lowlevel`` package. This class holds the
+    behaviour that cannot be expressed in the OpenAPI specification, so that
+    regenerating the client never discards it.
+    """
+
+    EXECUTION_READ_SCOPE = "dailyrun:execution:read"
+    EXECUTION_WRITE_SCOPE = "dailyrun:execution:write"
+    ENABLED_READ_SCOPE = "dailyrun:enabled:read"
+    ENABLED_WRITE_SCOPE = "dailyrun:enabled:write"
+
+    # Scopes accepted for each operation, mirroring AuthorizationScopes on the
+    # API Gateway routes. Each route accepts exactly one scope: a write scope
+    # does not imply the matching read scope.
+    EXECUTION_READ_SCOPES = (EXECUTION_READ_SCOPE,)
+    EXECUTION_WRITE_SCOPES = (EXECUTION_WRITE_SCOPE,)
+    ENABLED_READ_SCOPES = (ENABLED_READ_SCOPE,)
+    ENABLED_WRITE_SCOPES = (ENABLED_WRITE_SCOPE,)
+
+    REQUIRED_AUDIENCE = "dash_api"
+
+    def __init__(self, config: DashConfig):
+        """
+        Parameters
+        ----------
+        config : DashConfig
+            Object of type DashConfig including configuration details and authentication.
+
+        Raises
+        ------
+        TypeError
+            If config is not of type DashConfig
+        """
+        if not isinstance(config, DashConfig):
+            raise TypeError("config must be of type comotion.dash.DashConfig")
+
+        self.config = config
+
+    def _check_authorisation(self, accepted_scopes: Tuple[str, ...]) -> None:
+        """
+        Verify that the current access token is entitled to call a
+        ``/dailyRun`` endpoint.
+
+        Parameters
+        ----------
+        accepted_scopes : tuple of str
+            The scopes configured on the API Gateway route. The token needs
+            any one of them, matching how API Gateway evaluates scopes.
+
+        Raises
+        ------
+        UnAuthenticatedException
+            If the token cannot be read, or is missing the ``dash_api``
+            audience or all of the accepted scopes.
+        """
+        import jwt
+
+        try:
+            claims = jwt.decode(
+                self.config.access_token,
+                options={"verify_signature": False}
+            )
+        except jwt.PyJWTError as e:
+            raise UnAuthenticatedException(
+                f"Could not read the access token to check DailyRun permissions: {e}"
+            )
+
+        scopes = set((claims.get("scope") or "").split())
+
+        audiences = claims.get("aud") or []
+        if isinstance(audiences, str):
+            audiences = [audiences]
+
+        missing = []
+        if scopes.isdisjoint(accepted_scopes):
+            accepted = " or ".join(f"'{scope}'" for scope in accepted_scopes)
+            missing.append(f"one of the scopes {accepted}")
+        if DailyRun.REQUIRED_AUDIENCE not in audiences:
+            missing.append(f"the audience '{DailyRun.REQUIRED_AUDIENCE}'")
+
+        if missing:
+            raise UnAuthenticatedException(
+                "Your credentials are not entitled to perform this DailyRun "
+                f"operation. The access token is missing {' and '.join(missing)}. "
+                f"It currently has scopes {sorted(scopes) or ['<none>']} and "
+                f"audiences {sorted(audiences) or ['<none>']}. "
+                "Ask your Comotion administrator to grant your user or application "
+                f"the required scope on the '{DailyRun.REQUIRED_AUDIENCE}' audience."
+            )
+
+    def _api_configuration(self, verify: Union[bool, str] = True):
+        """
+        Build a configuration for the generated DailyRun client.
+
+        The access token is read at call time rather than at construction, so
+        that a token refreshed by ``_check_and_refresh_token`` is picked up.
+
+        ``verify`` follows the `requests` convention and is mapped onto the
+        generated client's TLS settings: a string is treated as a path to a CA
+        bundle, anything else as a boolean toggle.
+        """
+        configuration = comodash_dailyrun_api_client_lowlevel.Configuration(
+            host=self.config.daily_run_host_url.rstrip("/"),
+            access_token=self.config.access_token
+        )
+
+        if isinstance(verify, str):
+            configuration.verify_ssl = True
+            configuration.ssl_ca_cert = verify
+        else:
+            configuration.verify_ssl = bool(verify)
+
+        return configuration
+
+    def _call(
+        self,
+        operation: str,
+        accepted_scopes: Tuple[str, ...],
+        path: str,
+        verify: Union[bool, str] = True,
+        additional_ok_statuses: Tuple[int, ...] = (),
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Invoke an operation on the generated DailyRun client.
+
+        Refreshes the access token if needed, checks the token entitlements
+        against ``accepted_scopes``, and translates the generated client's
+        exceptions into the same exceptions the rest of this module raises.
+
+        ``additional_ok_statuses`` lists non-2xx status codes that should be
+        treated as a normal response and have their deserialised body returned
+        to the caller rather than raising. This lets an endpoint surface a
+        structured body (for example the ``409`` returned by
+        ``start_execution`` when a pipeline is already running) instead of an
+        opaque error.
+        """
+        self.config._check_and_refresh_token()
+        self._check_authorisation(accepted_scopes)
+
+        configuration = self._api_configuration(verify=verify)
+
+        try:
+            with comodash_dailyrun_api_client_lowlevel.ApiClient(
+                configuration
+            ) as api_client:
+                api_instance = DailyRunApi(api_client)
+                return getattr(api_instance, operation)(**kwargs)
+        except (DailyRunUnauthorizedException, DailyRunForbiddenException) as e:
+            accepted = " or ".join(f"'{scope}'" for scope in accepted_scopes)
+            raise UnAuthenticatedException(
+                f"Access denied ({e.status}) calling {path}. The API "
+                f"requires one of the scopes {accepted} on the "
+                f"'{DailyRun.REQUIRED_AUDIENCE}' audience. Response: {e.body}"
+            )
+        except DailyRunApiException as e:
+            if e.status in additional_ok_statuses:
+                return e.data
+            raise ValueError(
+                f"Unexpected status code from DailyRun endpoint {path}: "
+                f"{e.status} - {e.body}"
+            )
+        except Exception as e:
+            raise ValueError(f"Error calling DailyRun endpoint {path}: {e}")
+
+    @staticmethod
+    def _read_daily_run_flag(payload: Any) -> bool:
+        """Pull the DailyRun boolean out of an endpoint response."""
+        if isinstance(payload, DailyRunEnabled):
+            flag_value = payload.daily_run
+        elif isinstance(payload, dict):
+            if "dailyRun" in payload:
+                flag_value = payload["dailyRun"]
+            elif "DailyRun" in payload:
+                flag_value = payload["DailyRun"]
+            else:
+                raise ValueError("DailyRun flag not found in response payload.")
+        else:
+            raise ValueError("DailyRun flag not found in response payload.")
+
+        if not isinstance(flag_value, bool):
+            raise ValueError("DailyRun flag in response is not a boolean.")
+
+        return flag_value
+
+    def get_daily_run_enabled(self) -> bool:
+        """
+        Calls ``GET /dailyRun/dailyRun_enabled`` and returns whether the daily run
+        is enabled for the current Dash organisation.
+
+        Requires the ``dailyrun:enabled:read`` scope.
+
+        Returns
+        -------
+        bool
+            True if the daily run is enabled for the organisation.
+
+        Raises
+        ------
+        UnAuthenticatedException
+            If the access token lacks an accepted scope or the audience.
+        ValueError
+            If the response from the API is unexpected or cannot be parsed.
+            A ``404`` is raised here when the organisation has no DailyRun
+            setting recorded against it.
+        """
+        payload = self._call(
+            "get_daily_run_enabled",
+            DailyRun.ENABLED_READ_SCOPES,
+            "/dailyRun/dailyRun_enabled"
+        )
+        return DailyRun._read_daily_run_flag(payload)
+
+    def update_daily_run_enabled(self, enabled: bool) -> bool:
+        """
+        Calls ``POST /dailyRun/dailyRun_enabled`` to enable or disable the daily
+        run for the current Dash organisation.
+
+        Turning the daily ETL on or off is a configuration change, so this
+        requires the ``dailyrun:enabled:write`` scope.
+
+        Parameters
+        ----------
+        enabled : bool
+            The new value for the daily run setting.
+
+        Returns
+        -------
+        bool
+            The value stored by the API.
+
+        Raises
+        ------
+        TypeError
+            If enabled is not a boolean.
+        UnAuthenticatedException
+            If the access token lacks the admin scope or the audience.
+        ValueError
+            If the response from the API is unexpected or cannot be parsed.
+        """
+        if not isinstance(enabled, bool):
+            raise TypeError("enabled must be a boolean.")
+
+        payload = self._call(
+            "update_daily_run_enabled",
+            DailyRun.ENABLED_WRITE_SCOPES,
+            "/dailyRun/dailyRun_enabled",
+            daily_run_enabled=DailyRunEnabled(dailyRun=enabled)
+        )
+        return DailyRun._read_daily_run_flag(payload)
+
+    class GetDailyRunExecutionMode(Enum):
+        LIST = "list"
+        LATEST = "latest"
+        LAST_SUCCESSFUL = "last_successful"
+
+    def get_execution_info(
+        self,
+        mode: Optional["DailyRun.GetDailyRunExecutionMode"] = None,
+        limit: Optional[int] = None
+    ) -> Optional[ExecutionStatus]:
+        """
+        Calls ``GET /dailyRun/execution_status`` and returns information about
+        the organisation's Daily ETL pipeline executions.
+
+        Requires the ``dailyrun:execution:read`` scope.
+
+        Parameters
+        ----------
+        mode : GetDailyRunExecutionMode, optional
+            Which view of the execution history to return. Defaults to
+            ``GetDailyRunExecutionMode.LIST``.
+
+            * ``LIST`` populates ``executions``
+            * ``LATEST`` populates the execution fields directly, or returns
+              ``None`` when there are no executions
+            * ``LAST_SUCCESSFUL`` populates the execution fields directly, or
+              populates ``message`` if there is none
+        limit : int, optional
+            Maximum number of executions to consider. The API clamps this to
+            between 1 and 200, and defaults to 50.
+
+        Returns
+        -------
+        ExecutionStatus
+            The execution information returned by the endpoint, or ``None`` in
+            ``LATEST`` mode when the organisation has no executions. Call
+            ``.to_dict()`` on the result for the raw payload shape.
+
+        Raises
+        ------
+        ValueError
+            If an invalid mode or limit is provided, or the response from the
+            API is unexpected or cannot be parsed.
+        UnAuthenticatedException
+            If the access token lacks an accepted scope or the audience.
+        """
+        if mode is None:
+            mode = DailyRun.GetDailyRunExecutionMode.LIST
+
+        if not isinstance(mode, DailyRun.GetDailyRunExecutionMode):
+            raise ValueError(
+                "Invalid mode. Must be an instance of "
+                "DailyRun.GetDailyRunExecutionMode."
+            )
+
+        # The API reads these from the query string, not the request body.
+        parameters = {"mode": mode.value}
+
+        if limit is not None:
+            if not isinstance(limit, int) or isinstance(limit, bool):
+                raise ValueError("limit must be an integer.")
+            parameters["limit"] = limit
+
+        return self._call(
+            "get_daily_run_execution_status",
+            DailyRun.EXECUTION_READ_SCOPES,
+            "/dailyRun/execution_status",
+            **parameters
+        )
+
+    def start_execution(
+        self,
+        verify: Union[bool, str] = True
+    ) -> StartExecutionResponse:
+        """
+        Calls ``POST /dailyRun/start_execution`` to start ``DailyETLPipeline`` for
+        the current Dash organisation.
+
+        Manual SDK runs always target ``DailyETLPipeline`` (not
+        ``DailyETLPipelineV2``). The scheduled nightly kickoff still routes
+        ``insights_v2`` clients to V2 separately.
+
+        Requires the ``dailyrun:execution:write`` scope.
+
+        Starting a run manually is **not** gated by the daily-run enabled flag
+        (that flag only controls the scheduled nightly kickoff). A manual run is
+        started unless one is already in progress for the organisation: in that
+        case the API responds with ``409`` and a payload where ``started`` is
+        False, and this method returns that payload rather than raising, so
+        callers should inspect ``started`` to tell the two outcomes apart.
+
+        Parameters
+        ----------
+        verify : bool | str, default True
+            Follows the `requests` convention. Set to False to disable TLS
+            certificate verification (not recommended for production), or to a
+            path to a CA bundle to use for verification.
+
+        Returns
+        -------
+        StartExecutionResponse
+            On a successful start (``200``) ``started`` is True and
+            ``execution_arn``, ``start_date``, ``execution_name`` and
+            ``state_machine_arn`` are populated. When a run is already in
+            progress (``409``) ``started`` is False and ``running_execution``
+            describes the in-flight run. Call ``.to_dict()`` on the result for
+            the raw payload shape.
+
+        Raises
+        ------
+        UnAuthenticatedException
+            If the access token lacks an accepted scope or the audience.
+        ValueError
+            If the response from the API is unexpected or cannot be parsed.
+        """
+        return cast(
+            StartExecutionResponse,
+            self._call(
+                "start_daily_run_execution",
+                DailyRun.EXECUTION_WRITE_SCOPES,
+                "/dailyRun/start_execution",
+                verify=verify,
+                additional_ok_statuses=(409,)
+            ),
+        )
 
 class Load():
     """
@@ -1679,18 +2107,18 @@ class Migration():
         migration = comodash_api_client_lowlevel.Migration(**migration_data)
         try:
             self.migration_api_instance.start_migration(migration)
-        except comodash_api_client_lowlevel.exceptions.BadRequestException as exp:
+        except BadRequestException as exp:
             raise ValueError(json.loads(exp.body)['message'])
-        except comodash_api_client_lowlevel.exceptions.ApiException as e:
+        except ApiException as e:
             raise ValueError(json.loads(e.body)['message'])
     
     def status(self):
         try:
             migration_status = self.migration_api_instance.get_migration()
             return migration_status
-        except comodash_api_client_lowlevel.exceptions.BadRequestException as exp:
+        except BadRequestException as exp:
             raise ValueError(json.loads(exp.body)['message'])
-        except comodash_api_client_lowlevel.exceptions.ApiException as e:
+        except ApiException as e:
             raise ValueError(json.loads(e.body)['message'])
         
 
@@ -1846,9 +2274,15 @@ def upload_from_oracle(
         # Empty list to store chunks that fail to upload 
         error_chunks = []   
 
+        chunk_iterator = (
+            tqdm(range(chunk_number))
+            if tqdm is not None
+            else range(chunk_number)
+        )
+
         with open(os.path.join(output_path, load_id + "_success.csv.gz"), "wb") as f: 
             
-            for i in tqdm(range(chunk_number)): 
+            for i in chunk_iterator: 
 
                 # Get data chunk
                 chunk = pd.DataFrame(result.fetchmany(chunksize), columns=columns) 
