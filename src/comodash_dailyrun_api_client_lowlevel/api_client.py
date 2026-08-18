@@ -410,7 +410,11 @@ class ApiClient:
             else:
                 data = json.loads(response_text)
         elif re.match(r'^text\/[a-z.+-]+\s*(;|$)', content_type, re.IGNORECASE):
-            data = response_text
+            # DailyRun Lambdas often return JSON bodies with a text/* content type.
+            try:
+                data = json.loads(response_text)
+            except (ValueError, json.JSONDecodeError):
+                data = response_text
         else:
             raise ApiException(
                 status=0,
@@ -793,5 +797,10 @@ class ApiClient:
         :param klass: class literal.
         :return: model object.
         """
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError:
+                pass
 
         return klass.from_dict(data)

@@ -18,9 +18,8 @@ import re  # noqa: F401
 import json
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional, Set
 from comodash_dailyrun_api_client_lowlevel.models.running_execution import RunningExecution
-from typing import Optional, Set
 from typing_extensions import Self
 
 class StartExecutionResponse(BaseModel):
@@ -101,10 +100,13 @@ class StartExecutionResponse(BaseModel):
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of StartExecutionResponse from a dict"""
+    def from_dict(cls, obj: Optional[Any]) -> Optional[Self]:
+        """Create an instance of StartExecutionResponse from a dict or JSON string."""
         if obj is None:
             return None
+
+        if isinstance(obj, str):
+            obj = json.loads(obj)
 
         if not isinstance(obj, dict):
             return cls.model_validate(obj)

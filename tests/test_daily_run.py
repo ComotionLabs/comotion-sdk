@@ -162,6 +162,28 @@ class TestDailyRunScopeSplit(unittest.TestCase):
         mock_api_class.return_value.get_daily_run_execution_status.assert_not_called()
 
 
+class TestDailyRunEnabledModel(unittest.TestCase):
+
+    def test_from_dict_parses_json_string_and_ignores_extra_fields(self):
+        payload = DailyRunEnabled.from_dict('{"dailyRun": true, "model": "main"}')
+        self.assertTrue(payload.daily_run)
+
+    def test_from_dict_reads_boolean_from_dict(self):
+        payload = DailyRunEnabled.from_dict({"dailyRun": False, "model": "forecast"})
+        self.assertFalse(payload.daily_run)
+
+
+class TestStartExecutionResponseModel(unittest.TestCase):
+
+    def test_from_dict_parses_json_string(self):
+        payload = StartExecutionResponse.from_dict(
+            '{"message": "Daily ETL pipeline execution started.", "started": true, '
+            '"executionName": "DailyScheduledETL_testorg_20260818T100000Z"}'
+        )
+        self.assertTrue(payload.started)
+        self.assertEqual(payload.execution_name, "DailyScheduledETL_testorg_20260818T100000Z")
+
+
 @patch("comotion.dash.DailyRunApi")
 class TestGetDailyRunEnabled(unittest.TestCase):
 

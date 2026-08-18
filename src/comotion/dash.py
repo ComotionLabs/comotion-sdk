@@ -107,6 +107,7 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
         self.zone = zone
 
         host_url = 'https://%s.api.comodash.io/v2' % (self.orgname) if not zone else 'https://%s.%s.api.comodash.io/v2' % (self.zone, self.orgname)
+        self.daily_run_host_url = 'https://api.%s.comodash.io/superset' % (self.orgname)
         
         super().__init__(
             host=host_url,
