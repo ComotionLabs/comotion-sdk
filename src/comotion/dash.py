@@ -98,7 +98,12 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
         The zone to use for the API. If not provided, defaults to None, i.e. the main zone.
     """
 
-    def __init__(self, auth: Auth, zone: str = None):
+    def __init__(
+        self,
+        auth: Auth,
+        zone: str = None,
+        dns_suffix: str = "comodash.io",
+    ):
         if not(isinstance(auth, Auth)):
             raise TypeError("auth must be of type comotion.Auth")
 
@@ -107,7 +112,7 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
         self.zone = zone
 
         host_url = 'https://%s.api.comodash.io/v2' % (self.orgname) if not zone else 'https://%s.%s.api.comodash.io/v2' % (self.zone, self.orgname)
-        self.daily_run_host_url = 'https://api.%s.comodash.io/superset' % (self.orgname)
+        self.daily_run_host_url = 'https://api.%s.%s/superset' % (self.orgname, dns_suffix)
         
         super().__init__(
             host=host_url,
@@ -379,8 +384,8 @@ class DailyRun():
     Helper class for the ``/dailyRun`` endpoints of the Dash frontend API.
 
     The endpoints are served from the per-organisation frontend API
-    (``https://api.<orgname>.comodash.io/superset``) and are protected by a JWT
-    authorizer. The access token must be issued for the ``dash_api`` audience
+    (``https://api.<orgname>.comodash.io/superset`` by default) and are protected
+    by a JWT authorizer. The access token must be issued for the ``dash_api`` audience
     and carry a scope appropriate to the operation. This class checks both up
     front so that a missing entitlement produces an actionable error rather than
     an opaque ``403`` from API Gateway.
@@ -494,28 +499,22 @@ class DailyRun():
                 f"the required scope on the '{DailyRun.REQUIRED_AUDIENCE}' audience."
             )
 
-    def _api_configuration(self, verify: Union[bool, str] = True):
+    def _api_configuration(self):
         """
         Build a configuration for the generated DailyRun client.
 
         The access token is read at call time rather than at construction, so
         that a token refreshed by ``_check_and_refresh_token`` is picked up.
 
-        ``verify`` follows the `requests` convention and is mapped onto the
-        generated client's TLS settings: a string is treated as a path to a CA
-        bundle, anything else as a boolean toggle.
+        TLS settings are taken from ``DashConfig``, matching ``Query`` and
+        ``Load`` (``verify_ssl`` and ``ssl_ca_cert``).
         """
         configuration = comodash_dailyrun_api_client_lowlevel.Configuration(
             host=self.config.daily_run_host_url.rstrip("/"),
-            access_token=self.config.access_token
+            access_token=self.config.access_token,
+            ssl_ca_cert=self.config.ssl_ca_cert,
         )
-
-        if isinstance(verify, str):
-            configuration.verify_ssl = True
-            configuration.ssl_ca_cert = verify
-        else:
-            configuration.verify_ssl = bool(verify)
-
+        configuration.verify_ssl = self.config.verify_ssl
         return configuration
 
     def _call(
@@ -523,7 +522,6 @@ class DailyRun():
         operation: str,
         accepted_scopes: Tuple[str, ...],
         path: str,
-        verify: Union[bool, str] = True,
         additional_ok_statuses: Tuple[int, ...] = (),
         **kwargs: Any,
     ) -> Any:
@@ -544,7 +542,7 @@ class DailyRun():
         self.config._check_and_refresh_token()
         self._check_authorisation(accepted_scopes)
 
-        configuration = self._api_configuration(verify=verify)
+        configuration = self._api_configuration()
 
         try:
             with comodash_dailyrun_api_client_lowlevel.ApiClient(
@@ -577,8 +575,6 @@ class DailyRun():
         elif isinstance(payload, dict):
             if "dailyRun" in payload:
                 flag_value = payload["dailyRun"]
-            elif "DailyRun" in payload:
-                flag_value = payload["DailyRun"]
             else:
                 raise ValueError("DailyRun flag not found in response payload.")
         else:
@@ -613,7 +609,7 @@ class DailyRun():
         payload = self._call(
             "get_daily_run_enabled",
             DailyRun.ENABLED_READ_SCOPES,
-            "/dailyRun/dailyRun_enabled"
+            "/dailyRun/dailyRun_enabled",
         )
         return DailyRun._read_daily_run_flag(payload)
 
@@ -725,10 +721,7 @@ class DailyRun():
             **parameters
         )
 
-    def start_execution(
-        self,
-        verify: Union[bool, str] = True
-    ) -> StartExecutionResponse:
+    def start_execution(self) -> StartExecutionResponse:
         """
         Calls ``POST /dailyRun/start_execution`` to start ``DailyETLPipeline`` for
         the current Dash organisation.
@@ -745,13 +738,6 @@ class DailyRun():
         case the API responds with ``409`` and a payload where ``started`` is
         False, and this method returns that payload rather than raising, so
         callers should inspect ``started`` to tell the two outcomes apart.
-
-        Parameters
-        ----------
-        verify : bool | str, default True
-            Follows the `requests` convention. Set to False to disable TLS
-            certificate verification (not recommended for production), or to a
-            path to a CA bundle to use for verification.
 
         Returns
         -------
@@ -776,7 +762,6 @@ class DailyRun():
                 "start_daily_run_execution",
                 DailyRun.EXECUTION_WRITE_SCOPES,
                 "/dailyRun/start_execution",
-                verify=verify,
                 additional_ok_statuses=(409,)
             ),
         )

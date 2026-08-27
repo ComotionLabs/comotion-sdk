@@ -5,7 +5,7 @@ import os
 from .auth import Auth, KeyringCredentialCache
 from comotion.dash import DashConfig
 from comotion.auth import Auth
-from comotion.dash import Query, Load, Migration
+from comotion.dash import Query, Load, Migration, DailyRun
 from comotion.auth import UnAuthenticatedException
 import comotion
 
@@ -220,7 +220,7 @@ def query_info(config, query_id):
     query_info = query.get_query_info()
     result = query_info.status.state
     if (hasattr(query_info.status,'state_change_reason') and query_info.status.state_change_reason is not None):
-        result = f"{result} - {query_info.status.state_change_reason}"
+        result = result + ' - ' + query_info.status.state_change_reason
     click.echo(result)
 
 
@@ -529,7 +529,92 @@ def migration_status(
     click.echo(f"Full migration process: {migration.to_dict().get('full_migration_status','Not Run')}")
     if "full_migration_message" in migration.to_dict():
         click.echo(f"Full migration message: {migration.to_dict().get('full_migration_message','None')}")
-    
+
+
+def _dash_config_from_cli(config, dns_suffix="comodash.io"):
+    return DashConfig(
+        Auth(config.orgname, issuer=config.issuer),
+        dns_suffix=dns_suffix,
+    )
+
+
+DAILY_RUN_DNS_SUFFIX_OPTION = click.option(
+    "--dns-suffix",
+    default="comodash.io",
+    show_default=True,
+    help="Domain suffix for the DailyRun API host (e.g. comodash.com for us-east-1).",
+)
+
+
+@dash.command("daily-run-enabled")
+@DAILY_RUN_DNS_SUFFIX_OPTION
+@pass_config
+def daily_run_enabled(config, dns_suffix):
+    """Get whether the daily run is enabled for the organisation."""
+    enabled = DailyRun(_dash_config_from_cli(config, dns_suffix)).get_daily_run_enabled()
+    click.echo(enabled)
+
+
+@dash.command("update-daily-run-enabled")
+@click.option("--enable", is_flag=True, help="Enable the daily run.")
+@click.option("--disable", is_flag=True, help="Disable the daily run.")
+@DAILY_RUN_DNS_SUFFIX_OPTION
+@pass_config
+def update_daily_run_enabled(config, enable, disable, dns_suffix):
+    """Enable or disable the daily run for the organisation."""
+    if enable and disable:
+        raise click.BadParameter("Specify only one of --enable or --disable.")
+    if not enable and not disable:
+        raise click.BadParameter("Specify --enable or --disable.")
+    enabled = DailyRun(
+        _dash_config_from_cli(config, dns_suffix)
+    ).update_daily_run_enabled(enable=enable)
+    click.echo(enabled)
+
+
+@dash.command("daily-run-execution-info")
+@click.option(
+    "--mode",
+    type=click.Choice(["list", "latest", "last_successful"]),
+    default="list",
+    help="Which view of execution history to return.",
+)
+@click.option("--limit", type=int, help="Maximum number of executions to consider.")
+@DAILY_RUN_DNS_SUFFIX_OPTION
+@pass_config
+def daily_run_execution_info(config, mode, limit, dns_suffix):
+    """Get Daily ETL pipeline execution information."""
+    mode_map = {
+        "list": DailyRun.GetDailyRunExecutionMode.LIST,
+        "latest": DailyRun.GetDailyRunExecutionMode.LATEST,
+        "last_successful": DailyRun.GetDailyRunExecutionMode.LAST_SUCCESSFUL,
+    }
+    result = DailyRun(_dash_config_from_cli(config, dns_suffix)).get_execution_info(
+        mode=mode_map[mode],
+        limit=limit,
+    )
+    if result is None:
+        click.echo("null")
+    else:
+        click.echo(json.dumps(result.to_dict(), indent=2))
+
+
+@dash.command("start-daily-run-execution")
+@click.confirmation_option(prompt="Start a Daily ETL pipeline run?")
+@DAILY_RUN_DNS_SUFFIX_OPTION
+@pass_config
+def start_daily_run_execution(config, dns_suffix):
+    """Start a Daily ETL pipeline execution for the organisation."""
+    response = DailyRun(_dash_config_from_cli(config, dns_suffix)).start_execution()
+    if response.started:
+        click.echo(f"Started {response.execution_name}")
+    else:
+        click.echo(response.message)
+        if response.running_execution is not None:
+            click.echo(
+                f"Running execution: {response.running_execution.name} "
+                f"({response.running_execution.status})"
+            )
 
 
 

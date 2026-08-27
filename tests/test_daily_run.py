@@ -59,6 +59,8 @@ def make_config(claims=None):
     config = MagicMock(spec=DashConfig)
     config.daily_run_host_url = "https://api.testorg.comodash.io/superset"
     config.access_token = make_token(FULL_ACCESS_CLAIMS if claims is None else claims)
+    config.verify_ssl = True
+    config.ssl_ca_cert = None
     return config
 
 
@@ -214,6 +216,28 @@ class TestGetDailyRunEnabled(unittest.TestCase):
             "https://api.testorg.comodash.io/superset"
         )
 
+    def test_uses_dash_config_verify_ssl(self, mock_api_class):
+        mock_api_class.return_value.get_daily_run_enabled.return_value = (
+            DailyRunEnabled(dailyRun=True)
+        )
+        config = make_config()
+        config.verify_ssl = False
+        DailyRun(config).get_daily_run_enabled()
+        api_client = mock_api_class.call_args[0][0]
+        self.assertFalse(api_client.configuration.verify_ssl)
+
+    def test_uses_dash_config_ssl_ca_cert(self, mock_api_class):
+        mock_api_class.return_value.get_daily_run_enabled.return_value = (
+            DailyRunEnabled(dailyRun=True)
+        )
+        config = make_config()
+        config.ssl_ca_cert = "/path/to/ca-bundle.pem"
+        DailyRun(config).get_daily_run_enabled()
+        api_client = mock_api_class.call_args[0][0]
+        self.assertEqual(
+            api_client.configuration.ssl_ca_cert, "/path/to/ca-bundle.pem"
+        )
+
 
 @patch("comotion.dash.DailyRunApi")
 class TestGetExecutionInfo(unittest.TestCase):
@@ -337,27 +361,6 @@ class TestStartExecution(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             DailyRun(make_config(EXECUTION_WRITE_CLAIMS)).start_execution()
-
-    def test_verify_false_disables_tls_verification(self, mock_api_class):
-        mock_api_class.return_value.start_daily_run_execution.return_value = (
-            StartExecutionResponse(started=True)
-        )
-        DailyRun(make_config(EXECUTION_WRITE_CLAIMS)).start_execution(verify=False)
-        api_client = mock_api_class.call_args[0][0]
-        self.assertFalse(api_client.configuration.verify_ssl)
-
-    def test_verify_path_is_used_as_ca_bundle(self, mock_api_class):
-        mock_api_class.return_value.start_daily_run_execution.return_value = (
-            StartExecutionResponse(started=True)
-        )
-        DailyRun(make_config(EXECUTION_WRITE_CLAIMS)).start_execution(
-            verify="/path/to/ca-bundle.pem"
-        )
-        api_client = mock_api_class.call_args[0][0]
-        self.assertTrue(api_client.configuration.verify_ssl)
-        self.assertEqual(
-            api_client.configuration.ssl_ca_cert, "/path/to/ca-bundle.pem"
-        )
 
 
 @patch("comotion.dash.DailyRunApi")

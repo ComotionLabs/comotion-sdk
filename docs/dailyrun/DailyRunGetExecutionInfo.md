@@ -1,4 +1,4 @@
-# DailyRunGetExectionInfo
+# DailyRunGetExecutionInfo
 
 Helper for retrieving execution status information for the `DailyETLPipeline` associated with the current Dash organisation.
 
@@ -18,7 +18,7 @@ The helper checks the scope and audience before sending the request and raises `
 
 ## HTTP details
 
-- **Base URL**: `https://api.{orgname}.comodash.io/superset`
+- **Base URL**: `https://api.{orgname}.comodash.io/superset` (or `comodash.com` via `DashConfig(..., dns_suffix="comodash.com")`)
 - **Method**: `GET`
 - **Path**: `/dailyRun/execution_status`
 - **Headers**:

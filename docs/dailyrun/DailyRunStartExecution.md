@@ -1,4 +1,4 @@
-# DailyRunStartExection
+# DailyRunStartExecution
 
 Helper for starting a `DailyETLPipeline` execution for the current Dash organisation.
 
@@ -20,7 +20,7 @@ The helper checks the scope and audience before sending the request and raises `
 
 ## HTTP details
 
-- **Base URL**: `https://api.{orgname}.comodash.io/superset`
+- **Base URL**: `https://api.{orgname}.comodash.io/superset` (or `comodash.com` via `DashConfig(..., dns_suffix="comodash.com")`)
 - **Method**: `POST`
 - **Path**: `/dailyRun/start_execution`
 - **Headers**:
@@ -83,14 +83,10 @@ payload = response.json()
 print(payload)
 ```
 
-### Parameters
+### TLS
 
-`verify` – `bool | str`, default `True`  
-Follows the `requests` convention and is mapped onto the generated client's TLS settings:
-
-- `True` – enable TLS certificate verification using system defaults (recommended for production)
-- `False` – disable TLS certificate verification (not recommended for production)
-- `"/path/to/ca-bundle.pem"` – use a specific CA bundle for verification
+TLS verification follows ``DashConfig``, the same as ``Query`` and ``Load``. Set
+``config.verify_ssl`` or ``config.ssl_ca_cert`` before creating ``DailyRun(config)``.
 
 ### Return type
 

@@ -25,7 +25,8 @@ Endpoint summary
 ################
 
 All four endpoints are served from the per-organisation frontend API at
-``https://api.{orgname}.comodash.io/superset``:
+``https://api.{orgname}.comodash.io/superset`` (use ``dns_suffix="comodash.com"``
+on :class:`DashConfig <comotion.dash.DashConfig>` for us-east-1).
 
 .. list-table::
    :header-rows: 1
@@ -58,8 +59,8 @@ generated client package, ``comodash_dailyrun_api_client_lowlevel``.
 :class:`DailyRun <comotion.dash.DailyRun>` is a thin hand-written layer over that
 generated client. It holds the behaviour that an OpenAPI specification cannot
 express: the up-front scope and audience check, treating the ``409`` from
-:meth:`~comotion.dash.DailyRun.start_execution` as a normal result, the ``verify``
-argument, and the ``GetDailyRunExecutionMode`` enum. Because that layer lives in
+:meth:`~comotion.dash.DailyRun.start_execution` as a normal result, and the
+``GetDailyRunExecutionMode`` enum. Because that layer lives in
 ``comotion/dash.py`` rather than inside the generated package, regenerating the
 client never discards it.
 
@@ -163,6 +164,36 @@ Or as a user, after running ``comotion authenticate`` on the command line:
 
    config = DashConfig(auth=auth)
    daily_run = DailyRun(config)
+
+For a US organisation in us-east-1:
+
+.. code-block:: python
+
+   config = DashConfig(auth=auth, dns_suffix="comodash.com")
+   daily_run = DailyRun(config)
+
+
+CLI
+###
+
+The DailyRun helper is also available from the ``comotion`` command line under
+``comotion dash``. Authenticate first with ``comotion authenticate``, then use
+``-o <orgname>`` to select the organisation.
+
+.. code-block:: bash
+
+   comotion -o orgname dash daily-run-enabled
+   comotion -o orgname dash update-daily-run-enabled --enable
+   comotion -o orgname dash update-daily-run-enabled --disable
+   comotion -o orgname dash daily-run-execution-info --mode list
+   comotion -o orgname dash daily-run-execution-info --mode latest
+   comotion -o orgname dash daily-run-execution-info --mode last_successful --limit 10
+   comotion -o orgname dash start-daily-run-execution
+   comotion -o orgname dash daily-run-enabled --dns-suffix comodash.com
+
+``start-daily-run-execution`` prompts for confirmation before starting a run.
+Pass ``--yes`` to skip the prompt. Use ``--dns-suffix comodash.com`` for
+us-east-1 organisations (default is ``comodash.io``).
 
 
 Checking whether the daily run is enabled
@@ -444,15 +475,9 @@ When a run is already in progress (``409``):
 As with ``get_execution_info``, ``.to_dict()`` returns the original camelCase
 JSON shape.
 
-TLS verification
-****************
-
-The ``verify`` argument follows the :mod:`requests` convention and is mapped onto
-the generated client's TLS settings:
-
-* ``True`` – enable TLS certificate verification using system defaults (recommended)
-* ``False`` – disable TLS certificate verification (not recommended for production)
-* ``"/path/to/ca-bundle.pem"`` – use a specific CA bundle for verification
+TLS verification uses the same ``DashConfig`` settings as ``Query`` and
+``Load``: set ``verify_ssl`` or ``ssl_ca_cert`` on the config passed to
+:class:`DailyRun <comotion.dash.DailyRun>`.
 
 HTTP details
 ************
@@ -477,8 +502,8 @@ helper, live in ``docs/dailyrun/``:
 
 * ``DailyRunGetDailyRunEnabled.md``
 * ``DailyRunUpdateDailyRunEnabled.md``
-* ``DailyRunGetExectionInfo.md``
-* ``DailyRunStartExection.md``
+* ``DailyRunGetExecutionInfo.md``
+* ``DailyRunStartExecution.md``
 
 The generated client's own reference documentation is in
 ``src/comodash_dailyrun_api_client_lowlevel/docs/``, and the specification it is
