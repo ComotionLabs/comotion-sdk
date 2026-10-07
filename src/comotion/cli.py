@@ -6,6 +6,7 @@ from .auth import Auth, KeyringCredentialCache
 from comotion.dash import DashConfig
 from comotion.auth import Auth
 from comotion.dash import Query, Load, Migration, DailyRun
+from comotion.dash import DAILY_RUN_DNS_SUFFIXES, DEFAULT_DNS_SUFFIX
 from comotion.auth import UnAuthenticatedException
 import comotion
 
@@ -531,7 +532,7 @@ def migration_status(
         click.echo(f"Full migration message: {migration.to_dict().get('full_migration_message','None')}")
 
 
-def _dash_config_from_cli(config, dns_suffix="comodash.io"):
+def _dash_config_from_cli(config, dns_suffix):
     return DashConfig(
         Auth(config.orgname, issuer=config.issuer),
         dns_suffix=dns_suffix,
@@ -540,9 +541,10 @@ def _dash_config_from_cli(config, dns_suffix="comodash.io"):
 
 DAILY_RUN_DNS_SUFFIX_OPTION = click.option(
     "--dns-suffix",
-    default="comodash.io",
+    type=click.Choice(DAILY_RUN_DNS_SUFFIXES),
+    default=DEFAULT_DNS_SUFFIX,
     show_default=True,
-    help="Domain suffix for the DailyRun API host (e.g. comodash.com for us-east-1).",
+    help="Domain suffix for the DailyRun API host (comodash.com for us-east-1).",
 )
 
 
@@ -552,24 +554,26 @@ DAILY_RUN_DNS_SUFFIX_OPTION = click.option(
 def daily_run_enabled(config, dns_suffix):
     """Get whether the daily run is enabled for the organisation."""
     enabled = DailyRun(_dash_config_from_cli(config, dns_suffix)).get_daily_run_enabled()
-    click.echo(enabled)
+    click.echo(json.dumps(enabled))
 
 
 @dash.command("update-daily-run-enabled")
-@click.option("--enable", is_flag=True, help="Enable the daily run.")
-@click.option("--disable", is_flag=True, help="Disable the daily run.")
+@click.option(
+    "--enable/--disable",
+    "enabled",
+    default=None,
+    help="Enable or disable the daily run.",
+)
 @DAILY_RUN_DNS_SUFFIX_OPTION
 @pass_config
-def update_daily_run_enabled(config, enable, disable, dns_suffix):
+def update_daily_run_enabled(config, enabled, dns_suffix):
     """Enable or disable the daily run for the organisation."""
-    if enable and disable:
-        raise click.BadParameter("Specify only one of --enable or --disable.")
-    if not enable and not disable:
-        raise click.BadParameter("Specify --enable or --disable.")
-    enabled = DailyRun(
+    if enabled is None:
+        raise click.UsageError("Specify --enable or --disable.")
+    stored = DailyRun(
         _dash_config_from_cli(config, dns_suffix)
-    ).update_daily_run_enabled(enable=enable)
-    click.echo(enabled)
+    ).update_daily_run_enabled(enabled=enabled)
+    click.echo(json.dumps(stored))
 
 
 @dash.command("daily-run-execution-info")
@@ -579,7 +583,11 @@ def update_daily_run_enabled(config, enable, disable, dns_suffix):
     default="list",
     help="Which view of execution history to return.",
 )
-@click.option("--limit", type=int, help="Maximum number of executions to consider.")
+@click.option(
+    "--limit",
+    type=click.IntRange(1, 200),
+    help="Maximum number of executions to consider (1-200).",
+)
 @DAILY_RUN_DNS_SUFFIX_OPTION
 @pass_config
 def daily_run_execution_info(config, mode, limit, dns_suffix):
@@ -593,10 +601,7 @@ def daily_run_execution_info(config, mode, limit, dns_suffix):
         mode=mode_map[mode],
         limit=limit,
     )
-    if result is None:
-        click.echo("null")
-    else:
-        click.echo(json.dumps(result.to_dict(), indent=2))
+    click.echo(json.dumps(result.to_dict() if result is not None else None, indent=2))
 
 
 @dash.command("start-daily-run-execution")
@@ -604,17 +609,14 @@ def daily_run_execution_info(config, mode, limit, dns_suffix):
 @DAILY_RUN_DNS_SUFFIX_OPTION
 @pass_config
 def start_daily_run_execution(config, dns_suffix):
-    """Start a Daily ETL pipeline execution for the organisation."""
+    """
+    Start a Daily ETL pipeline execution for the organisation.
+
+    Prints the response as JSON. "started" is false when a run is already in
+    progress.
+    """
     response = DailyRun(_dash_config_from_cli(config, dns_suffix)).start_execution()
-    if response.started:
-        click.echo(f"Started {response.execution_name}")
-    else:
-        click.echo(response.message)
-        if response.running_execution is not None:
-            click.echo(
-                f"Running execution: {response.running_execution.name} "
-                f"({response.running_execution.status})"
-            )
+    click.echo(json.dumps(response.to_dict(), indent=2))
 
 
 

@@ -86,6 +86,11 @@ import random
 import string
 from inspect import signature, Parameter
 
+# The access token is sent to the DailyRun host, so only Comotion domains are
+# allowed: comodash.io (eu-west-1) and comodash.com (us-east-1).
+DAILY_RUN_DNS_SUFFIXES = ("comodash.io", "comodash.com")
+DEFAULT_DNS_SUFFIX = DAILY_RUN_DNS_SUFFIXES[0]
+
 class DashConfig(comodash_api_client_lowlevel.Configuration):
     """
     Object containing configuration information for Dash API
@@ -96,16 +101,25 @@ class DashConfig(comodash_api_client_lowlevel.Configuration):
         comotion.Auth object holding information about authentication
     zone: str, optional
         The zone to use for the API. If not provided, defaults to None, i.e. the main zone.
+    dns_suffix: str, optional
+        Domain suffix for the DailyRun API host. ``comodash.io`` (default) for
+        eu-west-1 or ``comodash.com`` for us-east-1. Does not affect the
+        ``/v2`` host.
     """
 
     def __init__(
         self,
         auth: Auth,
         zone: str = None,
-        dns_suffix: str = "comodash.io",
+        dns_suffix: str = DEFAULT_DNS_SUFFIX,
     ):
         if not(isinstance(auth, Auth)):
             raise TypeError("auth must be of type comotion.Auth")
+        if dns_suffix not in DAILY_RUN_DNS_SUFFIXES:
+            raise ValueError(
+                f"dns_suffix must be one of {', '.join(DAILY_RUN_DNS_SUFFIXES)}, "
+                f"got {dns_suffix!r}"
+            )
 
         self.auth = auth
         self.orgname = auth.orgname

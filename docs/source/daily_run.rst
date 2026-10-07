@@ -193,7 +193,16 @@ The DailyRun helper is also available from the ``comotion`` command line under
 
 ``start-daily-run-execution`` prompts for confirmation before starting a run.
 Pass ``--yes`` to skip the prompt. Use ``--dns-suffix comodash.com`` for
-us-east-1 organisations (default is ``comodash.io``).
+us-east-1 organisations (default is ``comodash.io``). Only ``comodash.io`` and
+``comodash.com`` are accepted, both here and on
+:class:`DashConfig <comotion.dash.DashConfig>`, because your access token is
+sent to that host.
+
+``--limit`` accepts 1 to 200. Every command prints JSON so the output can be
+piped into other tools: the enabled commands print ``true`` or ``false``,
+``daily-run-execution-info`` prints the execution status (``null`` when there
+is none), and ``start-daily-run-execution`` prints the start response, where
+``started`` is ``false`` if a run was already in progress.
 
 
 Checking whether the daily run is enabled
