@@ -1088,6 +1088,27 @@ class TestDashConfig(unittest.TestCase):
 
     def test_init_with_valid_auth(self):
         self.assertEqual(self.config.auth, self.mock_auth)
+        self.assertEqual(
+            self.config.daily_run_host_url,
+            "https://api.test_org.comodash.io/superset",
+        )
+
+    def test_daily_run_host_url_uses_dns_suffix(self):
+        config = DashConfig(auth=self.mock_auth, dns_suffix="comodash.com")
+        self.assertEqual(
+            config.daily_run_host_url,
+            "https://api.test_org.comodash.com/superset",
+        )
+
+    def test_dns_suffix_rejects_non_comotion_domain(self):
+        for dns_suffix in ("evil.example", "comodash.io.evil.example", ""):
+            with self.subTest(dns_suffix=dns_suffix):
+                with self.assertRaises(ValueError):
+                    DashConfig(auth=self.mock_auth, dns_suffix=dns_suffix)
+
+    def test_dns_suffix_does_not_change_v2_host(self):
+        config = DashConfig(auth=self.mock_auth, dns_suffix="comodash.com")
+        self.assertEqual(config.host, "https://test_org.api.comodash.io/v2")
 
     @patch('jwt.decode')
     def test_check_and_refresh_token_no_token(self, mock_jwt_decode):

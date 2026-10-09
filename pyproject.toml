@@ -20,3 +20,57 @@ testpaths = [
     "tests",
     "**/test"
 ]
+
+# Type checking for editors (nvim basedpyright, etc.).
+#
+# Only analyse hand-written SDK code. The OpenAPI-generated client packages are
+# excluded — they are regenerated from the swagger files and are not kept
+# type-clean.
+#
+# Start nvim from `pipenv shell` so basedpyright inherits VIRTUAL_ENV and can
+# resolve installed packages (pydantic, jwt, pandas, ...).
+[tool.basedpyright]
+include = [
+    "src/comotion",
+    "tests",
+]
+exclude = [
+    "src/comodash_api_client_lowlevel",
+    "src/comodash_dailyrun_api_client_lowlevel",
+    "tests/test_integration_tests.py",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "build",
+]
+extraPaths = ["src"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+useLibraryCodeForTypes = true
+reportMissingImports = "error"
+reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"
+reportUnknownParameterType = "none"
+reportMissingParameterType = "none"
+reportUnusedCallResult = "none"
+reportAny = "none"
+reportMissingTypeStubs = "none"
+reportUntypedFunctionDecorator = "none"
+reportImplicitStringConcatenation = "none"
+reportUnnecessaryTypeIgnoreComment = "none"
+reportUnsafeMultipleInheritance = "none"
+reportMissingSuperCall = "none"
+reportUninitializedInstanceVariable = "none"
+reportExplicitAny = "none"
+reportGeneralTypeIssues = "warning"
+reportOptionalMemberAccess = "warning"
+reportReturnType = "warning"
+reportArgumentType = "warning"
+reportAttributeAccessIssue = "warning"
+reportPossiblyUnboundVariable = "warning"
+reportCallIssue = "warning"
+reportAssignmentType = "warning"
+reportOperatorIssue = "warning"
+reportIndexIssue = "warning"
+reportInvalidTypeForm = "error"
+reportUndefinedVariable = "error"
+reportUnboundVariable = "error"

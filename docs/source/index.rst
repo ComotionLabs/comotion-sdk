@@ -13,6 +13,7 @@ This documentation helps you get set up on and use the python Comotion SDK.  Thi
 
    comotion.dash
    comotion.auth
+   daily_run
 
 This is an open source project, and can be `contributed to <https://github.com/ComotionLabs/comotion-sdk>`_ by the community.
 
