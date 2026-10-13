@@ -235,7 +235,8 @@
 <span class="kn">import</span> <span class="nn">requests</span>
 <span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">cast</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
 <span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">join</span><span class="p">,</span> <span class="n">basename</span><span class="p">,</span> <span class="n">isdir</span><span class="p">,</span> <span class="n">isfile</span><span class="p">,</span> <span class="n">splitext</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">listdir</span>
 <span class="kn">import</span> <span class="nn">logging</span>
@@ -261,7 +262,7 @@
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">uuid</span>
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="nn">cx_Oracle</span>
+    <span class="kn">import</span> <span class="nn">cx_Oracle</span>  <span class="c1"># type: ignore[import-unresolved]</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="n">cx_Oracle</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Optional dependency 'cx_Oracle' is not installed; Oracle-related features are unavailable."</span><span class="p">)</span>
@@ -277,6 +278,7 @@
     <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Optional dependency 'tqdm' is not installed; progress bars are unavailable."</span><span class="p">)</span>
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
 <span class="kn">from</span> <span class="nn">comotion</span> <span class="kn">import</span> <span class="n">Auth</span>
+<span class="kn">from</span> <span class="nn">comotion.auth</span> <span class="kn">import</span> <span class="n">UnAuthenticatedException</span>
 <span class="kn">import</span> <span class="nn">comodash_api_client_lowlevel</span>
 <span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel</span> <span class="kn">import</span> <span class="n">QueriesApi</span><span class="p">,</span> <span class="n">LoadsApi</span><span class="p">,</span> <span class="n">MigrationsApi</span>
 <span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.query_text</span> <span class="kn">import</span> <span class="n">QueryText</span>
@@ -291,10 +293,34 @@
 <span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.load</span> <span class="kn">import</span> <span class="n">Load</span>
 <span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.models.query_id</span> <span class="kn">import</span> <span class="n">QueryId</span>
 <span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.rest</span> <span class="kn">import</span> <span class="n">ApiException</span>
+<span class="kn">from</span> <span class="nn">comodash_api_client_lowlevel.exceptions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BadRequestException</span><span class="p">,</span>
+    <span class="n">NotFoundException</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># The DailyRun endpoints are served by a different API gateway to the /v2 Dash</span>
+<span class="c1"># API, so they have their own spec and their own generated client. Its names</span>
+<span class="c1"># collide with the /v2 client's, hence the aliases.</span>
+<span class="kn">import</span> <span class="nn">comodash_dailyrun_api_client_lowlevel</span>
+<span class="kn">from</span> <span class="nn">comodash_dailyrun_api_client_lowlevel</span> <span class="kn">import</span> <span class="n">DailyRunApi</span>
+<span class="kn">from</span> <span class="nn">comodash_dailyrun_api_client_lowlevel.models.daily_run_enabled</span> <span class="kn">import</span> <span class="n">DailyRunEnabled</span>
+<span class="kn">from</span> <span class="nn">comodash_dailyrun_api_client_lowlevel.models.execution_status</span> <span class="kn">import</span> <span class="n">ExecutionStatus</span>
+<span class="kn">from</span> <span class="nn">comodash_dailyrun_api_client_lowlevel.models.start_execution_response</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">StartExecutionResponse</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">comodash_dailyrun_api_client_lowlevel.exceptions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ApiException</span> <span class="k">as</span> <span class="n">DailyRunApiException</span><span class="p">,</span>
+    <span class="n">ForbiddenException</span> <span class="k">as</span> <span class="n">DailyRunForbiddenException</span><span class="p">,</span>
+    <span class="n">UnauthorizedException</span> <span class="k">as</span> <span class="n">DailyRunUnauthorizedException</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">concurrent.futures</span> <span class="kn">import</span> <span class="n">ThreadPoolExecutor</span><span class="p">,</span> <span class="n">as_completed</span>
 <span class="kn">import</span> <span class="nn">random</span> 
 <span class="kn">import</span> <span class="nn">string</span>
 <span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">signature</span><span class="p">,</span> <span class="n">Parameter</span>
+
+<span class="c1"># The access token is sent to the DailyRun host, so only Comotion domains are</span>
+<span class="c1"># allowed: comodash.io (eu-west-1) and comodash.com (us-east-1).</span>
+<span class="n">DAILY_RUN_DNS_SUFFIXES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"comodash.io"</span><span class="p">,</span> <span class="s2">"comodash.com"</span><span class="p">)</span>
+<span class="n">DEFAULT_DNS_SUFFIX</span> <span class="o">=</span> <span class="n">DAILY_RUN_DNS_SUFFIXES</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 <div class="viewcode-block" id="DashConfig"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DashConfig">[docs]</a><span class="k">class</span> <span class="nc">DashConfig</span><span class="p">(</span><span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">Configuration</span><span class="p">):</span>
     <span class="sd">"""</span>
@@ -306,17 +332,32 @@
 <span class="sd">        comotion.Auth object holding information about authentication</span>
 <span class="sd">    zone: str, optional</span>
 <span class="sd">        The zone to use for the API. If not provided, defaults to None, i.e. the main zone.</span>
+<span class="sd">    dns_suffix: str, optional</span>
+<span class="sd">        Domain suffix for the DailyRun API host. ``comodash.io`` (default) for</span>
+<span class="sd">        eu-west-1 or ``comodash.com`` for us-east-1. Does not affect the</span>
+<span class="sd">        ``/v2`` host.</span>
 <span class="sd">    """</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">auth</span><span class="p">:</span> <span class="n">Auth</span><span class="p">,</span> <span class="n">zone</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">auth</span><span class="p">:</span> <span class="n">Auth</span><span class="p">,</span>
+        <span class="n">zone</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dns_suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_DNS_SUFFIX</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">Auth</span><span class="p">)):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"auth must be of type comotion.Auth"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dns_suffix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DAILY_RUN_DNS_SUFFIXES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"dns_suffix must be one of {', '.join(DAILY_RUN_DNS_SUFFIXES)}, "</span>
+                <span class="sa">f</span><span class="s2">"got </span><span class="si">{dns_suffix!r}</span><span class="s2">"</span>
+            <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">auth</span> <span class="o">=</span> <span class="n">auth</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">orgname</span> <span class="o">=</span> <span class="n">auth</span><span class="o">.</span><span class="n">orgname</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">zone</span> <span class="o">=</span> <span class="n">zone</span>
 
         <span class="n">host_url</span> <span class="o">=</span> <span class="s1">'https://</span><span class="si">%s</span><span class="s1">.api.comodash.io/v2'</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orgname</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">zone</span> <span class="k">else</span> <span class="s1">'https://</span><span class="si">%s</span><span class="s1">.</span><span class="si">%s</span><span class="s1">.api.comodash.io/v2'</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">zone</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">orgname</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">daily_run_host_url</span> <span class="o">=</span> <span class="s1">'https://api.</span><span class="si">%s</span><span class="s1">.</span><span class="si">%s</span><span class="s1">/superset'</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orgname</span><span class="p">,</span> <span class="n">dns_suffix</span><span class="p">)</span>
         
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">host</span><span class="o">=</span><span class="n">host_url</span><span class="p">,</span>
@@ -421,7 +462,7 @@
                 <span class="n">query_text_model</span> <span class="o">=</span> <span class="n">QueryText</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">query_text</span><span class="p">)</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">query_id_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">run_query</span><span class="p">(</span><span class="n">query_text_model</span><span class="p">)</span> <span class="c1"># noqa</span>
-                <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">BadRequestException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
+                <span class="k">except</span> <span class="n">BadRequestException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">exp</span><span class="o">.</span><span class="n">body</span><span class="p">)[</span><span class="s1">'message'</span><span class="p">])</span>
                     
                 <span class="bp">self</span><span class="o">.</span><span class="n">query_id</span> <span class="o">=</span> <span class="n">query_id_model</span><span class="o">.</span><span class="n">query_id</span>
@@ -480,7 +521,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">refresh_api_instance</span><span class="p">()</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">get_query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">)</span>
-        <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">NotFoundException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
+        <span class="k">except</span> <span class="n">NotFoundException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"query_id cannot be found"</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Query.state"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Query.state">[docs]</a>    <span class="k">def</span> <span class="nf">state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -582,6 +623,393 @@
         <span class="sd">""" Stop the query"""</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh_api_instance</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_api_instance</span><span class="o">.</span><span class="n">stop_query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query_id</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="DailyRun"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DailyRun">[docs]</a><span class="k">class</span> <span class="nc">DailyRun</span><span class="p">():</span>
+    <span class="sd">"""</span>
+<span class="sd">    Helper class for the ``/dailyRun`` endpoints of the Dash frontend API.</span>
+
+<span class="sd">    The endpoints are served from the per-organisation frontend API</span>
+<span class="sd">    (``https://api.&lt;orgname&gt;.comodash.io/superset`` by default) and are protected</span>
+<span class="sd">    by a JWT authorizer. The access token must be issued for the ``dash_api`` audience</span>
+<span class="sd">    and carry a scope appropriate to the operation. This class checks both up</span>
+<span class="sd">    front so that a missing entitlement produces an actionable error rather than</span>
+<span class="sd">    an opaque ``403`` from API Gateway.</span>
+
+<span class="sd">    Four scopes in two pairs (read/write per concern):</span>
+
+<span class="sd">    * ``dailyrun:execution:read`` / ``dailyrun:execution:write`` - inspect or</span>
+<span class="sd">      trigger Daily ETL pipeline runs</span>
+<span class="sd">    * ``dailyrun:enabled:read`` / ``dailyrun:enabled:write`` - inspect or</span>
+<span class="sd">      change whether the daily run is enabled</span>
+
+<span class="sd">    All four are independent: each endpoint accepts exactly one scope, so a</span>
+<span class="sd">    write scope does not also grant the matching read.</span>
+
+<span class="sd">    Superset API access still requires ``superset:user`` separately.</span>
+
+<span class="sd">    Available endpoints:</span>
+
+<span class="sd">    * ``GET  /dailyRun/dailyRun_enabled``  -&gt; :meth:`get_daily_run_enabled`</span>
+<span class="sd">    * ``POST /dailyRun/dailyRun_enabled``  -&gt; :meth:`update_daily_run_enabled`</span>
+<span class="sd">    * ``GET  /dailyRun/execution_status``  -&gt; :meth:`get_execution_info`</span>
+<span class="sd">    * ``POST /dailyRun/start_execution``   -&gt; :meth:`start_execution`</span>
+
+<span class="sd">    HTTP transport and payload models come from the generated</span>
+<span class="sd">    ``comodash_dailyrun_api_client_lowlevel`` package. This class holds the</span>
+<span class="sd">    behaviour that cannot be expressed in the OpenAPI specification, so that</span>
+<span class="sd">    regenerating the client never discards it.</span>
+<span class="sd">    """</span>
+
+    <span class="n">EXECUTION_READ_SCOPE</span> <span class="o">=</span> <span class="s2">"dailyrun:execution:read"</span>
+    <span class="n">EXECUTION_WRITE_SCOPE</span> <span class="o">=</span> <span class="s2">"dailyrun:execution:write"</span>
+    <span class="n">ENABLED_READ_SCOPE</span> <span class="o">=</span> <span class="s2">"dailyrun:enabled:read"</span>
+    <span class="n">ENABLED_WRITE_SCOPE</span> <span class="o">=</span> <span class="s2">"dailyrun:enabled:write"</span>
+
+    <span class="c1"># Scopes accepted for each operation, mirroring AuthorizationScopes on the</span>
+    <span class="c1"># API Gateway routes. Each route accepts exactly one scope: a write scope</span>
+    <span class="c1"># does not imply the matching read scope.</span>
+    <span class="n">EXECUTION_READ_SCOPES</span> <span class="o">=</span> <span class="p">(</span><span class="n">EXECUTION_READ_SCOPE</span><span class="p">,)</span>
+    <span class="n">EXECUTION_WRITE_SCOPES</span> <span class="o">=</span> <span class="p">(</span><span class="n">EXECUTION_WRITE_SCOPE</span><span class="p">,)</span>
+    <span class="n">ENABLED_READ_SCOPES</span> <span class="o">=</span> <span class="p">(</span><span class="n">ENABLED_READ_SCOPE</span><span class="p">,)</span>
+    <span class="n">ENABLED_WRITE_SCOPES</span> <span class="o">=</span> <span class="p">(</span><span class="n">ENABLED_WRITE_SCOPE</span><span class="p">,)</span>
+
+    <span class="n">REQUIRED_AUDIENCE</span> <span class="o">=</span> <span class="s2">"dash_api"</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">DashConfig</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        config : DashConfig</span>
+<span class="sd">            Object of type DashConfig including configuration details and authentication.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        TypeError</span>
+<span class="sd">            If config is not of type DashConfig</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">DashConfig</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"config must be of type comotion.dash.DashConfig"</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+
+    <span class="k">def</span> <span class="nf">_check_authorisation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">accepted_scopes</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Verify that the current access token is entitled to call a</span>
+<span class="sd">        ``/dailyRun`` endpoint.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        accepted_scopes : tuple of str</span>
+<span class="sd">            The scopes configured on the API Gateway route. The token needs</span>
+<span class="sd">            any one of them, matching how API Gateway evaluates scopes.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        UnAuthenticatedException</span>
+<span class="sd">            If the token cannot be read, or is missing the ``dash_api``</span>
+<span class="sd">            audience or all of the accepted scopes.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span> <span class="nn">jwt</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">claims</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">access_token</span><span class="p">,</span>
+                <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s2">"verify_signature"</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">jwt</span><span class="o">.</span><span class="n">PyJWTError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UnAuthenticatedException</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Could not read the access token to check DailyRun permissions: </span><span class="si">{e}</span><span class="s2">"</span>
+            <span class="p">)</span>
+
+        <span class="n">scopes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">((</span><span class="n">claims</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"scope"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+
+        <span class="n">audiences</span> <span class="o">=</span> <span class="n">claims</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"aud"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audiences</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">audiences</span> <span class="o">=</span> <span class="p">[</span><span class="n">audiences</span><span class="p">]</span>
+
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">scopes</span><span class="o">.</span><span class="n">isdisjoint</span><span class="p">(</span><span class="n">accepted_scopes</span><span class="p">):</span>
+            <span class="n">accepted</span> <span class="o">=</span> <span class="s2">" or "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"'</span><span class="si">{scope}</span><span class="s2">'"</span> <span class="k">for</span> <span class="n">scope</span> <span class="ow">in</span> <span class="n">accepted_scopes</span><span class="p">)</span>
+            <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"one of the scopes </span><span class="si">{accepted}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">DailyRun</span><span class="o">.</span><span class="n">REQUIRED_AUDIENCE</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">audiences</span><span class="p">:</span>
+            <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"the audience '</span><span class="si">{DailyRun.REQUIRED_AUDIENCE}</span><span class="s2">'"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UnAuthenticatedException</span><span class="p">(</span>
+                <span class="s2">"Your credentials are not entitled to perform this DailyRun "</span>
+                <span class="sa">f</span><span class="s2">"operation. The access token is missing {' and '.join(missing)}. "</span>
+                <span class="sa">f</span><span class="s2">"It currently has scopes {sorted(scopes) or ['&lt;none&gt;']} and "</span>
+                <span class="sa">f</span><span class="s2">"audiences {sorted(audiences) or ['&lt;none&gt;']}. "</span>
+                <span class="s2">"Ask your Comotion administrator to grant your user or application "</span>
+                <span class="sa">f</span><span class="s2">"the required scope on the '</span><span class="si">{DailyRun.REQUIRED_AUDIENCE}</span><span class="s2">' audience."</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_api_configuration</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Build a configuration for the generated DailyRun client.</span>
+
+<span class="sd">        The access token is read at call time rather than at construction, so</span>
+<span class="sd">        that a token refreshed by ``_check_and_refresh_token`` is picked up.</span>
+
+<span class="sd">        TLS settings are taken from ``DashConfig``, matching ``Query`` and</span>
+<span class="sd">        ``Load`` (``verify_ssl`` and ``ssl_ca_cert``).</span>
+<span class="sd">        """</span>
+        <span class="n">configuration</span> <span class="o">=</span> <span class="n">comodash_dailyrun_api_client_lowlevel</span><span class="o">.</span><span class="n">Configuration</span><span class="p">(</span>
+            <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">daily_run_host_url</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">),</span>
+            <span class="n">access_token</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">access_token</span><span class="p">,</span>
+            <span class="n">ssl_ca_cert</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">ssl_ca_cert</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">configuration</span><span class="o">.</span><span class="n">verify_ssl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">verify_ssl</span>
+        <span class="k">return</span> <span class="n">configuration</span>
+
+    <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">operation</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">accepted_scopes</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">additional_ok_statuses</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Invoke an operation on the generated DailyRun client.</span>
+
+<span class="sd">        Refreshes the access token if needed, checks the token entitlements</span>
+<span class="sd">        against ``accepted_scopes``, and translates the generated client's</span>
+<span class="sd">        exceptions into the same exceptions the rest of this module raises.</span>
+
+<span class="sd">        ``additional_ok_statuses`` lists non-2xx status codes that should be</span>
+<span class="sd">        treated as a normal response and have their deserialised body returned</span>
+<span class="sd">        to the caller rather than raising. This lets an endpoint surface a</span>
+<span class="sd">        structured body (for example the ``409`` returned by</span>
+<span class="sd">        ``start_execution`` when a pipeline is already running) instead of an</span>
+<span class="sd">        opaque error.</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">_check_and_refresh_token</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_authorisation</span><span class="p">(</span><span class="n">accepted_scopes</span><span class="p">)</span>
+
+        <span class="n">configuration</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api_configuration</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">comodash_dailyrun_api_client_lowlevel</span><span class="o">.</span><span class="n">ApiClient</span><span class="p">(</span>
+                <span class="n">configuration</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">api_client</span><span class="p">:</span>
+                <span class="n">api_instance</span> <span class="o">=</span> <span class="n">DailyRunApi</span><span class="p">(</span><span class="n">api_client</span><span class="p">)</span>
+                <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">api_instance</span><span class="p">,</span> <span class="n">operation</span><span class="p">)(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">DailyRunUnauthorizedException</span><span class="p">,</span> <span class="n">DailyRunForbiddenException</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">accepted</span> <span class="o">=</span> <span class="s2">" or "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"'</span><span class="si">{scope}</span><span class="s2">'"</span> <span class="k">for</span> <span class="n">scope</span> <span class="ow">in</span> <span class="n">accepted_scopes</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">UnAuthenticatedException</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Access denied (</span><span class="si">{e.status}</span><span class="s2">) calling </span><span class="si">{path}</span><span class="s2">. The API "</span>
+                <span class="sa">f</span><span class="s2">"requires one of the scopes </span><span class="si">{accepted}</span><span class="s2"> on the "</span>
+                <span class="sa">f</span><span class="s2">"'</span><span class="si">{DailyRun.REQUIRED_AUDIENCE}</span><span class="s2">' audience. Response: </span><span class="si">{e.body}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">DailyRunApiException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">status</span> <span class="ow">in</span> <span class="n">additional_ok_statuses</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Unexpected status code from DailyRun endpoint </span><span class="si">{path}</span><span class="s2">: "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{e.status}</span><span class="s2"> - </span><span class="si">{e.body}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error calling DailyRun endpoint </span><span class="si">{path}</span><span class="s2">: </span><span class="si">{e}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_read_daily_run_flag</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">"""Pull the DailyRun boolean out of an endpoint response."""</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">DailyRunEnabled</span><span class="p">):</span>
+            <span class="n">flag_value</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">daily_run</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s2">"dailyRun"</span> <span class="ow">in</span> <span class="n">payload</span><span class="p">:</span>
+                <span class="n">flag_value</span> <span class="o">=</span> <span class="n">payload</span><span class="p">[</span><span class="s2">"dailyRun"</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"DailyRun flag not found in response payload."</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"DailyRun flag not found in response payload."</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">flag_value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"DailyRun flag in response is not a boolean."</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">flag_value</span>
+
+<div class="viewcode-block" id="DailyRun.get_daily_run_enabled"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DailyRun.get_daily_run_enabled">[docs]</a>    <span class="k">def</span> <span class="nf">get_daily_run_enabled</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Calls ``GET /dailyRun/dailyRun_enabled`` and returns whether the daily run</span>
+<span class="sd">        is enabled for the current Dash organisation.</span>
+
+<span class="sd">        Requires the ``dailyrun:enabled:read`` scope.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            True if the daily run is enabled for the organisation.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        UnAuthenticatedException</span>
+<span class="sd">            If the access token lacks an accepted scope or the audience.</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the response from the API is unexpected or cannot be parsed.</span>
+<span class="sd">            A ``404`` is raised here when the organisation has no DailyRun</span>
+<span class="sd">            setting recorded against it.</span>
+<span class="sd">        """</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call</span><span class="p">(</span>
+            <span class="s2">"get_daily_run_enabled"</span><span class="p">,</span>
+            <span class="n">DailyRun</span><span class="o">.</span><span class="n">ENABLED_READ_SCOPES</span><span class="p">,</span>
+            <span class="s2">"/dailyRun/dailyRun_enabled"</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">DailyRun</span><span class="o">.</span><span class="n">_read_daily_run_flag</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DailyRun.update_daily_run_enabled"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DailyRun.update_daily_run_enabled">[docs]</a>    <span class="k">def</span> <span class="nf">update_daily_run_enabled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">enabled</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Calls ``POST /dailyRun/dailyRun_enabled`` to enable or disable the daily</span>
+<span class="sd">        run for the current Dash organisation.</span>
+
+<span class="sd">        Turning the daily ETL on or off is a configuration change, so this</span>
+<span class="sd">        requires the ``dailyrun:enabled:write`` scope.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        enabled : bool</span>
+<span class="sd">            The new value for the daily run setting.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            The value stored by the API.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        TypeError</span>
+<span class="sd">            If enabled is not a boolean.</span>
+<span class="sd">        UnAuthenticatedException</span>
+<span class="sd">            If the access token lacks the admin scope or the audience.</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the response from the API is unexpected or cannot be parsed.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">enabled</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"enabled must be a boolean."</span><span class="p">)</span>
+
+        <span class="n">payload</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call</span><span class="p">(</span>
+            <span class="s2">"update_daily_run_enabled"</span><span class="p">,</span>
+            <span class="n">DailyRun</span><span class="o">.</span><span class="n">ENABLED_WRITE_SCOPES</span><span class="p">,</span>
+            <span class="s2">"/dailyRun/dailyRun_enabled"</span><span class="p">,</span>
+            <span class="n">daily_run_enabled</span><span class="o">=</span><span class="n">DailyRunEnabled</span><span class="p">(</span><span class="n">dailyRun</span><span class="o">=</span><span class="n">enabled</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">DailyRun</span><span class="o">.</span><span class="n">_read_daily_run_flag</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DailyRun.GetDailyRunExecutionMode"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DailyRun.GetDailyRunExecutionMode">[docs]</a>    <span class="k">class</span> <span class="nc">GetDailyRunExecutionMode</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+        <span class="n">LIST</span> <span class="o">=</span> <span class="s2">"list"</span>
+        <span class="n">LATEST</span> <span class="o">=</span> <span class="s2">"latest"</span>
+        <span class="n">LAST_SUCCESSFUL</span> <span class="o">=</span> <span class="s2">"last_successful"</span></div>
+
+<div class="viewcode-block" id="DailyRun.get_execution_info"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DailyRun.get_execution_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_execution_info</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">"DailyRun.GetDailyRunExecutionMode"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">limit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExecutionStatus</span><span class="p">]:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Calls ``GET /dailyRun/execution_status`` and returns information about</span>
+<span class="sd">        the organisation's Daily ETL pipeline executions.</span>
+
+<span class="sd">        Requires the ``dailyrun:execution:read`` scope.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mode : GetDailyRunExecutionMode, optional</span>
+<span class="sd">            Which view of the execution history to return. Defaults to</span>
+<span class="sd">            ``GetDailyRunExecutionMode.LIST``.</span>
+
+<span class="sd">            * ``LIST`` populates ``executions``</span>
+<span class="sd">            * ``LATEST`` populates the execution fields directly, or returns</span>
+<span class="sd">              ``None`` when there are no executions</span>
+<span class="sd">            * ``LAST_SUCCESSFUL`` populates the execution fields directly, or</span>
+<span class="sd">              populates ``message`` if there is none</span>
+<span class="sd">        limit : int, optional</span>
+<span class="sd">            Maximum number of executions to consider. The API clamps this to</span>
+<span class="sd">            between 1 and 200, and defaults to 50.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ExecutionStatus</span>
+<span class="sd">            The execution information returned by the endpoint, or ``None`` in</span>
+<span class="sd">            ``LATEST`` mode when the organisation has no executions. Call</span>
+<span class="sd">            ``.to_dict()`` on the result for the raw payload shape.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If an invalid mode or limit is provided, or the response from the</span>
+<span class="sd">            API is unexpected or cannot be parsed.</span>
+<span class="sd">        UnAuthenticatedException</span>
+<span class="sd">            If the access token lacks an accepted scope or the audience.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="n">DailyRun</span><span class="o">.</span><span class="n">GetDailyRunExecutionMode</span><span class="o">.</span><span class="n">LIST</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">DailyRun</span><span class="o">.</span><span class="n">GetDailyRunExecutionMode</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"Invalid mode. Must be an instance of "</span>
+                <span class="s2">"DailyRun.GetDailyRunExecutionMode."</span>
+            <span class="p">)</span>
+
+        <span class="c1"># The API reads these from the query string, not the request body.</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"mode"</span><span class="p">:</span> <span class="n">mode</span><span class="o">.</span><span class="n">value</span><span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"limit must be an integer."</span><span class="p">)</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="s2">"limit"</span><span class="p">]</span> <span class="o">=</span> <span class="n">limit</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call</span><span class="p">(</span>
+            <span class="s2">"get_daily_run_execution_status"</span><span class="p">,</span>
+            <span class="n">DailyRun</span><span class="o">.</span><span class="n">EXECUTION_READ_SCOPES</span><span class="p">,</span>
+            <span class="s2">"/dailyRun/execution_status"</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">parameters</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="DailyRun.start_execution"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.DailyRun.start_execution">[docs]</a>    <span class="k">def</span> <span class="nf">start_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StartExecutionResponse</span><span class="p">:</span>
+        <span class="sd">"""</span>
+<span class="sd">        Calls ``POST /dailyRun/start_execution`` to start ``DailyETLPipeline`` for</span>
+<span class="sd">        the current Dash organisation.</span>
+
+<span class="sd">        Manual SDK runs always target ``DailyETLPipeline`` (not</span>
+<span class="sd">        ``DailyETLPipelineV2``). The scheduled nightly kickoff still routes</span>
+<span class="sd">        ``insights_v2`` clients to V2 separately.</span>
+
+<span class="sd">        Requires the ``dailyrun:execution:write`` scope.</span>
+
+<span class="sd">        Starting a run manually is **not** gated by the daily-run enabled flag</span>
+<span class="sd">        (that flag only controls the scheduled nightly kickoff). A manual run is</span>
+<span class="sd">        started unless one is already in progress for the organisation: in that</span>
+<span class="sd">        case the API responds with ``409`` and a payload where ``started`` is</span>
+<span class="sd">        False, and this method returns that payload rather than raising, so</span>
+<span class="sd">        callers should inspect ``started`` to tell the two outcomes apart.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        StartExecutionResponse</span>
+<span class="sd">            On a successful start (``200``) ``started`` is True and</span>
+<span class="sd">            ``execution_arn``, ``start_date``, ``execution_name`` and</span>
+<span class="sd">            ``state_machine_arn`` are populated. When a run is already in</span>
+<span class="sd">            progress (``409``) ``started`` is False and ``running_execution``</span>
+<span class="sd">            describes the in-flight run. Call ``.to_dict()`` on the result for</span>
+<span class="sd">            the raw payload shape.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        UnAuthenticatedException</span>
+<span class="sd">            If the access token lacks an accepted scope or the audience.</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the response from the API is unexpected or cannot be parsed.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span>
+            <span class="n">StartExecutionResponse</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_call</span><span class="p">(</span>
+                <span class="s2">"start_daily_run_execution"</span><span class="p">,</span>
+                <span class="n">DailyRun</span><span class="o">.</span><span class="n">EXECUTION_WRITE_SCOPES</span><span class="p">,</span>
+                <span class="s2">"/dailyRun/start_execution"</span><span class="p">,</span>
+                <span class="n">additional_ok_statuses</span><span class="o">=</span><span class="p">(</span><span class="mi">409</span><span class="p">,)</span>
+            <span class="p">),</span>
+        <span class="p">)</span></div></div>
 
 <div class="viewcode-block" id="Load"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Load">[docs]</a><span class="k">class</span> <span class="nc">Load</span><span class="p">():</span>
     <span class="sd">"""</span>
@@ -1910,18 +2338,18 @@
         <span class="n">migration</span> <span class="o">=</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">Migration</span><span class="p">(</span><span class="o">**</span><span class="n">migration_data</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">migration_api_instance</span><span class="o">.</span><span class="n">start_migration</span><span class="p">(</span><span class="n">migration</span><span class="p">)</span>
-        <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">BadRequestException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
+        <span class="k">except</span> <span class="n">BadRequestException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">exp</span><span class="o">.</span><span class="n">body</span><span class="p">)[</span><span class="s1">'message'</span><span class="p">])</span>
-        <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ApiException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">except</span> <span class="n">ApiException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">body</span><span class="p">)[</span><span class="s1">'message'</span><span class="p">])</span></div>
     
 <div class="viewcode-block" id="Migration.status"><a class="viewcode-back" href="../../comotion.dash.html#comotion.dash.Migration.status">[docs]</a>    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">migration_status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">migration_api_instance</span><span class="o">.</span><span class="n">get_migration</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">migration_status</span>
-        <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">BadRequestException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
+        <span class="k">except</span> <span class="n">BadRequestException</span> <span class="k">as</span> <span class="n">exp</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">exp</span><span class="o">.</span><span class="n">body</span><span class="p">)[</span><span class="s1">'message'</span><span class="p">])</span>
-        <span class="k">except</span> <span class="n">comodash_api_client_lowlevel</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ApiException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">except</span> <span class="n">ApiException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">body</span><span class="p">)[</span><span class="s1">'message'</span><span class="p">])</span></div></div>
         
 
@@ -2077,9 +2505,15 @@
         <span class="c1"># Empty list to store chunks that fail to upload </span>
         <span class="n">error_chunks</span> <span class="o">=</span> <span class="p">[]</span>   
 
+        <span class="n">chunk_iterator</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">chunk_number</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">tqdm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="nb">range</span><span class="p">(</span><span class="n">chunk_number</span><span class="p">)</span>
+        <span class="p">)</span>
+
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">load_id</span> <span class="o">+</span> <span class="s2">"_success.csv.gz"</span><span class="p">),</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> 
             
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">chunk_number</span><span class="p">)):</span> 
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">chunk_iterator</span><span class="p">:</span> 
 
                 <span class="c1"># Get data chunk</span>
                 <span class="n">chunk</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">fetchmany</span><span class="p">(</span><span class="n">chunksize</span><span class="p">),</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span> 
