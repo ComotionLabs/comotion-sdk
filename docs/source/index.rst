@@ -584,6 +584,8 @@ Once that is done, your application can authenticate using the secret key using 
 
 .. code-block:: python
 
+   import os
+
    from comotion.dash import DashConfig
    from comotion.auth import Auth
    from comotion.dash import Query
@@ -592,8 +594,8 @@ Once that is done, your application can authenticate using the secret key using 
    auth = Auth(
         entity_type=Auth.APPLICATION,
         application_client_id="test",
-        application_client_secret="2shjkdfbjsdhfg2893847",  
-        #best to pass to your application from an apprioriate secrets manager or environment variable
+        application_client_secret=os.environ["COMOTION_APPLICATION_CLIENT_SECRET"],
+        # load the secret from a secrets manager or environment variable; never hard-code it
         orgname="myorgname"
    )
    config = DashConfig(auth)
